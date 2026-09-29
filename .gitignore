@@ -1,0 +1,37 @@
+# Secrets — never commit real values
+.env
+*.env.local
+
+# .NET build output
+bin/
+obj/
+*.user
+
+# Angular / Node
+web/node_modules/
+web/dist/
+web/.angular/
+web/test-results/
+web/playwright-report/
+npm-debug.log
+
+# Visual Studio
+.vs/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# macOS resource-fork archive artifacts (seen under scripts/loyalty_db)
+__MACOSX/
+
+# Local dev settings with plaintext secrets (JWT signing key, connection passwords).
+# Copy src/dEngage.Loyalty.Api/appsettings.Development.example.json and fill it in.
+src/dEngage.Loyalty.Api/appsettings.Development.json
+
+# Database dumps / backups — may contain real data; keep them local.
+scripts/*_pg_backup_*.sql
+scripts/loyalty_db.zip
+
+# Personal Claude Code settings (allowed commands may embed local credentials)
+.claude/settings.local.json

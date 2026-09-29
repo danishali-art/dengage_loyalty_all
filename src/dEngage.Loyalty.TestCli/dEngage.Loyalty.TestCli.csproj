@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
+    <PackageReference Include="Spectre.Console" Version="0.49.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\dEngage.Loyalty.Consumer\dEngage.Loyalty.Consumer.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Ledger\dEngage.Loyalty.Ledger.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.RuleEngine\dEngage.Loyalty.RuleEngine.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Schema\dEngage.Loyalty.Schema.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Shared\dEngage.Loyalty.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

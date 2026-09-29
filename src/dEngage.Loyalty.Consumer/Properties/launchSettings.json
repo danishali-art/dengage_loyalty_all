@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "dEngage.Loyalty.Consumer": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "LOYALTY_MASTER_KEY": "/65XyGaT8WogAqRVLUTzOoFN1A7t9rl+xWzg0qtdvOk="
+      }
+    }
+  }
+}

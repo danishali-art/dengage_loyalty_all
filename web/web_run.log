@@ -1,0 +1,39 @@
+❯ Building...
+✔ Building...
+Initial chunk files | Names                     |  Raw size
+styles.css          | styles                    |  52.76 kB | 
+main.js             | main                      |  16.25 kB | 
+chunk-MRVRU3JA.js   | -                         |   7.29 kB | 
+chunk-VKLNRXR7.js   | -                         |   5.45 kB | 
+chunk-VQO4ACLG.js   | -                         |   5.27 kB | 
+chunk-GYBQOQEU.js   | -                         |   3.40 kB | 
+chunk-VWQIJJGM.js   | -                         |   2.11 kB | 
+chunk-7CDKPS5V.js   | -                         |   1.82 kB | 
+chunk-VUJOFXKG.js   | -                         | 987 bytes | 
+chunk-YIKLW2ME.js   | -                         | 185 bytes | 
+
+                    | Initial total             |  95.53 kB
+
+Lazy chunk files    | Names                     |  Raw size
+chunk-HJHNATK7.js   | shell                     |  53.63 kB | 
+chunk-CD7L2OQY.js   | account-types-list-page   |  39.11 kB | 
+chunk-JAU5HGQQ.js   | tiers-list-page           |  34.63 kB | 
+chunk-4LMSDHJV.js   | rewards-list-page         |  34.29 kB | 
+chunk-ADJIFX4O.js   | streak-campaign-form-page |  34.02 kB | 
+chunk-4VVNA5J3.js   | card-bucket-form-page     |  29.88 kB | 
+chunk-EPT5MTNB.js   | rule-form-page            |  27.46 kB | 
+chunk-OGWS7P6W.js   | customer-detail-page      |  25.76 kB | 
+chunk-5FLWYJ7V.js   | event-simulator-page      |  24.69 kB | 
+chunk-LJBSP3YJ.js   | tenant-admins-list-page   |  20.43 kB | 
+chunk-NIBQJORU.js   | tenants-list-page         |  19.88 kB | 
+chunk-UMERDNUL.js   | programs-list-page        |  18.71 kB | 
+chunk-IOK3BIHO.js   | -                         |  18.19 kB | 
+chunk-ORBFUUQ2.js   | program-overview-page     |  18.07 kB | 
+chunk-IIFUTFAL.js   | api-keys-list-page        |  18.03 kB | 
+...and 39 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [13.466 seconds] - 2026-09-04T11:46:21.325Z
+
+Watch mode enabled. Watching for file changes...
+NOTE: Raw file sizes do not reflect development server per-request transformations.
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m4200[22m/[39m

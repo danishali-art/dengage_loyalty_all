@@ -1,0 +1,362 @@
+/* Fonts (self-hosted via @fontsource — no runtime Google Fonts) */
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/500.css';
+@import '@fontsource/roboto/700.css';
+
+@import 'tailwindcss';
+
+/* Class-based dark mode is wired but unused in v1 — author colours via token names only. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens ported verbatim from ux/en/fintech/*.html.
+ * Tailwind v4 generates utilities from these (bg-brand, text-muted, shadow-card, ...).
+ */
+@theme {
+  --color-brand: #125cfa;
+  --color-brand-dark: #0e4ad1;
+  --color-brand-light: #e8f0fe;
+  /* Popup titles and .section-heading text — a calmer blue than --color-brand, meant for type
+     rather than the accent bar/interactive states, which stay on --color-brand. */
+  --color-heading: #3e72cc;
+  --color-navy: #1c2c48;
+  --color-page: #eef1f6;
+  --color-muted: #8a94a6;
+
+  --color-success-fg: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #dcfce7;
+  --color-warn-fg: #d97706;
+  --color-warn-bg: #fff7ed;
+  --color-warn-border: #ffedd5;
+  --color-danger-fg: #ef4444;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-streak-fg: #7c3aed;
+  --color-streak-bg: #f3e8ff;
+  --color-streak-border: #e9d5ff;
+
+  --font-sans:
+    'Roboto', 'Helvetica Neue', Arial, sans-serif;
+
+  --shadow-card: 0 1px 3px rgba(16, 30, 54, 0.06);
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-page);
+    color: var(--color-gray-800);
+    font-family: var(--font-sans);
+  }
+
+  /* Consistent, visible keyboard focus for every interactive element. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: var(--radius-lg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+/*
+ * Recurring visual recipes so templates stay readable. Keep these small —
+ * anything component-specific belongs in the component, not here.
+ */
+@layer components {
+  .card {
+    background-color: white;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    padding: 1.25rem;
+  }
+
+  /* Small caps label: table headers (<th>) and compact key/value labels (<p>). Muted and dense
+     on purpose — it sits next to real content, not on its own. For an actual section heading
+     (an <h2> introducing a card), use .section-heading instead. */
+  .section-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-slate-400);
+  }
+
+  /* <h2> introducing a card/section. Deliberately louder than .section-label — it's the only
+     thing on its line — with a brand-colored accent bar so a page of stacked cards is easy to
+     scan. This is the standalone bar, used when a heading isn't wrapped in .section-header (see
+     below) — e.g. customers-search's own bordered header row. */
+  .section-heading {
+    position: relative;
+    padding-left: 0.75rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-heading);
+    letter-spacing: -0.01em;
+  }
+  .section-heading::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.125rem;
+    bottom: 0.125rem;
+    width: 0.1875rem;
+    border-radius: 9999px;
+    background-color: var(--color-brand);
+  }
+
+  /* Light-blue banner behind a card's leading title block (.section-heading, an optional <p>
+     subtitle, and/or an inline header action) — bleeds to the card's edges via negative margins
+     sized to .card's own padding (1.25rem), so it reads as a header band rather than an inset.
+     Draws ONE accent bar spanning the whole block itself (rather than letting .section-heading
+     and a trailing <p> each draw their own) so a heading + subtitle reads as a single bar, not
+     two disconnected segments with a gap between them. */
+  .section-header {
+    position: relative;
+    margin: -1.25rem -1.25rem 1rem;
+    padding: 1rem 1.25rem 1rem 2rem;
+    background-color: var(--color-brand-light);
+  }
+  .section-header::before {
+    content: '';
+    position: absolute;
+    left: 1.25rem;
+    top: 1rem;
+    bottom: 1rem;
+    width: 0.1875rem;
+    border-radius: 9999px;
+    background-color: var(--color-brand);
+  }
+  .section-header .section-heading,
+  .section-header .section-heading + p {
+    padding-left: 0;
+  }
+  .section-header .section-heading::before,
+  .section-header .section-heading + p::before {
+    content: none;
+  }
+
+  /* Every `<label>`/`<span>` field caption in the app shares this — one place to retune type. */
+  .field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-700);
+  }
+
+  /* Custom checkbox: appearance:none + a clip-path checkmark, so it picks up brand colors
+     instead of the browser's native (usually OS-blue) control. */
+  .checkbox {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 1.5px solid var(--color-gray-300);
+    border-radius: 0.3125rem;
+    background-color: white;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+  .checkbox::before {
+    content: '';
+    width: 0.65rem;
+    height: 0.65rem;
+    transform: scale(0);
+    transition: transform 100ms ease;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    background-color: white;
+  }
+  .checkbox:hover {
+    border-color: var(--color-brand);
+  }
+  .checkbox:checked {
+    background-color: var(--color-brand);
+    border-color: var(--color-brand);
+  }
+  .checkbox:checked::before {
+    transform: scale(1);
+  }
+  .checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Custom radio: same treatment as .checkbox, dot instead of a checkmark. */
+  .radio {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 1.5px solid var(--color-gray-300);
+    border-radius: 9999px;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 120ms ease;
+  }
+  .radio::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    transform: scale(0);
+    transition: transform 100ms ease;
+    background-color: var(--color-brand);
+  }
+  .radio:hover {
+    border-color: var(--color-brand);
+  }
+  .radio:checked {
+    border-color: var(--color-brand);
+  }
+  .radio:checked::before {
+    transform: scale(1);
+  }
+  .radio:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Card-style choice control (an <input type="radio" class="sr-only"> inside a bordered label) —
+     used where each option carries its own description, e.g. Tiers' qualifying model. The input
+     stays in the a11y tree and keyboard-focusable; :has() paints the focus ring on the card
+     itself since the input is visually hidden. */
+  .radio-card {
+    display: block;
+    cursor: pointer;
+    border-radius: var(--radius-lg);
+    border-width: 2px;
+    border-style: solid;
+    border-color: var(--color-gray-200);
+    padding: 0.75rem;
+    transition: border-color 120ms ease, background-color 120ms ease;
+  }
+  .radio-card:hover {
+    border-color: var(--color-gray-300);
+  }
+  .radio-card:has(input:checked) {
+    border-color: var(--color-brand);
+    background-color: var(--color-brand-light);
+  }
+  .radio-card:has(input:focus-visible) {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  .radio-card:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .field-input {
+    width: 100%;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    color: var(--color-gray-800);
+    background-color: white;
+  }
+  .field-input::placeholder {
+    color: var(--color-gray-500);
+  }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand) 20%, transparent);
+  }
+  .field-input[aria-invalid='true'] {
+    border-color: var(--color-danger-fg);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-gray-300);
+  }
+
+  /* Every data table's header row — DataTable and the few hand-rolled <table>s alike, since all
+     of them use a semantic <thead>. A shared background + rule line separates it from the body
+     without each table having to opt in. */
+  thead {
+    background-color: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+  }
+}
+
+/*
+ * Dialog open/close motion. DialogService (core/ui/dialog.service.ts) tags every CDK dialog
+ * with these two class names, so this is the one place every popup's animation lives.
+ * `prefers-reduced-motion` is already handled globally above (zeroes animation-duration).
+ */
+@layer components {
+  .app-dialog-backdrop {
+    animation: app-backdrop-in 150ms ease-out both;
+  }
+
+  .app-dialog-panel {
+    animation: app-panel-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .app-dialog-panel.app-dialog-closing {
+    animation: app-panel-out 120ms ease-in both;
+  }
+}
+
+@keyframes app-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes app-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes app-panel-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+}

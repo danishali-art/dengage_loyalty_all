@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\dEngage.Loyalty.Schema\dEngage.Loyalty.Schema.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Shared\dEngage.Loyalty.Shared.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Ledger\dEngage.Loyalty.Ledger.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" Version="2.8.0" />
+    <PackageReference Include="UUIDNext" Version="4.1.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

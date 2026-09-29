@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rule builder — Loyalty</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#EDF0F4; --panel:#FFFFFF; --sunk:#F6F8FA;
+  --ink:#0E1726; --ink2:#59647A; --ink3:#8B95A7;
+  --line:#DCE1E9; --line2:#C3CBD8;
+  --accent:#1B4B8F; --accent-bg:#E6EDF8; --accent-line:#9FB8DC;
+  --danger:#A32D2D; --danger-bg:#FBEAEA;
+  --warn:#8A5A08; --warn-bg:#FBF0DC;
+  --earn-fg:#0F6E56; --earn-bg:#DEF1EA;
+  --burn-fg:#8E3B1C; --burn-bg:#F9E9E2;
+  --rev-fg:#7A4A08;  --rev-bg:#FAEFDA;
+  --adj-fg:#4A41AC;  --adj-bg:#EBEAFB;
+  --r:6px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:14px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-0.01em}
+a{color:var(--accent)}
+
+.topbar{
+  background:var(--panel); border-bottom:1px solid var(--line);
+  padding:0 24px; height:56px; display:flex; align-items:center; gap:16px;
+  position:sticky; top:0; z-index:20;
+}
+.topbar h1{font-size:15px}
+.crumb{color:var(--ink3); font-size:13px}
+.spacer{flex:1}
+
+.wrap{max-width:1260px; margin:0 auto; padding:24px; display:grid; grid-template-columns:268px minmax(0,1fr); gap:24px; align-items:start}
+@media (max-width:1000px){ .wrap{grid-template-columns:1fr} .rail{position:static !important} }
+
+/* ---- derivation rail ---- */
+.rail{position:sticky; top:80px; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.rail-h{padding:12px 16px; border-bottom:1px solid var(--line); font-size:12px; color:var(--ink2)}
+.node{padding:11px 16px 11px 34px; position:relative; border-bottom:1px solid var(--line)}
+.node:last-child{border-bottom:0}
+.node::before{content:""; position:absolute; left:16px; top:17px; width:7px; height:7px; border-radius:50%; background:var(--line2)}
+.node.src::before{background:var(--accent)}
+.node.locked::before{background:var(--warn)}
+.node::after{content:""; position:absolute; left:19px; top:26px; bottom:-1px; width:1px; background:var(--line)}
+.node:last-child::after{display:none}
+.node-k{font-size:11px; color:var(--ink3); text-transform:none; letter-spacing:0}
+.node-v{font-size:13px; font-weight:500; word-break:break-word}
+.node-n{font-size:11px; color:var(--ink2); margin-top:2px}
+
+/* ---- cards ---- */
+.card{background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:16px}
+.card-h{padding:13px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.card-h h2{font-size:14px}
+.card-b{padding:18px 20px}
+.derive{font-size:11px; color:var(--accent); background:var(--accent-bg); border:1px solid var(--accent-line); padding:1px 7px; border-radius:20px; white-space:nowrap}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px}
+.f{min-width:0}
+.f label{display:block; font-size:12px; color:var(--ink2); margin-bottom:5px}
+.f .hint{font-size:11px; color:var(--ink3); margin-top:5px; line-height:1.45}
+.f .hint.warn{color:var(--warn)}
+
+input[type=text],input[type=number],select,textarea{
+  width:100%; height:34px; padding:0 9px; font:inherit; font-size:13px; color:var(--ink);
+  background:var(--panel); border:1px solid var(--line2); border-radius:var(--r); outline:none;
+}
+select{appearance:none; padding-right:26px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' fill='none' stroke='%235A6577' stroke-width='1.5'/></svg>");
+  background-repeat:no-repeat; background-position:right 9px center;
+}
+input:focus-visible,select:focus-visible,button:focus-visible{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg)}
+input:disabled,select:disabled{background:var(--sunk); color:var(--ink2); cursor:not-allowed}
+input::placeholder{color:var(--ink3)}
+
+button{
+  font:inherit; font-size:13px; height:34px; padding:0 13px; color:var(--ink);
+  background:var(--panel); border:1px solid var(--line2); border-radius:var(--r); cursor:pointer;
+}
+button:hover:not(:disabled){background:var(--sunk); border-color:#A9B3C4}
+button:disabled{color:var(--ink3); cursor:not-allowed; opacity:.65}
+button.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+button.primary:hover{background:#163D77}
+button.icon{width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; line-height:1}
+button.link{border:0; background:none; padding:0 2px; color:var(--accent); height:auto}
+button.link:hover{background:none; text-decoration:underline}
+
+.chk{display:flex; align-items:center; gap:8px; height:34px; font-size:13px; cursor:pointer; color:var(--ink)}
+.chk input{width:16px; height:16px; margin:0; accent-color:var(--accent); cursor:pointer}
+.fieldwrap{position:relative}
+.fieldwrap input{font-family:"IBM Plex Mono",monospace; font-size:12.5px}
+.unknown{border-color:#D8B66A !important; background:#FFFDF6 !important}
+.fmark{position:absolute; right:8px; top:9px; font-size:10px; color:var(--warn); pointer-events:none}
+
+.pill{font-size:11px; font-weight:500; padding:2px 9px; border-radius:20px}
+.p-Earn{background:var(--earn-bg); color:var(--earn-fg)}
+.p-Burn{background:var(--burn-bg); color:var(--burn-fg)}
+.p-Reverse{background:var(--rev-bg); color:var(--rev-fg)}
+.p-Adjust{background:var(--adj-bg); color:var(--adj-fg)}
+.p-mute{background:var(--sunk); color:var(--ink2); border:1px solid var(--line)}
+
+.lockmsg{font-size:12px; color:var(--warn); background:var(--warn-bg); border:1px solid #EBD4A6; padding:8px 11px; border-radius:var(--r); margin-top:14px}
+.note{font-size:12px; color:var(--ink2); background:var(--sunk); border:1px solid var(--line); padding:8px 11px; border-radius:var(--r)}
+
+/* ---- conditions ---- */
+.grp{border:1px solid var(--line2); border-radius:8px; background:var(--sunk); padding:12px 13px}
+.grp-h{display:flex; align-items:center; gap:10px; margin-bottom:11px; flex-wrap:wrap}
+.grp-t{font-size:12px; color:var(--ink2); font-weight:500}
+.row{display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,0.9fr) minmax(0,1.6fr) 32px; gap:7px; align-items:start}
+.row input,.row select{background:var(--panel)}
+.row .money{display:grid; grid-template-columns:minmax(0,1fr) 74px; gap:6px}
+.joiner{display:flex; align-items:center; gap:8px; margin:7px 0 7px 2px}
+.joiner span{font-size:11px; color:var(--ink3)}
+.joiner i{flex:1; height:1px; background:var(--line); display:block}
+.rootjoin{display:flex; align-items:center; gap:11px; margin:12px 0}
+.rootjoin i{flex:1; height:1px; background:var(--line2); display:block}
+
+.seg{display:inline-flex; border:1px solid var(--line2); border-radius:var(--r); overflow:hidden; height:28px}
+.seg button{height:26px; border:0; border-radius:0; padding:0 13px; font-size:12px; background:var(--panel); color:var(--ink2)}
+.seg button[aria-pressed=true]{background:var(--accent); color:#fff}
+.seg button:hover:not([aria-pressed=true]){background:var(--sunk)}
+
+/* ---- validation + output ---- */
+.issue{display:flex; gap:9px; padding:8px 11px; border-radius:var(--r); font-size:12.5px; margin-bottom:7px; align-items:flex-start}
+.issue.err{background:var(--danger-bg); color:var(--danger)}
+.issue.wrn{background:var(--warn-bg); color:var(--warn)}
+.issue.ok{background:var(--earn-bg); color:var(--earn-fg)}
+.issue b{font-weight:500}
+
+pre{margin:0; font-family:"IBM Plex Mono",monospace; font-size:12px; line-height:1.65; white-space:pre-wrap; word-break:break-word; color:var(--ink)}
+
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){ button,input,select{transition:background-color .12s, border-color .12s, box-shadow .12s} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Loyalty</h1>
+  <span class="crumb">Programs / NovaPoints / Rules / New rule</span>
+  <span class="spacer"></span>
+  <button id="btn-sim">Test with payload</button>
+  <button class="primary" id="btn-save">Save rule</button>
+</div>
+
+<div class="wrap">
+
+  <aside class="rail" aria-label="How this rule is derived">
+    <div class="rail-h">Every field below derives from the one above it.</div>
+    <div id="rail"></div>
+  </aside>
+
+  <main>
+    <div class="card">
+      <div class="card-h"><h2>Basics</h2><span id="cat-pill"></span><span id="src-pill"></span></div>
+      <div class="card-b">
+        <div class="grid">
+          <div class="f"><label for="f-name">Rule name</label><input id="f-name" type="text" value="Grocery base earn"></div>
+          <div class="f"><label for="f-prio">Priority</label><input id="f-prio" type="number" value="100">
+            <div class="hint">Higher wins inside an exclusivity group.</div></div>
+
+          <div class="f"><label for="f-trigger">Trigger event</label><select id="f-trigger"></select>
+            <div class="hint" id="h-trigger"></div></div>
+
+          <div class="f"><label for="f-ruletype">Rule type <span id="d-ruletype" class="derive"></span></label>
+            <select id="f-ruletype"></select><div class="hint" id="h-ruletype"></div></div>
+
+          <div class="f"><label for="f-target">Target account <span id="d-target" class="derive"></span></label>
+            <select id="f-target"></select><div class="hint" id="h-target"></div></div>
+
+          <div class="f"><label for="f-excl">Exclusivity group</label><input id="f-excl" type="text" value="base-earn">
+            <div class="hint" id="h-excl">Same group competes, different groups stack.</div></div>
+
+          <div class="f"><label>Stacking</label>
+            <label class="chk" for="f-stack"><input id="f-stack" type="checkbox"> Stackable with other rules</label>
+            <div class="hint" id="h-stack"></div></div>
+
+          <div class="f"><label for="f-from">Active from</label><input id="f-from" type="text" placeholder="2026-09-01 00:00">
+            <div class="hint">Program timezone, Asia/Riyadh.</div></div>
+          <div class="f"><label for="f-to">Active to</label><input id="f-to" type="text" placeholder="Open ended"></div>
+        </div>
+        <div id="src-note" class="note" style="margin-top:16px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Calculation</h2><span class="derive">from rule type</span></div>
+      <div class="card-b"><div class="grid" id="calc"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Conditions</h2><span class="derive">fields from trigger schema</span>
+        <span class="spacer"></span>
+        <span style="font-size:12px;color:var(--ink2)">Join groups with</span>
+        <span id="root-op"></span>
+      </div>
+      <div class="card-b">
+        <div id="groups"></div>
+        <button id="add-group" style="width:100%;margin-top:12px">Add group</button>
+        <div class="note" style="margin-top:14px">A condition always lives in a group. Groups are joined by the operator above; conditions inside a group are joined by that group's own operator.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Limits</h2><span class="derive" id="d-limits"></span></div>
+      <div class="card-b">
+        <div class="grid">
+          <div class="f"><label for="f-lim-total">Per customer, total</label><input id="f-lim-total" type="text" placeholder="Unlimited">
+            <div class="hint" id="h-lim-total"></div></div>
+          <div class="f"><label for="f-lim-period">Per customer, per period</label><input id="f-lim-period" type="text" placeholder="Unlimited"></div>
+          <div class="f"><label for="f-period">Period</label><select id="f-period">
+            <option>Day</option><option>Week</option><option>Month</option><option>Year</option></select></div>
+          <div class="f"><label for="f-reset">Reset window</label><select id="f-reset">
+            <option value="Calendar">Calendar (midnight, program timezone)</option>
+            <option value="Rolling">Rolling (trailing window from now)</option></select></div>
+          <div class="f"><label for="f-lim-event">Max per event</label><input id="f-lim-event" type="text" placeholder="Unlimited"></div>
+          <div class="f"><label for="f-min-amount">Minimum event amount</label><input id="f-min-amount" type="text" placeholder="No floor"></div>
+          <div class="f"><label for="f-cooldown">Cooldown (hours)</label><input id="f-cooldown" type="text" placeholder="None"></div>
+          <div class="f"><label for="f-max-cust">Max customers</label><input id="f-max-cust" type="text" placeholder="Unlimited">
+            <div class="hint">First N customers to qualify.</div></div>
+          <div class="f"><label for="f-budget">Rule budget, total</label><input id="f-budget" type="text" placeholder="Unlimited">
+            <div class="hint" id="h-budget"></div></div>
+          <div class="f"><label for="f-budget-period">Rule budget, per period</label><input id="f-budget-period" type="text" placeholder="Unlimited"></div>
+          <div class="f"><label for="f-breach">On breach</label><select id="f-breach">
+            <option value="Clamp">Clamp to remaining headroom</option>
+            <option value="Skip">Skip, award nothing</option></select>
+            <div class="hint">Clamp suits budgets, skip suits count caps.</div></div>
+        </div>
+        <div id="lim-lock" class="lockmsg" hidden></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Configuration</h2><span class="derive">inherits program defaults</span></div>
+      <div class="card-b">
+        <div class="grid">
+          <div class="f"><label for="f-rounding">Rounding</label><select id="f-rounding">
+            <option value="">Inherit from program (down)</option>
+            <option>down</option><option>nearest</option><option>up</option></select></div>
+          <div class="f"><label for="f-posting">Posting</label><select id="f-posting">
+            <option value="Immediate">Post immediately</option>
+            <option value="Pending">Post as pending, confirm on settlement</option>
+            <option value="Delayed">Hold until refund window closes</option></select></div>
+          <div class="f"><label for="f-hold">Hold period (days)</label><input id="f-hold" type="text" placeholder="0">
+            <div class="hint" id="h-hold"></div></div>
+          <div class="f"><label for="f-expiry">Expiry override (days)</label><input id="f-expiry" type="text" placeholder="Inherit from program (365)"></div>
+          <div class="f"><label>Reversible</label>
+            <label class="chk" for="f-reversible"><input id="f-reversible" type="checkbox" checked> Claw back on refund</label>
+            <div class="hint">Turn off for lifecycle bonuses.</div></div>
+          <div class="f"><label>Test mode</label>
+            <label class="chk" for="f-test"><input id="f-test" type="checkbox"> Evaluate and log, post nothing</label>
+            <div class="hint" id="h-test"></div></div>
+          <div class="f"><label>Notification</label>
+            <label class="chk" for="f-notify"><input id="f-notify" type="checkbox"> Emit event on award</label></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Validation</h2></div>
+      <div class="card-b"><div id="issues"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Serialised rule</h2>
+        <span class="spacer"></span><button class="link" id="btn-copy">Copy</button></div>
+      <div class="card-b" style="background:var(--sunk);border-radius:0 0 10px 10px"><pre id="out"></pre></div>
+    </div>
+  </main>
+</div>
+
+<div class="sr" id="live" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   METADATA — the single source of truth.
+   The form filter and the engine match predicate both read this.
+   ============================================================ */
+
+var EVENTS = {
+  "signup":           {cat:"Earn",   src:"Behavioural", card:"OncePerCustomer", fields:[["profile.segment","string"],["profile.tier","string"]]},
+  "kyc.completed":    {cat:"Earn",   src:"Behavioural", card:"OncePerCustomer", fields:[["profile.segment","string"]]},
+  "birthdaybonus":    {cat:"Earn",   src:"Scheduled",   card:"OncePerPeriod", period:"Yearly", fields:[["profile.segment","string"],["profile.tier","string"]]},
+  "card.transaction": {cat:"Earn",   src:"Behavioural", card:"Unlimited", fields:[["tx.amount","money"],["tx.mcc","string"],["tx.country","string"],["tx.status","string"],["event.hour_of_day","number"],["event.day_of_week","string"],["profile.segment","string"],["profile.tier","string"]]},
+  "order.created":    {cat:"Earn",   src:"Behavioural", card:"Unlimited", fields:[["tx.amount","money"],["tx.country","string"],["order.channel","string"],["event.day_of_week","string"],["profile.segment","string"]]},
+  "remittance":       {cat:"Earn",   src:"Behavioural", card:"Unlimited", fields:[["tx.amount","money"],["tx.country","string"],["tx.corridor","string"],["profile.segment","string"]]},
+  "cash.added":       {cat:"Earn",   src:"Behavioural", card:"Unlimited", fields:[["tx.amount","money"],["profile.segment","string"]]},
+  "cash.spent":       {cat:"Earn",   src:"Behavioural", card:"Unlimited", fields:[["tx.amount","money"],["tx.mcc","string"],["profile.segment","string"]]},
+  "points.redeem":    {cat:"Burn",   src:"Behavioural", card:"Unlimited", fields:[["redeem.points","number"],["profile.tier","string"]]},
+  "reward.purchase":  {cat:"Burn",   src:"Behavioural", card:"Unlimited", fields:[["redeem.points","number"],["reward.id","string"],["reward.category","string"]]},
+  "points.transfer":  {cat:"Burn",   src:"Behavioural", card:"Unlimited", fields:[["transfer.points","number"],["transfer.recipientRef","string"]]},
+  "order.refunded":   {cat:"Reverse",src:"Behavioural", card:"Unlimited", fields:[["tx.amount","money"],["tx.originalEventId","string"]]},
+  "points.expired":   {cat:"Adjust", src:"Scheduled",   card:"Unlimited", fields:[]},
+  "points.adjusted":  {cat:"Adjust", src:"Operator",    card:"Unlimited", fields:[["operator.reasonCode","string"]]}
+};
+
+var RULES = {
+  FixedBonusRule:      {cat:"Earn",   needs:[],        targets:["POINTS","CASH","TIER_POINTS"], note:"Awards a constant. Needs nothing from the payload.",
+                        calc:[["amount","Fixed amount","number","500"]]},
+  SpendRule:           {cat:"Earn",   needs:["money"], targets:["POINTS","CASH"], note:"Rate applied to the event amount after currency normalisation.",
+                        calc:[["rate","Rate","number","0.02"],["rounding","Rounding","select","down|nearest|up"],["minAward","Minimum award","number","0"]]},
+  StampRule:           {cat:"Earn",   needs:[],        targets:["STAMPS"], note:"Counter increment. Not fungible, never transfers.",
+                        calc:[["stamps","Stamps per event","number","1"],["cardSize","Card size","number","10"],["onComplete","On completion","select","reset|reset and award"]]},
+  RedemptionRule:      {cat:"Burn",   needs:["points"],targets:["POINTS"], note:"Debits. Balance is checked inside the posting transaction.",
+                        calc:[["ratio","Points per currency unit","number","100"],["minRedeem","Minimum redeemable","number","500"]]},
+  TransferRule:        {cat:"Burn",   needs:["points"],targets:["POINTS"], note:"Two postings under one transaction id.",
+                        calc:[["ratio","Transfer ratio","number","1.0"],["fee","Fee in points","number","0"],["maxPerDay","Max per day","number","5000"]]},
+  ReversalRule:        {cat:"Reverse",needs:["money"], targets:["(inherited from original posting)"], note:"Reads the historical posting, not the current rule config.",
+                        calc:[["mode","Reversal mode","select","proportional|full"],["allowNegative","If balance is short","select","allow negative|clamp to zero"]]},
+  ExpiryRule:          {cat:"Adjust", needs:[],        targets:["POINTS"], note:"Runs on a schedule over points lots.",
+                        calc:[["ageDays","Lot age in days","number","365"],["order","Consumption order","select","FIFO|LIFO"]]},
+  ManualAdjustmentRule:{cat:"Adjust", needs:[],        targets:["POINTS","CASH","STAMPS","TIER_POINTS"], note:"Requires an authenticated operator and a reason code.",
+                        calc:[["amount","Amount","number",""],["reason","Reason code","select","goodwill|correction|dispute|migration"]]}
+};
+
+var FIELD_KIND = {money:"money", number:"points", string:"string"};
+var OPS = {
+  money:   ["gte","lte","between","eq","neq"],
+  number:  ["gte","lte","between","eq","neq"],
+  string:  ["eq","neq","in","not_in","starts_with"],
+  unknown: ["eq","neq","in","not_in","gte","lte","between","starts_with","exists","is_null"]
+};
+var PLACEHOLDER = {money:"100", number:"9", string:"5411, 5541", unknown:"value"};
+var CURRENCIES = ["SAR","AED","PKR","USD"];
+
+/* ============================================================ */
+
+var S = {
+  trigger:"card.transaction",
+  ruleType:"SpendRule",
+  target:"POINTS",
+  calc:{},
+  stackable:false,
+  rootOp:"AND",
+  groups:[
+    {op:"AND", conds:[
+      {f:"tx.mcc",    o:"in",  v:"5411, 5541", cur:"SAR"},
+      {f:"tx.amount", o:"gte", v:"100",        cur:"SAR"},
+      {f:"tx.status", o:"eq",  v:"captured",   cur:"SAR"}
+    ]},
+    {op:"OR", conds:[
+      {f:"profile.segment", o:"eq", v:"premium", cur:"SAR"}
+    ]}
+  ]
+};
+
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function ev(){ return EVENTS[S.trigger]; }
+function rt(){ return RULES[S.ruleType]; }
+function typeOf(name){
+  var t=null; ev().fields.forEach(function(f){ if(f[0]===name) t=f[1]; });
+  return t || "unknown";
+}
+function isDeclared(name){ return ev().fields.some(function(f){ return f[0]===name; }); }
+function fieldKinds(){ var s={}; ev().fields.forEach(function(f){ s[FIELD_KIND[f[1]]]=true; }); return s; }
+
+function validRuleTypes(){
+  var e=ev(), have=fieldKinds(), out=[];
+  Object.keys(RULES).forEach(function(k){
+    var r=RULES[k];
+    if(r.cat!==e.cat) return;
+    for(var i=0;i<r.needs.length;i++){ if(!have[r.needs[i]]) return; }
+    out.push(k);
+  });
+  return out;
+}
+
+/* ---------- trigger dropdown, grouped by category ---------- */
+(function(){
+  var sel=$("f-trigger"), cats=["Earn","Burn","Reverse","Adjust"];
+  cats.forEach(function(c){
+    var g=document.createElement("optgroup"); g.label=c+" events";
+    Object.keys(EVENTS).forEach(function(k){
+      if(EVENTS[k].cat!==c) return;
+      var o=document.createElement("option"); o.value=k; o.textContent=k; g.appendChild(o);
+    });
+    sel.appendChild(g);
+  });
+  sel.value=S.trigger;
+})();
+
+/* ---------- segmented AND / OR ---------- */
+function segHTML(scope, val){
+  return '<span class="seg" role="group" aria-label="Join operator">'+
+    ["AND","OR"].map(function(v){
+      return '<button type="button" data-seg="'+scope+'" data-v="'+v+'" aria-pressed="'+(v===val)+'">'+v+'</button>';
+    }).join("")+'</span>';
+}
+
+/* ---------- renderers ---------- */
+
+function renderBasics(){
+  var e=ev();
+  $("cat-pill").innerHTML='<span class="pill p-'+e.cat+'">'+e.cat+'</span>';
+  $("src-pill").innerHTML='<span class="pill p-mute">'+e.src+'</span>';
+  $("h-trigger").textContent = e.fields.length
+    ? e.fields.length+" condition fields available."
+    : "This event carries no condition fields.";
+
+  var valid=validRuleTypes();
+  var sel=$("f-ruletype"); sel.innerHTML="";
+  valid.forEach(function(k){ var o=document.createElement("option"); o.value=k; o.textContent=k; sel.appendChild(o); });
+  if(valid.indexOf(S.ruleType)<0) S.ruleType=valid[0];
+  sel.value=S.ruleType; sel.disabled = valid.length<2;
+  $("d-ruletype").textContent = valid.length<2 ? "locked by trigger" : valid.length+" valid for this trigger";
+  $("h-ruletype").textContent = rt().note;
+
+  var r=rt(), tsel=$("f-target"); tsel.innerHTML="";
+  r.targets.forEach(function(t){ var o=document.createElement("option"); o.value=t; o.textContent=t; tsel.appendChild(o); });
+  if(r.targets.indexOf(S.target)<0) S.target=r.targets[0];
+  tsel.value=S.target; tsel.disabled = r.targets.length<2;
+  $("d-target").textContent = r.targets.length<2 ? "locked by rule type" : "filtered by rule type";
+  var th=$("h-target"); th.className="hint";
+  if(S.target==="CASH"){ th.className="hint warn"; th.textContent="Real money. Approval workflow and a budget cap are required."; }
+  else if(S.target==="STAMPS"){ th.textContent="Stamps are counters, not a redeemable balance."; }
+  else if(S.target==="TIER_POINTS"){ th.textContent="Measures status only. Never burns."; }
+  else if(S.target.charAt(0)==="("){ th.textContent="Target comes from the posting being reversed."; }
+  else { th.textContent=""; }
+
+  $("src-note").textContent =
+    e.src==="Scheduled" ? "Scheduled trigger. The engine emits a synthetic event keyed on customerRef and period, so no caller push is needed and replays cannot double-award."
+  : e.src==="Operator"  ? "Operator trigger. Never reachable from a customer-facing event. Every posting carries the operator identity and reason code."
+  : "Behavioural trigger. Arrives at POST /v1/events with a caller-supplied eventId, unique per business event, used for idempotency.";
+}
+
+function renderStacking(){
+  var cb=$("f-stack"), excl=$("f-excl");
+  cb.checked=S.stackable;
+  if(S.stackable){
+    excl.disabled=true; excl.placeholder="Not used when stackable";
+    $("h-excl").textContent="Ignored while the rule is stackable.";
+    $("h-stack").textContent="Awards alongside every other matching rule. Use for boosters and campaign top-ups.";
+  } else {
+    excl.disabled=false; excl.placeholder="base-earn";
+    $("h-excl").textContent="Required. Highest priority in this group wins, the rest are suppressed.";
+    $("h-stack").textContent="Exclusive. Competes with other rules in its exclusivity group.";
+  }
+}
+
+function renderCalc(){
+  var r=rt(), box=$("calc"); box.innerHTML="";
+  r.calc.forEach(function(c){
+    var key=c[0], label=c[1], kind=c[2], def=c[3];
+    if(!(key in S.calc)) S.calc[key]= kind==="select" ? def.split("|")[0] : def;
+    var d=document.createElement("div"); d.className="f";
+    var id="calc-"+key;
+    var ctrl = kind==="select"
+      ? '<select id="'+id+'" data-calc="'+key+'">'+def.split("|").map(function(v){
+          return '<option'+(v===S.calc[key]?" selected":"")+'>'+esc(v)+'</option>'; }).join("")+'</select>'
+      : '<input id="'+id+'" data-calc="'+key+'" type="text" value="'+esc(S.calc[key])+'">';
+    d.innerHTML='<label for="'+id+'">'+esc(label)+'</label>'+ctrl;
+    box.appendChild(d);
+  });
+}
+
+function renderConditions(){
+  var e=ev();
+  $("root-op").innerHTML = segHTML("root", S.rootOp);
+  var box=$("groups");
+  $("add-group").disabled=false;
+
+  var h='<datalist id="schema-fields">'+e.fields.map(function(f){
+    return '<option value="'+f[0]+'">'+f[1]+'</option>'; }).join("")+'</datalist>';
+
+  if(!S.groups.length){
+    h+='<div class="note">No conditions. This rule matches every occurrence of the trigger. Add a group to narrow it, or use the limits below to bound it.</div>';
+    box.innerHTML=h; return;
+  }
+  S.groups.forEach(function(g,gi){
+    if(gi>0) h+='<div class="rootjoin"><i></i><span class="pill p-mute">'+S.rootOp+'</span><i></i></div>';
+    h+='<div class="grp">';
+    h+='<div class="grp-h"><span class="grp-t">Group '+(gi+1)+'</span>'+
+       '<span style="font-size:12px;color:var(--ink2)">match</span>'+segHTML("g"+gi,g.op)+
+       '<span class="spacer"></span>'+
+       '<button type="button" class="icon" data-delg="'+gi+'" aria-label="Remove group '+(gi+1)+'"'+
+       (S.groups.length<2?' disabled title="A rule needs at least one group"':'')+'>&#215;</button></div>';
+
+    g.conds.forEach(function(c,ci){
+      if(ci>0) h+='<div class="joiner"><span>'+g.op+'</span><i></i></div>';
+      var t=typeOf(c.f), ops=OPS[t], k=gi+"."+ci;
+      var valCtrl = t==="money"
+        ? '<div class="money"><input type="text" data-v="'+k+'" value="'+esc(c.v)+'" placeholder="'+PLACEHOLDER[t]+'" aria-label="Amount">'+
+          '<select data-cur="'+k+'" aria-label="Currency">'+CURRENCIES.map(function(x){
+             return '<option'+(x===c.cur?" selected":"")+'>'+x+'</option>'; }).join("")+'</select></div>'
+        : '<input type="text" data-v="'+k+'" value="'+esc(c.v)+'" placeholder="'+PLACEHOLDER[t]+'" aria-label="Value">';
+
+      var known=isDeclared(c.f);
+      h+='<div class="row">'+
+         '<div class="fieldwrap"><input type="text" data-f="'+k+'" list="schema-fields" value="'+esc(c.f)+'" '+
+           'placeholder="payload field path" aria-label="Field path" class="'+(known||!c.f?"":"unknown")+'">'+
+           (known||!c.f?"":'<span class="fmark" title="Not declared in this event schema">custom</span>')+'</div>'+
+         '<select data-o="'+k+'" aria-label="Operator">'+ops.map(function(o){
+            return '<option'+(o===c.o?" selected":"")+'>'+o+'</option>'; }).join("")+'</select>'+
+         valCtrl+
+         '<button type="button" class="icon" data-delc="'+k+'" aria-label="Remove condition"'+
+         (g.conds.length<2?' disabled title="A group needs at least one condition"':'')+'>&#215;</button>'+
+         '</div>';
+    });
+    h+='<button type="button" data-addc="'+gi+'" style="margin-top:11px">Add condition</button>';
+    h+='</div>';
+  });
+  box.innerHTML=h;
+}
+
+function renderLimits(){
+  var e=ev(), t=$("f-lim-total"), lock=$("lim-lock");
+  $("d-limits").textContent = "cardinality: "+e.card;
+  if(e.card==="OncePerCustomer"){
+    t.value="1"; t.disabled=true; lock.hidden=false;
+    lock.textContent="Cardinality is OncePerCustomer. Enforced by a unique index on (tenant, rule, customerRef), not by this field.";
+    $("h-lim-total").textContent="";
+  } else if(e.card==="OncePerPeriod"){
+    t.value=""; t.disabled=true; t.placeholder="1 per "+(e.period||"period").toLowerCase(); lock.hidden=false;
+    lock.textContent="Cardinality is OncePerPeriod. Guarded on (customerRef, ruleId, periodKey) so a scheduler misfire cannot double-award.";
+    $("h-lim-total").textContent="";
+  } else {
+    t.disabled=false; t.placeholder="Unlimited"; lock.hidden=true;
+    $("h-lim-total").textContent="Counters increment in the same transaction as the posting.";
+  }
+  $("h-budget").textContent = S.target==="CASH" ? "Required for cash targets." : "Total this rule may ever award.";
+  $("h-hold").textContent = $("f-posting").value==="Delayed" ? "Award is calculated now, posted after the hold." : "Only used with delayed posting.";
+  $("h-test").textContent = $("f-test").checked ? "Live evaluation, no postings." : "";
+}
+
+/* ---------- validation ---------- */
+function validate(){
+  var errs=[], warns=[], e=ev();
+
+  if(!$("f-name").value.trim()) errs.push("Rule name is required.");
+  if(!S.stackable && !$("f-excl").value.trim())
+    errs.push("An exclusive rule needs an exclusivity group to compete in.");
+  if(S.stackable && e.cat==="Earn" && !$("f-budget").value.trim())
+    warns.push("Stackable earn rule with no budget cap. Stacked awards compound across rules.");
+
+  var custom=[];
+  if(S.groups.length){
+    S.groups.forEach(function(g,gi){
+      var bounds={};
+      g.conds.forEach(function(c,ci){
+        var where="Group "+(gi+1)+", condition "+(ci+1);
+        if(!String(c.f).trim()) errs.push(where+" has no field path.");
+        else if(!isDeclared(c.f)) custom.push(c.f);
+        if(c.o!=="exists" && c.o!=="is_null" && !String(c.v).trim()) errs.push(where+" has no value.");
+        if(g.op==="AND"){
+          if(c.o==="gte") bounds[c.f]=bounds[c.f]||{}, bounds[c.f].lo=parseFloat(c.v);
+          if(c.o==="lte") bounds[c.f]=bounds[c.f]||{}, bounds[c.f].hi=parseFloat(c.v);
+        }
+      });
+      Object.keys(bounds).forEach(function(f){
+        var b=bounds[f];
+        if(b.lo!==undefined && b.hi!==undefined && !isNaN(b.lo) && !isNaN(b.hi) && b.lo>b.hi)
+          errs.push("Group "+(gi+1)+" can never match: "+f+" must be at least "+b.lo+" and at most "+b.hi+".");
+      });
+    });
+    if(custom.length){
+      var uniq=custom.filter(function(x,i){ return custom.indexOf(x)===i; });
+      warns.push(uniq.length+" field path"+(uniq.length===1?"":"s")+" not declared in the "+S.trigger+" schema ("+uniq.join(", ")+"). These resolve at runtime and evaluate to no match when absent from the payload.");
+    }
+    var statuses = e.fields.some(function(f){ return f[0]==="tx.status"; });
+    var hasStatus = S.groups.some(function(g){ return g.conds.some(function(c){ return c.f==="tx.status"; }); });
+    if(statuses && !hasStatus && e.cat==="Earn")
+      warns.push("No settlement check. Without tx.status = captured this rule can award on an authorisation that later voids.");
+  }
+
+  if(S.target==="CASH" && !$("f-budget").value.trim())
+    errs.push("A cash target needs a program budget cap.");
+  if(S.trigger==="cash.added" && S.target==="CASH")
+    errs.push("Crediting cash on cash.added creates an earning loop. Target POINTS instead.");
+  if(S.ruleType==="SpendRule" && parseFloat(S.calc.rate)>0.5)
+    warns.push("Rate above 50 percent. Confirm this is intended before saving.");
+  if(e.card==="Unlimited" && !$("f-lim-total").value.trim() && !$("f-lim-period").value.trim() && !$("f-budget").value.trim() && e.cat==="Earn")
+    warns.push("No cap of any kind on an earn rule.");
+  if($("f-test").checked) warns.push("Test mode is on. This rule evaluates and logs but posts nothing.");
+  if($("f-posting").value==="Delayed" && !Number($("f-hold").value))
+    errs.push("Delayed posting needs a hold period in days.");
+
+  var box=$("issues"), h="";
+  errs.forEach(function(m){ h+='<div class="issue err"><b>Blocks save</b><span>'+esc(m)+'</span></div>'; });
+  warns.forEach(function(m){ h+='<div class="issue wrn"><b>Check</b><span>'+esc(m)+'</span></div>'; });
+  if(!errs.length && !warns.length) h='<div class="issue ok"><b>Ready</b><span>No issues found.</span></div>';
+  box.innerHTML=h;
+  $("btn-save").disabled = errs.length>0;
+  return errs.length===0;
+}
+
+/* ---------- serialise ---------- */
+function typedValue(c){
+  var t=typeOf(c.f);
+  if(c.o==="exists"||c.o==="is_null") return {type:"none"};
+  if(t==="money")  return {type:"money", data:parseFloat(c.v)||0, currency:c.cur};
+  if(t==="number") return {type:"number", data:parseFloat(c.v)||0};
+  if(c.o==="in"||c.o==="not_in")
+    return {type:"string[]", data:String(c.v).split(",").map(function(x){return x.trim();}).filter(Boolean), inferred:t==="unknown"};
+  if(t==="unknown"){
+    var n=parseFloat(c.v);
+    if(String(c.v).trim()!=="" && !isNaN(n) && isFinite(c.v))
+      return {type:"number", data:n, inferred:true};
+    return {type:"string", data:c.v, inferred:true};
+  }
+  return {type:"string", data:c.v};
+}
+function serialise(){
+  var e=ev();
+  var rule={
+    name:$("f-name").value, priority:Number($("f-prio").value)||0,
+    triggerEvent:S.trigger, category:e.cat, triggerSource:e.src, cardinality:e.card,
+    ruleType:S.ruleType, targetAccount:S.target,
+    stackable:S.stackable,
+    exclusivityGroup:S.stackable ? null : ($("f-excl").value || null),
+    activeFrom:$("f-from").value || null, activeTo:$("f-to").value || null,
+    calculation:S.calc,
+    conditions: S.groups.length ? {
+      op:S.rootOp,
+      groups:S.groups.map(function(g){
+        return {op:g.op, conditions:g.conds.map(function(c){
+          return {field:c.f, operator:c.o, value:typedValue(c)};
+        })};
+      })
+    } : null,
+    limits:{
+      perCustomerTotal: e.card==="OncePerCustomer" ? 1 : (Number($("f-lim-total").value)||null),
+      perCustomerPerPeriod: Number($("f-lim-period").value)||null,
+      period: $("f-period").value,
+      resetWindow: $("f-reset").value,
+      maxPerEvent: Number($("f-lim-event").value)||null,
+      minEventAmount: Number($("f-min-amount").value)||null,
+      cooldownHours: Number($("f-cooldown").value)||null,
+      maxCustomers: Number($("f-max-cust").value)||null,
+      ruleBudgetTotal: Number($("f-budget").value)||null,
+      ruleBudgetPerPeriod: Number($("f-budget-period").value)||null,
+      onBreach: $("f-breach").value
+    },
+    configuration:{
+      rounding: $("f-rounding").value || null,
+      posting: $("f-posting").value,
+      holdDays: Number($("f-hold").value)||0,
+      expiryDaysOverride: Number($("f-expiry").value)||null,
+      reversible: $("f-reversible").checked,
+      testMode: $("f-test").checked,
+      notifyOnAward: $("f-notify").checked
+    }
+  };
+  $("out").textContent=JSON.stringify(rule,null,2);
+}
+
+function renderRail(){
+  var e=ev(), r=rt(), valid=validRuleTypes();
+  var nodes=[
+    {k:"Trigger event", v:S.trigger, n:e.cat+" · "+e.src+" · "+e.card, cls:"src"},
+    {k:"Rule type", v:S.ruleType, n:valid.length<2?"only valid option":"1 of "+valid.length+" valid", cls:valid.length<2?"locked":""},
+    {k:"Target account", v:S.target, n:r.targets.length<2?"locked by rule type":"1 of "+r.targets.length, cls:r.targets.length<2?"locked":""},
+    {k:"Calculation", v:r.calc.length+" field"+(r.calc.length===1?"":"s"), n:"shape set by rule type", cls:""},
+    {k:"Stacking", v:S.stackable?"stackable":"exclusive", n:S.stackable?"budget cap does the bounding":"group: "+($("f-excl").value||"none set"), cls:""},
+    {k:"Conditions", v:S.groups.length? (S.groups.length+" group"+(S.groups.length===1?"":"s")) : "none", n:e.fields.length? (e.fields.length+" suggested fields") : "no declared schema", cls:""},
+    {k:"Limits", v:e.card==="Unlimited"?"free":"enforced", n:e.card, cls:e.card==="Unlimited"?"":"locked"}
+  ];
+  $("rail").innerHTML=nodes.map(function(n){
+    return '<div class="node '+n.cls+'"><div class="node-k">'+n.k+'</div>'+
+           '<div class="node-v">'+esc(n.v)+'</div><div class="node-n">'+esc(n.n)+'</div></div>';
+  }).join("");
+}
+
+function renderAll(){ renderBasics(); renderStacking(); renderCalc(); renderConditions(); renderLimits(); renderRail(); validate(); serialise(); }
+function light(){ renderRail(); validate(); serialise(); }
+
+/* ---------- events ---------- */
+document.addEventListener("click", function(ev_){
+  var b=ev_.target.closest("button"); if(!b) return;
+
+  if(b.dataset.seg){
+    var sc=b.dataset.seg;
+    if(sc==="root") S.rootOp=b.dataset.v; else S.groups[+sc.slice(1)].op=b.dataset.v;
+    renderConditions(); light(); return;
+  }
+  if(b.dataset.delg!==undefined){
+    if(S.groups.length>1){ S.groups.splice(+b.dataset.delg,1); renderConditions(); light(); }
+    return;
+  }
+  if(b.dataset.delc!==undefined){
+    var p=b.dataset.delc.split("."), g=S.groups[+p[0]];
+    if(g.conds.length>1){ g.conds.splice(+p[1],1); renderConditions(); light(); }
+    return;
+  }
+  if(b.dataset.addc!==undefined){
+    var f=ev().fields[0];
+    S.groups[+b.dataset.addc].conds.push(f?{f:f[0],o:OPS[f[1]][0],v:"",cur:"SAR"}:{f:"",o:"eq",v:"",cur:"SAR"});
+    renderConditions(); light(); return;
+  }
+  if(b.id==="add-group"){
+    var f2=ev().fields[0];
+    S.groups.push({op:"AND", conds:[ f2?{f:f2[0],o:OPS[f2[1]][0],v:"",cur:"SAR"}:{f:"",o:"eq",v:"",cur:"SAR"} ]});
+    renderConditions(); light();
+    $("live").textContent="Group "+S.groups.length+" added."; return;
+  }
+  if(b.id==="btn-copy"){
+    navigator.clipboard && navigator.clipboard.writeText($("out").textContent);
+    b.textContent="Copied"; setTimeout(function(){ b.textContent="Copy"; },1400); return;
+  }
+  if(b.id==="btn-save"){ if(validate()) $("live").textContent="Rule saved."; return; }
+});
+
+document.addEventListener("change", function(ev_){
+  var t=ev_.target;
+  if(t.id==="f-trigger"){
+    S.trigger=t.value; S.calc={};
+    var f=ev().fields[0];
+    S.groups = [{op:"AND", conds:[ f ? {f:f[0], o:OPS[f[1]][0], v:"", cur:"SAR"} : {f:"", o:"eq", v:"", cur:"SAR"} ]}];
+    renderAll(); return;
+  }
+  if(t.id==="f-ruletype"){ S.ruleType=t.value; S.calc={}; renderBasics(); renderCalc(); renderLimits(); light(); return; }
+  if(t.id==="f-target"){ S.target=t.value; renderBasics(); renderLimits(); light(); return; }
+  if(t.id==="f-stack"){ S.stackable=t.checked; renderStacking(); light(); return; }
+  if(t.dataset.calc){ S.calc[t.dataset.calc]=t.value; light(); return; }
+  if(t.dataset.f){
+    var p=t.dataset.f.split("."), c=S.groups[+p[0]].conds[+p[1]];
+    c.f=t.value.trim();
+    if(OPS[typeOf(c.f)].indexOf(c.o)<0) c.o=OPS[typeOf(c.f)][0];
+    renderConditions(); light(); return;
+  }
+  if(t.dataset.o){ var q=t.dataset.o.split("."); S.groups[+q[0]].conds[+q[1]].o=t.value; light(); return; }
+  if(t.dataset.cur){ var m=t.dataset.cur.split("."); S.groups[+m[0]].conds[+m[1]].cur=t.value; light(); return; }
+});
+
+document.addEventListener("input", function(ev_){
+  var t=ev_.target;
+  if(t.dataset.f){
+    var q=t.dataset.f.split("."); S.groups[+q[0]].conds[+q[1]].f=t.value.trim();
+    t.classList.toggle("unknown", !!t.value.trim() && !isDeclared(t.value.trim()));
+    light(); return;
+  }
+  if(t.dataset.v){ var p=t.dataset.v.split("."); S.groups[+p[0]].conds[+p[1]].v=t.value; light(); return; }
+  if(t.dataset.calc){ S.calc[t.dataset.calc]=t.value; light(); return; }
+  if(t.id&&t.id.indexOf("f-")===0){ light(); }
+});
+
+renderAll();
+</script>
+</body>
+</html>

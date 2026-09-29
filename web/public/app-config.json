@@ -1,0 +1,17 @@
+{
+  "apiBaseUrl": "/api/v1",
+  "authMode": "http",
+  "defaultLocale": "en",
+  "platformTenantPageSize": 50,
+  "adminListPageSize": 25,
+  "features": {
+    "reports": false,
+    "settings": false,
+    "eventSimulator": true,
+    "eventInbox": false,
+    "outboxBrowser": false,
+    "streakInspector": false,
+    "jobStatus": false,
+    "darkMode": false
+  }
+}

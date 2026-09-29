@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentValidation" Version="11.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\dEngage.Loyalty.Api.Framework\dEngage.Loyalty.Api.Framework.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Schema\dEngage.Loyalty.Schema.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Shared\dEngage.Loyalty.Shared.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.RuleEngine\dEngage.Loyalty.RuleEngine.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Ledger\dEngage.Loyalty.Ledger.csproj" />
+  </ItemGroup>
+
+</Project>
