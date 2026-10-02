@@ -82,6 +82,9 @@ builder.Services.AddScoped<IRuleLimitEvaluator, RuleLimitEvaluator>();
 builder.Services.AddScoped<IBudgetReservationService, BudgetReservationService>();
 builder.Services.AddScoped<IWinnerSelector, WinnerSelector>();
 builder.Services.AddScoped<IStampCompletionHandler, StampCompletionHandler>();
+// CR 2026-09-30 (A2): pays out cashback / tier-upgrade rewards for RewardPurchaseHandler and
+// StreakCampaignModule.
+builder.Services.AddScoped<IRewardFulfilmentService, RewardFulfilmentService>();
 builder.Services.AddScoped<IRuleFireAuditWriter, RuleFireAuditWriter>();
 builder.Services.AddScoped<ILedgerPoster, LedgerPoster>();
 // CR-02: bypass WinnerSelector/LedgerPoster — see RuleEngine.cs dispatch and each

@@ -31,5 +31,11 @@ public class ProgramConfiguration : IEntityTypeConfiguration<Entities.Program>
             .IsRequired(false);
 
         builder.HasIndex(x => x.TenantId).HasDatabaseName("idx_programs_tenant_id");
+
+        // CR 2026-09-30 (A5): reward names are prefixed with it, so it must be unique per tenant.
+        builder.Property(x => x.Slug).HasColumnName("slug").HasMaxLength(40).IsRequired();
+        builder.HasIndex(x => new { x.TenantId, x.Slug })
+            .IsUnique()
+            .HasDatabaseName("ux_programs_tenant_slug");
     }
 }

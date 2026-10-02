@@ -11,12 +11,19 @@ public sealed class CreateRewardRequestValidator : AbstractValidator<CreateRewar
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(255);
 
-        RuleFor(x => x.Acquisition).Must(a => a is RewardAcquisition.PointsPurchase
-                or RewardAcquisition.StampCompletion or RewardAcquisition.StreakCompletion)
-            .WithMessage("Acquisition must be 'points_purchase', 'stamp_completion', or 'streak_completion'.");
+        // CR 2026-09-30 (A1): stamp_completion and the four non-cashback/tier types are retired —
+        // stored rows stay readable, but nothing new can be created with them.
+        RuleFor(x => x.Acquisition).Must(RewardAcquisition.IsCreatable)
+            .WithMessage("Acquisition must be 'points_purchase' or 'streak_completion'.");
 
         RuleFor(x => x.RewardType).Must(RewardTypeRegistry.IsKnown)
             .WithMessage(x => $"RewardType must be one of: {string.Join(", ", RewardTypeRegistry.KnownTypes)}.");
+
+        // §3.1 matrix: cashback with either acquisition, tier_upgrade only through a streak.
+        RuleFor(x => x.RewardType)
+            .Must((request, type) => RewardType.IsAllowedWith(type, request.Acquisition))
+            .When(x => RewardTypeRegistry.IsKnown(x.RewardType) && RewardAcquisition.IsCreatable(x.Acquisition))
+            .WithMessage("tier_upgrade_requires_streak_completion: a tier upgrade can only be earned through streak completion.");
 
         // Acquisition-specific fields, both ways: required for the acquisition type they belong
         // to, and rejected for every other one — a stray StampAccountTypeId on a points_purchase

@@ -17,11 +17,23 @@ internal static class MovedFieldMessages
         "status_not_settable_on_create: a new program always starts as a draft and inactive — publish it, then activate it.";
 }
 
+// CR 2026-09-30 (A5): lowercase letters, digits and single hyphens. No '_' — it separates the
+// slug from the rest of a reward name ({slug}_{suffix}), so allowing it would let two programs
+// claim the same reward name.
+internal static class ProgramSlugRules
+{
+    public const string Pattern = "^[a-z0-9]+(-[a-z0-9]+)*$";
+    public const string Message =
+        "slug must be 2-40 lowercase letters, digits and single hyphens (no underscores), e.g. 'fintech' or 'fin-tech'.";
+}
+
 public sealed class CreateProgramRequestValidator : AbstractValidator<CreateProgramRequest>
 {
     public CreateProgramRequestValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.Slug).Length(2, 40).Matches(ProgramSlugRules.Pattern).WithMessage(ProgramSlugRules.Message)
+            .When(x => x.Slug is not null);
         RuleFor(x => x.Status).Null().WithMessage(MovedFieldMessages.CreateStatus);
         RuleFor(x => x.QualifyingAccountTypeId).Null().WithMessage(MovedFieldMessages.QualifyingAccountType);
         RuleFor(x => x.WarningDays).Null().WithMessage(MovedFieldMessages.WarningDays);
@@ -33,6 +45,8 @@ public sealed class UpdateProgramRequestValidator : AbstractValidator<UpdateProg
     public UpdateProgramRequestValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(255).When(x => x.Name is not null);
+        RuleFor(x => x.Slug).Length(2, 40).Matches(ProgramSlugRules.Pattern).WithMessage(ProgramSlugRules.Message)
+            .When(x => x.Slug is not null);
         RuleFor(x => x.Status).Must(s => s is ProgramStatus.Active or ProgramStatus.Inactive)
             .When(x => x.Status is not null)
             .WithMessage("Status must be 'active' or 'inactive'.");

@@ -115,4 +115,72 @@ describe('AccountTypeFormDialog', () => {
       isTierQualifying: undefined,
     });
   });
+
+  // CR 2026-09-30 addendum A: points-transfer daily limit.
+  it('sends the transfer daily limit for POINTS when transfer is allowed', async () => {
+    const { form, submit } = setup();
+    form.patchValue({ name: 'Points', type: 'POINTS', decimals: 0 });
+    form.controls.transferEnabled.setValue(true);
+    form.controls.transferDailyLimit.setValue(5000);
+    await submit();
+    expect(service.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ config: { decimals: 0, transfer: { daily_limit: 5000 } } }),
+    );
+  });
+
+  it('does not let a hidden, invalid limit block a save when transfer is off', async () => {
+    const { form, submit } = setup();
+    form.patchValue({ name: 'Points', type: 'POINTS', decimals: 0 });
+    form.controls.transferDailyLimit.setValue(0);
+    await submit();
+    expect(service.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ config: { decimals: 0 } }),
+    );
+  });
+
+  // Regression: the form rebuilt the config from its own fields only, so editing a wallet
+  // silently dropped `transfer` (and any other key it doesn't show).
+  it('keeps the transfer limit and unknown settings when editing a POINTS account type', async () => {
+    const existing: AccountType = {
+      id: 'existing',
+      type: 'POINTS',
+      name: 'FinPuan',
+      config: { decimals: 0, transfer: { daily_limit: 5000 }, custom_flag: true },
+      createdAt: '2026-09-01T00:00:00Z',
+      isTierQualifying: false,
+    };
+    const { form, submit } = setup({ existing });
+    expect(form.controls.transferEnabled.value).toBe(true);
+    expect(form.controls.transferDailyLimit.value).toBe(5000);
+    form.controls.name.setValue('FinPuan renamed');
+    await submit();
+    expect(service.update).toHaveBeenCalledWith(
+      'p1',
+      'existing',
+      expect.objectContaining({
+        config: { custom_flag: true, decimals: 0, transfer: { daily_limit: 5000 } },
+      }),
+    );
+  });
+
+  it('removes the transfer setting when transfer is switched off', async () => {
+    const existing: AccountType = {
+      id: 'existing',
+      type: 'POINTS',
+      name: 'FinPuan',
+      config: { decimals: 0, transfer: { daily_limit: 5000 } },
+      createdAt: '2026-09-01T00:00:00Z',
+      isTierQualifying: false,
+    };
+    const { form, submit } = setup({ existing });
+    form.controls.transferEnabled.setValue(false);
+    await submit();
+    expect(service.update).toHaveBeenCalledWith(
+      'p1',
+      'existing',
+      expect.objectContaining({ config: { decimals: 0 } }),
+    );
+  });
 });

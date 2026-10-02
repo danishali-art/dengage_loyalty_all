@@ -26,6 +26,12 @@ export interface PointsConfig {
   /** 1.3.CL item 1: "expiring soon" warning, moved here from Program. Requires expiration_days. */
   warning_days?: number | null;
   redemption?: { rate: number; min_points: number; target_account_type_id: string } | null;
+  /**
+   * CR 2026-09-30 addendum A: points transfer between customers, capped per sender per UTC day
+   * (PointsTransferHandler). Absent = transfers are refused (`transfer_not_configured`).
+   * POINTS only — the backend rejects it on CASH and STAMP.
+   */
+  transfer?: { daily_limit: number } | null;
 }
 
 /** CASH has no expiration_days (1.3.CL item 3) — the backend rejects it. */

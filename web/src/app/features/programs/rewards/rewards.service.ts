@@ -11,7 +11,9 @@ export class RewardsService {
   private readonly api = inject(ApiClient);
 
   list(programId: string, page = 1, pageSize = 20): Promise<Page<Reward>> {
-    return firstValueFrom(this.api.tenantScope.getPage<Reward>(`programs/${programId}/rewards`, { page, pageSize }));
+    return firstValueFrom(
+      this.api.tenantScope.getPage<Reward>(`programs/${programId}/rewards`, { page, pageSize }),
+    );
   }
 
   /** Every reward in the program — used to populate the streak "reward definition" select. */
@@ -21,7 +23,9 @@ export class RewardsService {
 
   create(programId: string, request: CreateRewardRequest): Promise<Reward> {
     return firstValueFrom(
-      this.api.tenantScope.post<Reward>(`programs/${programId}/rewards`, request, { skipErrorToast: true }),
+      this.api.tenantScope.post<Reward>(`programs/${programId}/rewards`, request, {
+        skipErrorToast: true,
+      }),
     );
   }
 
@@ -35,11 +39,26 @@ export class RewardsService {
 
   setActive(programId: string, rewardId: string, isActive: boolean): Promise<Reward> {
     return firstValueFrom(
-      this.api.tenantScope.patch<Reward>(`programs/${programId}/rewards/${rewardId}/active`, { isActive }),
+      this.api.tenantScope.patch<Reward>(`programs/${programId}/rewards/${rewardId}/active`, {
+        isActive,
+      }),
+    );
+  }
+
+  /** CR 2026-09-30 (A4): a different admin than the creator — the API rejects self-approval. */
+  approve(programId: string, rewardId: string): Promise<Reward> {
+    return firstValueFrom(
+      this.api.tenantScope.patch<Reward>(
+        `programs/${programId}/rewards/${rewardId}/approve`,
+        {},
+        { skipErrorToast: true },
+      ),
     );
   }
 
   delete(programId: string, rewardId: string): Promise<void> {
-    return firstValueFrom(this.api.tenantScope.delete<void>(`programs/${programId}/rewards/${rewardId}`));
+    return firstValueFrom(
+      this.api.tenantScope.delete<void>(`programs/${programId}/rewards/${rewardId}`),
+    );
   }
 }

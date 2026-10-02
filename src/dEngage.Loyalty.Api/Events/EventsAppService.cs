@@ -63,6 +63,12 @@ public sealed class EventsAppService(
     // shares the same allow-list of non-built-in event types this deployment accepts at all.
     // Which tenant's Rules actually react to one is a separate, already-tenant-scoped concern
     // (RuleEngine matches rules by tenantId + programId, not by this list).
-    public EventTypesResponse GetEventTypes() =>
-        new(EventTypes.All, rabbitMqOptions.Value.GenericEventTypes);
+    public EventTypesResponse GetEventTypes()
+    {
+        var generic = rabbitMqOptions.Value.GenericEventTypes;
+        // Same predicate PublishAsync enforces, so the simulator never offers a type the API
+        // would reject as "scheduled internally".
+        var publishable = EventTypes.All.Where(EventTypes.IsExternallyPublishable).Concat(generic).ToList();
+        return new(EventTypes.All, generic, publishable);
+    }
 }

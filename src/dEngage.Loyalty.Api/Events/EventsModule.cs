@@ -70,7 +70,7 @@ public sealed class EventsModule : TenantScopedModule
             var tenantId = RequireTenantScope(RouteParam(parameters, "tenantId"));
             RequireApiKeyPrincipal();
             var request = await Request.ReadValidatedJsonBodyAsync(pointsTransferValidator, ct);
-            return Accepted(await appService.PublishAsync(tenantId, EventTypes.PointsTransfer, request, IdempotencyKey(), ct));
+            return Accepted(await appService.PublishAsync(tenantId, EventTypes.PointsTransfer, request.ToEventData(), IdempotencyKey(), ct));
         });
 
         MapPost("/reward-purchase", async (parameters, ct) =>

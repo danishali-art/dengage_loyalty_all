@@ -25,4 +25,8 @@ public static class LedgerReason
     // docs/scope-changes changelog: left disconnected pending an explicit coexistence decision
     // with RefundService) and must never share its cumulative-refund-cap bookkeeping with it.
     public const string RuleReversal = "rule_reversal";
+
+    // CR 2026-09-30 (A2): the CASH credit a cashback reward pays out (bought with points or
+    // earned through a streak). Its own reason so payouts can be told apart from cash loads.
+    public const string RewardCashback = "reward_cashback";
 }

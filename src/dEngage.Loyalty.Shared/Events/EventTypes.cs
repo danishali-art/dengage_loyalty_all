@@ -121,11 +121,13 @@ public static class EventTypes
             [PointsRedeem] = new(PointsRedeem, EventCategory.Burn, EventSource.Behavioural, EventCardinality.Unlimited, null,
                 new[] { new EventFieldSchema("points_amount", EventFieldKind.Number) }),
 
-            // Confirmed contract: RewardPurchaseHandler ("reward_name", "channel").
+            // Confirmed contract: RewardPurchaseHandler ("reward_name" or "reward_id", "channel").
+            // reward_id added by CR 2026-09-30 (§3.7).
             [RewardPurchase] = new(RewardPurchase, EventCategory.Burn, EventSource.Behavioural, EventCardinality.Unlimited, null,
                 new[]
                 {
                     new EventFieldSchema("reward_name", EventFieldKind.String),
+                    new EventFieldSchema("reward_id", EventFieldKind.String),
                     new EventFieldSchema("channel", EventFieldKind.String)
                 }),
 

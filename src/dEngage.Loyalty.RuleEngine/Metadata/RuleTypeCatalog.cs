@@ -58,10 +58,25 @@ public static class RuleTypeCatalog
     // don't carry category/field metadata yet, see EventTypes catalog) is treated as compatible
     // with everything: there is nothing to structurally rule out, and generic events are freely
     // assignable to any rule type today, so this check must not regress that.
+    // CR 2026-09-30 item 8: category + field kinds alone are too loose for the burn events —
+    // RedemptionRule only needs "a Number field", which let it onto points.transfer. These events
+    // each have exactly one meaningful rule type (and reward.purchase has none: it is configured
+    // through the reward definition, never through rules). Checked on top of the category/kind
+    // test, never instead of it; events not listed here are unaffected.
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> AllowedRuleTypesByEvent =
+        new Dictionary<string, IReadOnlyList<string>>
+        {
+            [EventTypes.PointsTransfer] = new[] { RuleTypes.TransferRule },
+            [EventTypes.PointsRedeem] = new[] { RuleTypes.RedemptionRule },
+            [EventTypes.RewardPurchase] = Array.Empty<string>(),
+        };
+
     public static bool IsCompatible(EventDefinition? evt, string ruleType)
     {
         if (!Catalog.TryGetValue(ruleType, out var meta)) return false;
         if (evt is null) return true;
+        if (AllowedRuleTypesByEvent.TryGetValue(evt.EventType, out var allowed) && !allowed.Contains(ruleType))
+            return false;
         if (evt.Category != meta.Category) return false;
 
         var availableKinds = evt.Fields.Select(f => f.Kind).ToHashSet();

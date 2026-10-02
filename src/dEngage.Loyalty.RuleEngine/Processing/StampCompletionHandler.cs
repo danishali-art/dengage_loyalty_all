@@ -55,62 +55,45 @@ public sealed class StampCompletionHandler(
             idempotencyKey: $"{eventId}:{rule.Id}:reset",
             ct: ct);
 
-        // The active reward definition the tenant mapped to this stamp account.
-        // If there is no definition, legacy behavior: pending record with the reward name from config.
-        var definition = await db.RewardDefinitions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x =>
-                x.TenantId == tenantGuid &&
-                x.StampAccountTypeId == account.AccountTypeId &&
-                x.Acquisition == RewardAcquisition.StampCompletion &&
-                x.IsActive, ct);
-
+        // CR 2026-09-30 (A1, O1): stamp-completion reward definitions are retired, so nothing is
+        // resolved any more. The completion is still announced — every stamp completion publishes
+        // loyalty.reward.earned named after the STAMP account type's config.reward_type, with
+        // reward_type null (it is no longer a catalog reward), so existing listeners keep working.
         var now = DateTime.UtcNow;
-        var reward = new RewardLog
+        db.RewardLogs.Add(new RewardLog
         {
             Id = UUIDNext.Uuid.NewDatabaseFriendly(UUIDNext.Database.PostgreSql),
             TenantId = tenantGuid,
             ContactKey = contactKey,
             AccountTypeId = account.AccountTypeId,
-            RewardName = definition?.Name ?? config.RewardType,
+            RewardName = config.RewardType,
             SourceEventId = eventId,
             LedgerResetEntryId = resetEntry.Id,
             CompletionCount = completionCount,
-            RewardDefinitionId = definition?.Id,
-            Status = definition is null ? RewardLogStatus.Pending : RewardLogStatus.Notified,
+            RewardDefinitionId = null,
+            Status = RewardLogStatus.Notified,
             CreatedAt = now,
-            DeliveredAt = definition is null ? null : now
-        };
+            DeliveredAt = now
+        });
 
-        db.RewardLogs.Add(reward);
+        await outbox.Enqueue(
+            tenantId,
+            dEngage.Loyalty.Shared.Events.OutboundEventTypes.RewardEarned,
+            contactKey,
+            new
+            {
+                contact_key = contactKey,
+                reward_name = config.RewardType,
+                reward_type = (string?)null,
+                source = RewardAcquisition.StampCompletion,
+                completion_count = completionCount,
+                source_event_id = eventId
+            },
+            dedupKey: $"reward_earned:{eventId}:{account.AccountTypeId}");
 
-        if (definition is not null)
-        {
-            await outbox.Enqueue(
-                tenantId,
-                dEngage.Loyalty.Shared.Events.OutboundEventTypes.RewardEarned,
-                contactKey,
-                new
-                {
-                    contact_key = contactKey,
-                    reward_name = definition.Name,
-                    reward_type = definition.RewardType,
-                    source = RewardAcquisition.StampCompletion,
-                    completion_count = completionCount,
-                    source_event_id = eventId
-                },
-                dedupKey: $"reward_earned:{eventId}:{account.AccountTypeId}");
-
-            logger.LogInformation(
-                "RuleEngine: [{Tenant}] REWARD contact={Contact} reward={Reward} type={RewardType} completion={Count}",
-                tenantId, contactKey, definition.Name, definition.RewardType, completionCount);
-        }
-        else
-        {
-            logger.LogWarning(
-                "RuleEngine: [{Tenant}] stamp completed but no active reward_definition — account_type={AccountType} reward_type={RewardType} left pending",
-                tenantId, account.AccountTypeId, config.RewardType);
-        }
+        logger.LogInformation(
+            "RuleEngine: [{Tenant}] STAMP COMPLETION contact={Contact} reward={Reward} completion={Count}",
+            tenantId, contactKey, config.RewardType, completionCount);
 
         await db.SaveChangesAsync(ct); // RewardLog + OutboxEvent in the same tx
     }

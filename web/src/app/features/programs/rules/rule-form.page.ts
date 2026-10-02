@@ -70,13 +70,22 @@ const DEFAULT_TRIGGER = 'order.created';
 const CATEGORY_ORDER = ['Earn', 'Burn', 'Reverse', 'Adjust'] as const;
 const OTHER_GROUP = 'Other';
 
-function buildTriggerOptions(
+/** Exported for its spec only. */
+export function buildTriggerOptions(
   catalog: EventTypesCatalog | null,
   metadata: RulesMetadata | null,
+  keep: string | null,
 ): SelectOption<string>[] {
   if (!catalog) return [{ value: DEFAULT_TRIGGER, label: DEFAULT_TRIGGER, group: 'Earn' }];
 
   const categoryByType = new Map(metadata?.events.map((e) => [e.eventType, e.category]) ?? []);
+  // CR 2026-09-30 item 8: an event no rule type can use (reward.purchase — configured through
+  // its reward definition) isn't offered as a trigger. `keep` is an existing rule's own trigger,
+  // so a rule saved before that change still opens with its trigger shown.
+  const ruleless = new Set(
+    metadata?.events.filter((e) => e.compatibleRuleTypes.length === 0).map((e) => e.eventType) ??
+      [],
+  );
   const groupRank = (group: string): number => {
     const i = CATEGORY_ORDER.indexOf(group as (typeof CATEGORY_ORDER)[number]);
     return i === -1 ? CATEGORY_ORDER.length : i;
@@ -88,6 +97,7 @@ function buildTriggerOptions(
   const seen = new Set<string>();
   return [...catalog.builtIn, ...catalog.generic]
     .filter((type) => (seen.has(type) ? false : (seen.add(type), true)))
+    .filter((type) => !ruleless.has(type) || type === keep)
     .map((type) => ({ value: type, label: type, group: categoryByType.get(type) ?? OTHER_GROUP }))
     .sort((a, b) => groupRank(a.group) - groupRank(b.group) || a.label.localeCompare(b.label));
 }
@@ -119,7 +129,9 @@ function buildTriggerOptions(
         <app-button variant="secondary" [routerLink]="['/programs', programId(), 'rules']"
           >Cancel</app-button
         >
-        <app-button [pending]="saving()" (click)="submit()">Save</app-button>
+        <app-button [pending]="saving()" [disabled]="noRuleType()" (click)="submit()"
+          >Save</app-button
+        >
       </div>
     </app-page-header>
 
@@ -208,7 +220,11 @@ function buildTriggerOptions(
                   <option [value]="t">{{ t }}</option>
                 }
               </select>
-              @if (selectedRuleTypeMeta(); as meta) {
+              @if (noRuleType()) {
+                <p class="text-danger-fg mt-1 text-xs" role="status">
+                  {{ 'rules.type.none' | translate }}
+                </p>
+              } @else if (selectedRuleTypeMeta(); as meta) {
                 <p class="mt-1 text-xs text-gray-500">{{ meta.note }}</p>
               }
               @if (isEdit()) {
@@ -216,7 +232,10 @@ function buildTriggerOptions(
               }
             </div>
           </div>
-          @if (needsTargetAccount()) {
+          @if (noRuleType()) {
+            <!-- No rule type → no target to pick; showing the list here is what used to offer
+                 POINTS/CASH for reward.purchase. -->
+          } @else if (needsTargetAccount()) {
             <div>
               <span id="targetAccountTypeId-label" class="field-label"
                 >Target account <span class="text-danger-fg" aria-hidden="true">*</span></span
@@ -738,8 +757,10 @@ export class RuleFormPage implements OnInit {
   // category, and triggerOptions recomputes grouped by category (CR-01's EventCategory) once
   // both land — order matters here since app-searchable-select groups by adjacency, not value.
   private readonly eventTypesCatalog = signal<EventTypesCatalog | null>(null);
+  /** The loaded rule's trigger, kept in the trigger list even if no rule type fits it any more. */
+  private readonly loadedTrigger = signal<string | null>(null);
   protected readonly triggerOptions = computed(() =>
-    buildTriggerOptions(this.eventTypesCatalog(), this.metadata()),
+    buildTriggerOptions(this.eventTypesCatalog(), this.metadata(), this.loadedTrigger()),
   );
 
   private loading = true;
@@ -883,6 +904,9 @@ export class RuleFormPage implements OnInit {
     return RULE_TYPES.filter((t) => evt.compatibleRuleTypes.includes(t));
   });
 
+  /** No rule type can be used with the chosen trigger (RuleTypeCatalog allows none). */
+  protected readonly noRuleType = computed(() => this.typeOptions().length === 0);
+
   protected readonly selectedRuleTypeMeta = computed(
     () => this.metadata()?.ruleTypes.find((rt) => rt.ruleType === this.typeValue()) ?? null,
   );
@@ -925,8 +949,12 @@ export class RuleFormPage implements OnInit {
         this.conditions.set(emptyTree());
         if (!this.isEdit()) {
           const opts = this.typeOptions();
-          if (!opts.includes(this.form.controls.type.value)) {
-            this.form.controls.type.setValue(opts[0] ?? RULE_TYPES[0]);
+          // No fallback when the trigger allows no rule type: a hidden default type (it used to
+          // be RULE_TYPES[0]) drove the target-account list and only failed on Save. The form
+          // shows the noRuleType state instead.
+          const first = opts[0];
+          if (first !== undefined && !opts.includes(this.form.controls.type.value)) {
+            this.form.controls.type.setValue(first);
           }
         }
       };
@@ -993,6 +1021,7 @@ export class RuleFormPage implements OnInit {
     const limits = rule.limits;
     const config = rule.configuration;
 
+    this.loadedTrigger.set(rule.trigger);
     this.form.patchValue({
       name: rule.name,
       priority: rule.priority,
@@ -1112,7 +1141,7 @@ export class RuleFormPage implements OnInit {
   }
 
   protected async submit(): Promise<void> {
-    if (this.saving()) return;
+    if (this.saving() || this.noRuleType()) return;
     this.formErrors.set([]);
     this.submitted.set(true);
 

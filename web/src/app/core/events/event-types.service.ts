@@ -7,6 +7,10 @@ import { ApiClient } from '../http/api-client';
 export interface EventTypesCatalog {
   builtIn: readonly string[];
   generic: readonly string[];
+  /** What a caller may actually send: built-ins minus the internally scheduled ones
+   * (`birthdaybonus`, `points.expired`), plus the generic types. Rule/streak builders keep using
+   * `builtIn`, since scheduled types are still valid rule triggers. */
+  publishable: readonly string[];
 }
 
 @Injectable({ providedIn: 'root' })

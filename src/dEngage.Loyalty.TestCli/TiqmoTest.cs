@@ -143,8 +143,12 @@ public static class TiqmoTest
             }, DateTime.UtcNow, badRedeemId);
             await WaitAsync(2500);
             Assert("below min 1000: points unchanged", await GetBalanceAsync("tq_e", FinPuanId), 200m);
-            Assert("below_minimum: inbox failed", await ScalarIntAsync(
-                $"SELECT COUNT(*) FROM event_inbox WHERE tenant_id='{TENANT}' AND event_id='{badRedeemId}' AND status='failed'"), 1);
+            // CR 2026-09-30 §3.9 step 4: below_minimum is a business outcome now — the event is
+            // processed (not dead-lettered) and reported with loyalty.points.redeem_failed.
+            Assert("below_minimum: inbox processed", await ScalarIntAsync(
+                $"SELECT COUNT(*) FROM event_inbox WHERE tenant_id='{TENANT}' AND event_id='{badRedeemId}' AND status='processed'"), 1);
+            Assert("below_minimum: redeem_failed outbox", await ScalarIntAsync(
+                $"SELECT COUNT(*) FROM outbox_events WHERE tenant_id='{_tid}' AND event_type='loyalty.points.redeem_failed' AND dedup_key='redeem_failed:{badRedeemId}' AND payload->'data'->>'reason'='below_minimum'"), 1);
         });
 
         // ── TQ04: Points transfer ────────────────────────────────────────

@@ -36,8 +36,12 @@ public static class RewardTest
         var stampTarget = await ScalarIntAsync(
             $"SELECT (config->>'stamp_target')::int FROM account_types WHERE id = '{StampAccountId}'");
 
-        // ── RW01: Defined coupon + outbox when stamp card completes ──────
-        await RunTest($"RW01 — {stampTarget} coffees → stamp card fills, 'bedava_icecek' notified + reward.earned outbox", async () =>
+        // ── RW01: stamp card completes → reward.earned outbox (CR 2026-09-30 A1/O1) ──
+        // Stamp-completion reward definitions are retired; the completion is still announced,
+        // named after the STAMP account's config.reward_type, with reward_type null.
+        var stampRewardName = await ScalarStringAsync(
+            $"SELECT config->>'reward_type' FROM account_types WHERE id = '{StampAccountId}'") ?? "";
+        await RunTest($"RW01 — {stampTarget} coffees → stamp card fills, '{stampRewardName}' notified + reward.earned outbox", async () =>
         {
             for (int i = 0; i < stampTarget; i++)
             {
@@ -50,21 +54,21 @@ public static class RewardTest
             Assert("stamp reset to 0", stamp, 0m);
 
             var rewardCount = await ScalarIntAsync(
-                $"SELECT COUNT(*) FROM reward_log WHERE tenant_id='{_tid}' AND contact_key='rw_user1' AND reward_name='bedava_icecek' AND status='notified' AND reward_definition_id IS NOT NULL AND delivered_at IS NOT NULL");
-            Assert("reward_log: bedava_icecek notified", rewardCount, 1);
+                $"SELECT COUNT(*) FROM reward_log WHERE tenant_id='{_tid}' AND contact_key='rw_user1' AND reward_name='{stampRewardName}' AND status='notified' AND reward_definition_id IS NULL AND delivered_at IS NOT NULL");
+            Assert($"reward_log: {stampRewardName} notified (no definition)", rewardCount, 1);
 
             var outboxCount = await ScalarIntAsync($"""
                 SELECT COUNT(*) FROM outbox_events
                 WHERE tenant_id='{_tid}' AND contact_key='rw_user1'
                   AND event_type='loyalty.reward.earned'
-                  AND payload->'data'->>'reward_type' = 'free_product'
+                  AND payload->'data'->>'reward_type' IS NULL
                   AND payload->'data'->>'source' = 'stamp_completion'
                 """);
-            Assert("outbox: reward.earned (free_product)", outboxCount, 1);
+            Assert("outbox: reward.earned (stamp, reward_type null)", outboxCount, 1);
         });
 
         // ── RW02: reward.purchase — successful purchase ───────────────────
-        await RunTest("RW02 — 500★ buys 'indirim_50' → −500★ + reward.earned outbox", async () =>
+        await RunTest("RW02 — 500★ buys 'cashback_50' → −500★, +50 on the card + reward.earned outbox", async () =>
         {
             await SendOrderAsync(channel, "rw_user2", 1000m, "mobile", "coffee");
             await SendOrderAsync(channel, "rw_user2", 1000m, "mobile", "coffee");
@@ -73,30 +77,34 @@ public static class RewardTest
             var starsBefore = await GetBalanceAsync("rw_user2", "Stars");
             if (starsBefore < 500m)
                 throw new Exception($"setup error: rw_user2 stars {starsBefore} < 500 — rules may have changed");
+            var cardBefore = await GetBalanceAsync("rw_user2", "Starbucks Card");
 
-            await SendRewardPurchaseAsync(channel, Guid.NewGuid().ToString(), "rw_user2", "indirim_50");
+            await SendRewardPurchaseAsync(channel, Guid.NewGuid().ToString(), "rw_user2", "cashback_50");
             await WaitAsync();
 
             var starsAfter = await GetBalanceAsync("rw_user2", "Stars");
             Assert("Stars −500", starsAfter, starsBefore - 500m);
+            // CR 2026-09-30 (A2): the cashback is actually paid into the CASH wallet.
+            Assert("Starbucks Card +50 (cashback)", await GetBalanceAsync("rw_user2", "Starbucks Card"), cardBefore + 50m);
 
             var ledgerCount = await ScalarIntAsync(
                 "SELECT COUNT(*) FROM ledger_entries WHERE tenant_id='starbucks' AND contact_key='rw_user2' AND reason='reward_purchase' AND delta = -500");
             Assert("ledger: reward_purchase −500", ledgerCount, 1);
 
             var rewardCount = await ScalarIntAsync(
-                $"SELECT COUNT(*) FROM reward_log WHERE tenant_id='{_tid}' AND contact_key='rw_user2' AND reward_name='indirim_50' AND status='notified' AND reward_definition_id IS NOT NULL");
-            Assert("reward_log: indirim_50 notified", rewardCount, 1);
+                $"SELECT COUNT(*) FROM reward_log WHERE tenant_id='{_tid}' AND contact_key='rw_user2' AND reward_name='cashback_50' AND status='notified' AND reward_definition_id IS NOT NULL");
+            Assert("reward_log: cashback_50 notified", rewardCount, 1);
 
             var outboxCount = await ScalarIntAsync($"""
                 SELECT COUNT(*) FROM outbox_events
                 WHERE tenant_id='{_tid}' AND contact_key='rw_user2'
                   AND event_type='loyalty.reward.earned'
-                  AND payload->'data'->>'reward_type' = 'discount'
+                  AND payload->'data'->>'reward_type' = 'cashback'
                   AND payload->'data'->>'source' = 'points_purchase'
                   AND payload->'data'->>'points_spent' = '500.00'
+                  AND payload->'data'->>'cashback_amount' = '50.00'
                 """);
-            Assert("outbox: reward.earned (discount, points_purchase)", outboxCount, 1);
+            Assert("outbox: reward.earned (cashback, points_purchase)", outboxCount, 1);
         });
 
         // ── RW03: Same reward.purchase event twice → single deduction ─────
@@ -111,9 +119,9 @@ public static class RewardTest
                 throw new Exception($"setup error: rw_user3 stars {starsBefore} < 500");
 
             var eventId = Guid.NewGuid().ToString();
-            await SendRewardPurchaseAsync(channel, eventId, "rw_user3", "indirim_50");
+            await SendRewardPurchaseAsync(channel, eventId, "rw_user3", "cashback_50");
             await WaitAsync();
-            await SendRewardPurchaseAsync(channel, eventId, "rw_user3", "indirim_50");
+            await SendRewardPurchaseAsync(channel, eventId, "rw_user3", "cashback_50");
             await WaitAsync();
 
             var starsAfter = await GetBalanceAsync("rw_user3", "Stars");
@@ -139,7 +147,7 @@ public static class RewardTest
                 throw new Exception($"setup error: rw_user4 stars {starsBefore} >= 500");
 
             var eventId = Guid.NewGuid().ToString();
-            await SendRewardPurchaseAsync(channel, eventId, "rw_user4", "indirim_50");
+            await SendRewardPurchaseAsync(channel, eventId, "rw_user4", "cashback_50");
             await WaitAsync();
 
             var starsAfter = await GetBalanceAsync("rw_user4", "Stars");
@@ -257,17 +265,19 @@ public static class RewardTest
                    d.stamp_id::uuid, d.price, d.points_id::uuid, d.reward_type, d.type_config::jsonb, true, now()
             FROM (SELECT id FROM programs WHERE tenant_id = '{{_tid}}' LIMIT 1) p
             CROSS JOIN (VALUES
-                ('bedava_icecek', 'Free Drink (Medium)', 'stamp_completion',
-                 @stamp_account, NULL::numeric, NULL, 'free_product', '{"product_sku":"FREE_DRINK_M","quantity":1}'),
-                ('indirim_50', '50 TL Discount Coupon', 'points_purchase',
-                 NULL, 500::numeric, @stars_account, 'discount', '{"discount_kind":"fixed","value":"50"}')
+                -- CR 2026-09-30: stamp-completion definitions are retired (RW01 runs without one);
+                -- the purchasable reward is a cashback paid into the tenant's CASH card.
+                ('cashback_50', '50 TL Cashback', 'points_purchase',
+                 NULL, 500::numeric, @stars_account, 'cashback',
+                 (SELECT jsonb_build_object('amount', '50.00', 'currency', at.config->>'currency', 'cash_account_type_id', at.id::text)::text
+                  FROM account_types at
+                  WHERE at.tenant_id = '{{_tid}}'::uuid AND at.type = 'CASH' AND at.name = 'Starbucks Card'))
             ) AS d(name, display_name, acquisition, stamp_id, price, points_id, reward_type, type_config)
             """, db);
-        seed.Parameters.AddWithValue("stamp_account", StampAccountId);
         seed.Parameters.AddWithValue("stars_account", StarsAccountId);
         await seed.ExecuteNonQueryAsync();
 
-        AnsiConsole.MarkupLine("[grey]DB reset, reward_definitions seeded (bedava_icecek + indirim_50).[/]");
+        AnsiConsole.MarkupLine("[grey]DB reset, reward_definitions seeded (cashback_50).[/]");
 
         await FlushRedisLimitsAsync();
         AnsiConsole.MarkupLine("[grey]Redis limit cache cleared.[/]\n");

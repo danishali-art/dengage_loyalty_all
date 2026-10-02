@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { PageHeader } from '../../shared/ui/page-header';
@@ -6,10 +13,73 @@ import { Button } from '../../shared/ui/button';
 import { FormErrors } from '../../shared/ui/form-errors';
 import { SearchableSelect, SelectOption } from '../../shared/ui/searchable-select';
 import { StatusPill } from '../../shared/ui/status-pill';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ToastService } from '../../core/ui/toast.service';
 import { ApiError } from '../../core/http/api-error';
+import { EventTypesCatalog } from '../../core/events/event-types.service';
 import { EventsService } from './events.service';
 import { EventStatus } from './event.model';
+
+// The API already leaves these out of `publishable` (EventTypes.IsExternallyPublishable — they're
+// produced by the nightly jobs and always rejected on publish). Filtering here too is the O9
+// fallback for an API that predates the `publishable` list.
+const SCHEDULED_EVENT_TYPES: readonly string[] = ['birthdaybonus', 'points.expired'];
+
+/** Field guidance per event type, checked against the Consumer handlers that read each payload. */
+interface EventHelp {
+  required: readonly string[];
+  optional?: readonly string[];
+  /** i18n key for the type-specific note. */
+  note: string;
+}
+
+const EVENT_HELP: Readonly<Record<string, EventHelp>> = {
+  'order.created': {
+    required: ['contact_key', 'amount'],
+    optional: ['channel', 'items'],
+    note: 'events.simulator.help.orderCreated',
+  },
+  'order.refunded': {
+    required: ['original_event_id'],
+    optional: ['refund_ratio', 'amount', 'original_amount'],
+    note: 'events.simulator.help.orderRefunded',
+  },
+  'cash.added': {
+    required: ['contact_key', 'amount', 'account_type_id'],
+    note: 'events.simulator.help.cashAdded',
+  },
+  'cash.spent': {
+    required: ['contact_key', 'amount', 'account_type_id'],
+    note: 'events.simulator.help.cashSpent',
+  },
+  'points.redeem': {
+    required: ['contact_key', 'points_amount', 'source_account_type_id'],
+    note: 'events.simulator.help.pointsRedeem',
+  },
+  'points.transfer': {
+    required: ['contact_key', 'target_contact_key', 'points_amount', 'source_account_type_id'],
+    note: 'events.simulator.help.pointsTransfer',
+  },
+  'reward.purchase': {
+    required: ['contact_key', 'reward_name'],
+    optional: ['channel'],
+    note: 'events.simulator.help.rewardPurchase',
+  },
+  'points.adjusted': {
+    required: ['contact_key', 'reason_code'],
+    note: 'events.simulator.help.pointsAdjusted',
+  },
+};
+
+const BUILT_IN_DEFAULT_HELP: EventHelp = {
+  required: ['contact_key'],
+  note: 'events.simulator.help.builtInDefault',
+};
+// GenericEventValidator rejects a non-built-in event without all three.
+const GENERIC_HELP: EventHelp = {
+  required: ['contact_key', 'channel', 'amount'],
+  note: 'events.simulator.help.generic',
+};
 
 const DEFAULT_DATA_JSON = `{
   "contact_key": "cust_test_1",
@@ -23,7 +93,16 @@ const STATUS_POLL_ATTEMPTS = 6;
 @Component({
   selector: 'app-event-simulator-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, PageHeader, Button, FormErrors, SearchableSelect, StatusPill, DatePipe],
+  imports: [
+    FormsModule,
+    TranslatePipe,
+    PageHeader,
+    Button,
+    FormErrors,
+    SearchableSelect,
+    StatusPill,
+    DatePipe,
+  ],
   template: `
     <app-page-header
       heading="Event Simulator"
@@ -48,11 +127,17 @@ const STATUS_POLL_ATTEMPTS = 6;
             (ngModelChange)="eventType.set($event)"
           />
           <p class="mt-1.5 text-xs text-gray-500">
-            @if (types()) {
-              Built-in: {{ types()!.builtIn.join(', ') }}. Generic (deployment-wide, configured in
-              <code class="font-mono">RabbitMq:GenericEventTypes</code>): {{ types()!.generic.join(', ') || 'none configured' }}.
+            @if (types(); as t) {
+              {{
+                'events.simulator.typesHint'
+                  | translate
+                    : {
+                        builtIn: publishableBuiltIns().join(', '),
+                        generic: t.generic.join(', ') || ('events.simulator.noGeneric' | translate),
+                      }
+              }}
             } @else {
-              Loading available event types…
+              {{ 'events.simulator.loadingTypes' | translate }}
             }
           </p>
         </div>
@@ -67,17 +152,26 @@ const STATUS_POLL_ATTEMPTS = 6;
             (input)="dataJson.set($any($event.target).value)"
             spellcheck="false"
           ></textarea>
-          <p class="mt-1.5 text-xs text-gray-500">
-            A non-built-in event type requires <code class="font-mono">contact_key</code>,
-            <code class="font-mono">channel</code>, and <code class="font-mono">amount</code> (string or number) in the
-            data object — the consumer rejects the event otherwise. Built-in types accept whatever fields their own
-            schema expects (see the dedicated form for each on the Customers/Programs screens); this simulator sends
-            the object as-is.
-          </p>
+          <p class="mt-1.5 text-xs text-gray-500">{{ 'events.simulator.dataHint' | translate }}</p>
+          @if (help(); as h) {
+            <p class="mt-1 text-xs text-gray-600">
+              {{ 'events.simulator.requires' | translate }}
+              <code class="font-mono">{{ h.required.join(', ') }}</code
+              >.
+              @if (h.optional; as optional) {
+                {{ 'events.simulator.optional' | translate }}
+                <code class="font-mono">{{ optional.join(', ') }}</code
+                >.
+              }
+              {{ h.note | translate }}
+            </p>
+          }
         </div>
 
         <div class="flex items-center gap-2">
-          <app-button [pending]="sending()" [disabled]="!eventType()" (click)="send()">Send event</app-button>
+          <app-button [pending]="sending()" [disabled]="!eventType()" (click)="send()"
+            >Send event</app-button
+          >
           @if (result()) {
             <app-button variant="ghost" size="sm" (click)="reset()">Send another</app-button>
           }
@@ -95,7 +189,9 @@ const STATUS_POLL_ATTEMPTS = 6;
               <div class="font-mono text-sm text-gray-800">{{ r.eventId }}</div>
             </div>
             @if (status(); as s) {
-              <app-status-pill [tone]="statusTone(s.status)" [dot]="true">{{ s.status }}</app-status-pill>
+              <app-status-pill [tone]="statusTone(s.status)" [dot]="true">{{
+                s.status
+              }}</app-status-pill>
             } @else {
               <span class="inline-flex items-center gap-2 text-xs text-gray-500">
                 <span
@@ -114,14 +210,18 @@ const STATUS_POLL_ATTEMPTS = 6;
               <dt class="text-gray-500">Received</dt>
               <dd class="text-gray-800">{{ s.receivedAt | date: 'medium' }}</dd>
               <dt class="text-gray-500">Processed</dt>
-              <dd class="text-gray-800">{{ s.processedAt ? (s.processedAt | date: 'medium') : '—' }}</dd>
+              <dd class="text-gray-800">
+                {{ s.processedAt ? (s.processedAt | date: 'medium') : '—' }}
+              </dd>
               @if (s.error) {
                 <dt class="text-gray-500">Error</dt>
                 <dd class="text-danger-fg">{{ s.error }}</dd>
               }
             </dl>
             @if (s.status === 'pending') {
-              <app-button variant="secondary" size="sm" [pending]="polling()" (click)="pollStatus()">Refresh status</app-button>
+              <app-button variant="secondary" size="sm" [pending]="polling()" (click)="pollStatus()"
+                >Refresh status</app-button
+              >
             }
           }
         </section>
@@ -133,7 +233,7 @@ export class EventSimulatorPage implements OnInit {
   private readonly eventsService = inject(EventsService);
   private readonly toast = inject(ToastService);
 
-  protected readonly types = signal<{ builtIn: readonly string[]; generic: readonly string[] } | null>(null);
+  protected readonly types = signal<EventTypesCatalog | null>(null);
   protected readonly eventType = signal<string | null>(null);
   protected readonly dataJson = signal(DEFAULT_DATA_JSON);
   protected readonly sending = signal(false);
@@ -142,10 +242,27 @@ export class EventSimulatorPage implements OnInit {
   protected readonly result = signal<{ eventId: string } | null>(null);
   protected readonly status = signal<EventStatus | null>(null);
 
-  protected readonly eventTypeOptions = computed<SelectOption<string>[]>(() => {
+  private readonly publishableTypes = computed<readonly string[]>(() => {
     const t = this.types();
     if (!t) return [];
-    return [...t.builtIn, ...t.generic].map((type) => ({ value: type, label: type }));
+    return t.publishable.filter((type) => !SCHEDULED_EVENT_TYPES.includes(type));
+  });
+
+  protected readonly publishableBuiltIns = computed(() => {
+    const builtIn = this.types()?.builtIn ?? [];
+    return this.publishableTypes().filter((type) => builtIn.includes(type));
+  });
+
+  protected readonly eventTypeOptions = computed<SelectOption<string>[]>(() =>
+    this.publishableTypes().map((type) => ({ value: type, label: type })),
+  );
+
+  protected readonly help = computed<EventHelp | null>(() => {
+    const type = this.eventType();
+    if (!type) return null;
+    const known = EVENT_HELP[type];
+    if (known) return known;
+    return this.types()?.generic.includes(type) ? GENERIC_HELP : BUILT_IN_DEFAULT_HELP;
   });
 
   ngOnInit(): void {
@@ -172,7 +289,9 @@ export class EventSimulatorPage implements OnInit {
       }
       data = parsed as Record<string, unknown>;
     } catch {
-      this.formErrors.set(['Event data must be valid JSON, and must be an object (e.g. { "contact_key": "..." }).']);
+      this.formErrors.set([
+        'Event data must be valid JSON, and must be an object (e.g. { "contact_key": "..." }).',
+      ]);
       return;
     }
 

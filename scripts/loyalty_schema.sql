@@ -2382,3 +2382,168 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001083819_BurnTriggerRuleTypesCr0930') THEN
+    UPDATE programs
+    SET has_unpublished_changes = true
+    WHERE publication_status = 'published'
+      AND id IN (SELECT program_id FROM rules WHERE status IN ('active', 'pending_approval')
+    AND ((trigger = 'points.transfer' AND type <> 'TransferRule')
+      OR (trigger = 'points.redeem' AND type <> 'RedemptionRule')
+      OR trigger = 'reward.purchase'));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001083819_BurnTriggerRuleTypesCr0930') THEN
+    UPDATE rules
+    SET status     = 'disabled',
+        updated_at = now()
+    WHERE status IN ('active', 'pending_approval')
+    AND ((trigger = 'points.transfer' AND type <> 'TransferRule')
+      OR (trigger = 'points.redeem' AND type <> 'RedemptionRule')
+      OR trigger = 'reward.purchase');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001083819_BurnTriggerRuleTypesCr0930') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261001083819_BurnTriggerRuleTypesCr0930', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    ALTER TABLE reward_definitions ADD approved_by character varying(255);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    ALTER TABLE reward_definitions ADD created_by character varying(255);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    ALTER TABLE reward_definitions ADD status character varying(20) NOT NULL DEFAULT 'active';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    ALTER TABLE customer_accounts ADD tier_locked_until date;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    ALTER TABLE programs ADD slug character varying(40);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    WITH base AS (
+        SELECT id, tenant_id, created_at,
+               trim(both '-' from left(trim(both '-' from regexp_replace(lower(name), '[^a-z0-9]+', '-', 'g')), 32)) AS s
+        FROM programs
+    ),
+    fixed AS (
+        SELECT id, tenant_id, created_at,
+               CASE WHEN length(s) < 2 THEN 'program-' || s ELSE s END AS s
+        FROM base
+    ),
+    numbered AS (
+        SELECT id, s, row_number() OVER (PARTITION BY tenant_id, s ORDER BY created_at, id) AS n
+        FROM fixed
+    )
+    UPDATE programs p
+    SET slug = CASE WHEN n.n = 1 THEN trim(both '-' from n.s)
+                    ELSE trim(both '-' from n.s) || '-' || left(replace(p.id::text, '-', ''), 6) END
+    FROM numbered n
+    WHERE p.id = n.id;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    ALTER TABLE programs ALTER COLUMN slug SET NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    ALTER TABLE programs ALTER COLUMN slug SET DEFAULT ('p-' || left(replace(gen_random_uuid()::text, '-', ''), 10));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    CREATE UNIQUE INDEX ux_programs_tenant_slug ON programs (tenant_id, slug);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    UPDATE programs
+    SET has_unpublished_changes = true
+    WHERE publication_status = 'published'
+      AND id IN (SELECT program_id FROM reward_definitions WHERE is_active
+    AND (acquisition NOT IN ('points_purchase', 'streak_completion')
+      OR reward_type NOT IN ('cashback', 'tier_upgrade')
+      OR (reward_type = 'tier_upgrade' AND acquisition <> 'streak_completion')
+      OR (reward_type = 'cashback' AND NOT (type_config ? 'cash_account_type_id'))));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    UPDATE reward_definitions
+    SET is_active = false
+    WHERE is_active
+    AND (acquisition NOT IN ('points_purchase', 'streak_completion')
+      OR reward_type NOT IN ('cashback', 'tier_upgrade')
+      OR (reward_type = 'tier_upgrade' AND acquisition <> 'streak_completion')
+      OR (reward_type = 'cashback' AND NOT (type_config ? 'cash_account_type_id')));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    CREATE UNIQUE INDEX ux_reward_definitions_tenant_name_active ON reward_definitions (tenant_id, name) WHERE is_active;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261001090316_RewardCatalogFulfilmentCr0930', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+

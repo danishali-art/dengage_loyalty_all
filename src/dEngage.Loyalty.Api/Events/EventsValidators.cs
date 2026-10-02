@@ -67,7 +67,8 @@ public sealed class RewardPurchaseRequestValidator : AbstractValidator<RewardPur
     public RewardPurchaseRequestValidator()
     {
         RuleFor(x => x.ContactKey).NotEmpty();
-        RuleFor(x => x.RewardName).NotEmpty();
+        RuleFor(x => x.RewardName).NotEmpty().When(x => x.RewardId is null)
+            .WithMessage("Either rewardName or rewardId is required.");
     }
 }
 

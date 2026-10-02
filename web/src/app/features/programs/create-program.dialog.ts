@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { TranslatePipe } from '@ngx-translate/core';
 import { DialogRef } from '@angular/cdk/dialog';
 import { closeDialogAnimated } from '../../core/ui/dialog.service';
 import { DialogShell } from '../../shared/ui/dialog-shell';
@@ -9,12 +10,12 @@ import { ApiError } from '../../core/http/api-error';
 import { applyServerErrors } from '../../shared/forms/server-errors';
 import { markAllDirtyAndTouched } from '../../shared/forms/form-utils';
 import { ProgramsService } from './programs.service';
-import { Program } from './program.model';
+import { PROGRAM_SLUG_PATTERN, Program } from './program.model';
 
 @Component({
   selector: 'app-create-program-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, DialogShell, Button, FormErrors],
+  imports: [ReactiveFormsModule, TranslatePipe, DialogShell, Button, FormErrors],
   template: `
     <app-dialog-shell heading="New program" (closed)="closeAnimated()">
       <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4">
@@ -22,6 +23,23 @@ import { Program } from './program.model';
         <div>
           <label for="name" class="field-label">Program name</label>
           <input id="name" formControlName="name" class="field-input" autocomplete="off" />
+        </div>
+        <!-- CR 2026-09-30 (A5): prefixes reward names; derived from the name when left empty. -->
+        <div>
+          <label for="slug" class="field-label">{{ 'programs.slug.label' | translate }}</label>
+          <input
+            id="slug"
+            formControlName="slug"
+            class="field-input font-mono text-xs"
+            autocomplete="off"
+            aria-describedby="slug-hint"
+            [attr.aria-invalid]="
+              form.controls.slug.invalid && form.controls.slug.touched ? 'true' : null
+            "
+          />
+          <p id="slug-hint" class="mt-1 text-xs text-gray-500">
+            {{ 'programs.slug.createHint' | translate }}
+          </p>
         </div>
         <div>
           <label for="description" class="field-label">Description</label>
@@ -51,6 +69,11 @@ export class CreateProgramDialog {
   protected readonly form = this.fb.group({
     name: this.fb.control('', [Validators.required, Validators.maxLength(255)]),
     description: this.fb.control(''),
+    slug: this.fb.control('', [
+      Validators.minLength(2),
+      Validators.maxLength(40),
+      Validators.pattern(PROGRAM_SLUG_PATTERN),
+    ]),
   });
 
   protected closeAnimated(): void {
@@ -66,9 +89,13 @@ export class CreateProgramDialog {
     this.pending.set(true);
     this.formErrors.set([]);
     try {
-      const { name, description } = this.form.getRawValue();
+      const { name, description, slug } = this.form.getRawValue();
       // 1.3.CL item 8: a new program is always an inactive draft — publish, then activate.
-      const program = await this.programs.create({ name, description: description || null });
+      const program = await this.programs.create({
+        name,
+        description: description || null,
+        slug: slug || null,
+      });
       this.ref.close(program);
     } catch (err) {
       if (err instanceof ApiError) this.formErrors.set(applyServerErrors(this.form, err));

@@ -39,7 +39,8 @@ public sealed class StreakCampaignModuleTests : IDisposable
         _db.SaveChanges();
 
         var tenantSlugResolver = new TenantSlugResolver(_db, new TenantSlugCache());
-        _sut = new StreakCampaignModule(_db, _ledger.Object, _outbox.Object, tenantSlugResolver, NullLogger<StreakCampaignModule>.Instance);
+        _sut = new StreakCampaignModule(_db, _ledger.Object, _outbox.Object, tenantSlugResolver,
+            new Mock<dEngage.Loyalty.RuleEngine.Processing.IRewardFulfilmentService>().Object, NullLogger<StreakCampaignModule>.Instance);
     }
 
     public void Dispose()

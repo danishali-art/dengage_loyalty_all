@@ -11,7 +11,7 @@ import { ConfirmService } from '../../core/ui/confirm.service';
 import { ApiError } from '../../core/http/api-error';
 import { ProgramContextStore } from '../../core/program/program-context.store';
 import { ProgramsService } from './programs.service';
-import { Program } from './program.model';
+import { PROGRAM_SLUG_PATTERN, Program } from './program.model';
 import { AccountTypesService } from './account-types/account-types.service';
 import { AccountType } from './account-types/account-type.model';
 
@@ -100,6 +100,28 @@ interface SummaryCard {
                 <div>
                   <label for="name" class="field-label">Program name</label>
                   <input id="name" formControlName="name" class="field-input" />
+                </div>
+                <!-- CR 2026-09-30 (A5): prefixes reward names; fixed once published. -->
+                <div>
+                  <label for="slug" class="field-label">{{
+                    'programs.slug.label' | translate
+                  }}</label>
+                  <input
+                    id="slug"
+                    formControlName="slug"
+                    class="field-input font-mono text-xs"
+                    aria-describedby="slug-hint"
+                    [readonly]="p.publicationStatus !== 'draft'"
+                  />
+                  <app-field-hint
+                    id="slug-hint"
+                    [hint]="
+                      (p.publicationStatus === 'draft'
+                        ? 'programs.slug.draftHint'
+                        : 'programs.slug.locked'
+                      ) | translate
+                    "
+                  />
                 </div>
                 <!-- 1.3.CL item 7: an Active/Inactive switch, saved immediately; only after publish. -->
                 <div>
@@ -236,6 +258,12 @@ export class ProgramOverviewPage implements OnInit {
   protected readonly infoForm = this.fb.group({
     name: this.fb.control('', [Validators.required, Validators.maxLength(255)]),
     description: this.fb.control(''),
+    slug: this.fb.control('', [
+      Validators.required,
+      Validators.minLength(2),
+      Validators.maxLength(40),
+      Validators.pattern(PROGRAM_SLUG_PATTERN),
+    ]),
   });
 
   ngOnInit(): void {
@@ -250,6 +278,7 @@ export class ProgramOverviewPage implements OnInit {
     this.infoForm.patchValue({
       name: p.name,
       description: p.description ?? '',
+      slug: p.slug,
     });
   }
 
@@ -265,10 +294,14 @@ export class ProgramOverviewPage implements OnInit {
     this.savingInfo.set(true);
     try {
       const v = this.infoForm.getRawValue();
-      // Status is not part of Save — the switch applies it on its own (1.3.CL item 7).
+      const current = this.program();
+      // Status is not part of Save — the switch applies it on its own (1.3.CL item 7). The slug
+      // is only sent when changed on a draft; the API locks it once published (A5).
+      const slugChanged = current?.publicationStatus === 'draft' && v.slug !== current.slug;
       const updated = await this.programsService.update(this.programId(), {
         name: v.name,
         description: v.description || null,
+        ...(slugChanged ? { slug: v.slug } : {}),
       });
       this.program.set(updated);
       this.programContext.updateName(updated);

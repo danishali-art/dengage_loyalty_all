@@ -12,6 +12,7 @@ import { FormErrors } from '../../../shared/ui/form-errors';
 import { ApiError } from '../../../core/http/api-error';
 import { applyServerErrors } from '../../../shared/forms/server-errors';
 import { markAllDirtyAndTouched } from '../../../shared/forms/form-utils';
+import { requiredWhen } from '../../../shared/forms/conditional-validators';
 import { AccountTypesService } from './account-types.service';
 import {
   AccountType,
@@ -193,6 +194,42 @@ export interface AccountTypeFormData {
               }
             </div>
           }
+          <!-- CR 2026-09-30 addendum A: the daily cap PointsTransferHandler enforces. -->
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              formControlName="transferEnabled"
+              class="checkbox"
+              aria-describedby="transfer-hint"
+            />
+            {{ 'accountTypes.transfer.label' | translate }}
+          </label>
+          <app-field-hint id="transfer-hint" [hint]="'accountTypes.transfer.hint' | translate" />
+          @if (form.controls.transferEnabled.value) {
+            <div>
+              <label for="transferDailyLimit" class="field-label">{{
+                'accountTypes.transfer.dailyLimit' | translate
+              }}</label>
+              <input
+                id="transferDailyLimit"
+                type="number"
+                min="1"
+                formControlName="transferDailyLimit"
+                class="field-input"
+                aria-describedby="transferDailyLimit-hint"
+                [attr.aria-invalid]="form.controls.transferDailyLimit.invalid || null"
+              />
+              <app-field-hint
+                id="transferDailyLimit-hint"
+                [error]="
+                  form.controls.transferDailyLimit.invalid
+                    ? ('accountTypes.transfer.dailyLimitError' | translate)
+                    : null
+                "
+                [hint]="'accountTypes.transfer.dailyLimitHint' | translate"
+              />
+            </div>
+          }
         }
 
         @if (form.controls.type.value === 'CASH') {
@@ -294,11 +331,28 @@ export class AccountTypeFormDialog {
     redemptionTargetAccountTypeId: this.fb.control(
       this.initialRedemption()?.target_account_type_id ?? '',
     ),
+    transferEnabled: this.fb.control(this.initialTransferLimit() !== null),
+    transferDailyLimit: this.fb.control<number | null>(this.initialTransferLimit() ?? 1000, [
+      requiredWhen((root) => root.get('transferEnabled')?.value === true),
+      Validators.min(1),
+    ]),
     currency: this.fb.control<string>({ value: this.initialCurrency(), disabled: this.isEdit }),
     stampConfigJson: this.fb.control(this.initialStampJson()),
   });
 
   protected readonly currencies = SUPPORTED_CURRENCIES;
+
+  constructor() {
+    // The limit only counts while transfer is on: disabled, it is left out of the form's
+    // validity, so a stale value in a hidden field can never block a save.
+    const syncTransferLimit = (enabled: boolean): void => {
+      const limit = this.form.controls.transferDailyLimit;
+      if (enabled) limit.enable({ emitEvent: false });
+      else limit.disable({ emitEvent: false });
+    };
+    syncTransferLimit(this.form.controls.transferEnabled.value);
+    this.form.controls.transferEnabled.valueChanges.subscribe(syncTransferLimit);
+  }
 
   private readonly formValue = toSignal(
     this.form.valueChanges.pipe(startWith(this.form.getRawValue())),
@@ -351,6 +405,10 @@ export class AccountTypeFormDialog {
     const c = this.data.existing?.config as PointsConfig | undefined;
     return c?.redemption ?? null;
   }
+  private initialTransferLimit(): number | null {
+    const c = this.data.existing?.config as PointsConfig | undefined;
+    return c?.transfer?.daily_limit ?? null;
+  }
   private initialCurrency(): string {
     const c = this.data.existing?.config as CashConfig | undefined;
     return c?.currency ?? DEFAULT_CURRENCY;
@@ -364,7 +422,15 @@ export class AccountTypeFormDialog {
   private buildConfig(): Record<string, unknown> {
     const v = this.form.getRawValue();
     if (v.type === 'POINTS') {
-      const config: Record<string, unknown> = { decimals: Number(v.decimals) };
+      // Start from the stored config minus the keys this form owns, so a setting the form doesn't
+      // show survives a save. Rebuilding from the form alone used to drop `transfer` on every edit.
+      const config: Record<string, unknown> = {
+        ...withoutKeys(
+          this.data.existing?.type === 'POINTS' ? this.data.existing.config : {},
+          POINTS_FORM_KEYS,
+        ),
+        decimals: Number(v.decimals),
+      };
       if (isFilled(v.expirationDays)) {
         config['expiration_days'] = Number(v.expirationDays);
         // A warning only means something before expiry — dropped with it (validator agrees).
@@ -376,6 +442,9 @@ export class AccountTypeFormDialog {
           min_points: Number(v.redemptionMinPoints),
           target_account_type_id: v.redemptionTargetAccountTypeId,
         };
+      }
+      if (v.transferEnabled) {
+        config['transfer'] = { daily_limit: Number(v.transferDailyLimit) };
       }
       return config;
     }
@@ -447,4 +516,17 @@ export class AccountTypeFormDialog {
 /** A number input that the user left blank comes back as null or ''. */
 function isFilled(value: number | string | null | undefined): boolean {
   return value !== null && value !== undefined && `${value}` !== '';
+}
+
+/** POINTS config keys the form edits; any other stored key is carried through unchanged. */
+const POINTS_FORM_KEYS = [
+  'decimals',
+  'expiration_days',
+  'warning_days',
+  'redemption',
+  'transfer',
+] as const;
+
+function withoutKeys(config: object, keys: readonly string[]): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(config).filter(([key]) => !keys.includes(key)));
 }

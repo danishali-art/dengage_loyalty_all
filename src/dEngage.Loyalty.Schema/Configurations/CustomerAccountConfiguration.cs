@@ -22,6 +22,7 @@ public class CustomerAccountConfiguration : IEntityTypeConfiguration<CustomerAcc
         builder.Property(x => x.TierQualifyingPts).HasColumnName("tier_qualifying_pts").HasColumnType("numeric(20,4)").HasDefaultValue(0m);
         builder.Property(x => x.TierPeriodStart).HasColumnName("tier_period_start");
         builder.Property(x => x.TierExpiresAt).HasColumnName("tier_expires_at");
+        builder.Property(x => x.TierLockedUntil).HasColumnName("tier_locked_until");
 
         builder.HasOne(x => x.AccountType)
             .WithMany()

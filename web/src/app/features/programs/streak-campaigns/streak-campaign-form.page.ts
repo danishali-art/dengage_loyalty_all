@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PageHeader } from '../../../shared/ui/page-header';
@@ -35,7 +43,15 @@ const DEFAULT_TRIGGER: (typeof EVENT_TRIGGERS)[number] = 'order.created';
 @Component({
   selector: 'app-streak-campaign-form-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, PageHeader, Button, FormErrors, SearchableSelect, ConditionsEditor],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    PageHeader,
+    Button,
+    FormErrors,
+    SearchableSelect,
+    ConditionsEditor,
+  ],
   template: `
     <app-page-header
       [heading]="isEdit() ? 'Edit streak campaign' : 'New streak campaign'"
@@ -46,7 +62,11 @@ const DEFAULT_TRIGGER: (typeof EVENT_TRIGGERS)[number] = 'order.created';
       ]"
     >
       <div actions>
-        <app-button variant="secondary" [routerLink]="['/programs', programId(), 'streak-campaigns']">Cancel</app-button>
+        <app-button
+          variant="secondary"
+          [routerLink]="['/programs', programId(), 'streak-campaigns']"
+          >Cancel</app-button
+        >
         <app-button [pending]="saving()" (click)="submit()">Save</app-button>
       </div>
     </app-page-header>
@@ -66,27 +86,50 @@ const DEFAULT_TRIGGER: (typeof EVENT_TRIGGERS)[number] = 'order.created';
           <div class="grid grid-cols-2 gap-3">
             <div>
               <span id="trigger-label" class="field-label">Trigger event</span>
-              <app-searchable-select formControlName="trigger" [options]="triggerOptions()" placeholder="Select a trigger…" ariaLabelledby="trigger-label" />
+              <app-searchable-select
+                formControlName="trigger"
+                [options]="triggerOptions()"
+                placeholder="Select a trigger…"
+                ariaLabelledby="trigger-label"
+              />
             </div>
             <div>
               <span id="targetAccountTypeId-label" class="field-label">Target account</span>
-              <app-searchable-select formControlName="targetAccountTypeId" [options]="targetAccountOptions()" placeholder="Select an account…" ariaLabelledby="targetAccountTypeId-label" />
+              <app-searchable-select
+                formControlName="targetAccountTypeId"
+                [options]="targetAccountOptions()"
+                placeholder="Select an account…"
+                ariaLabelledby="targetAccountTypeId-label"
+              />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label for="activeFrom" class="field-label">Active from</label>
-              <input id="activeFrom" type="datetime-local" formControlName="activeFrom" class="field-input" />
+              <input
+                id="activeFrom"
+                type="datetime-local"
+                formControlName="activeFrom"
+                class="field-input"
+              />
             </div>
             <div>
               <label for="activeTo" class="field-label">Active to</label>
-              <input id="activeTo" type="datetime-local" formControlName="activeTo" class="field-input" />
+              <input
+                id="activeTo"
+                type="datetime-local"
+                formControlName="activeTo"
+                class="field-input"
+              />
             </div>
           </div>
         </form>
       </section>
 
-      <app-conditions-editor [conditions]="conditions()" (conditionsChange)="conditions.set($event)" />
+      <app-conditions-editor
+        [conditions]="conditions()"
+        (conditionsChange)="conditions.set($event)"
+      />
 
       <section class="card space-y-4">
         <div class="section-header">
@@ -104,7 +147,13 @@ const DEFAULT_TRIGGER: (typeof EVENT_TRIGGERS)[number] = 'order.created';
             </div>
             <div>
               <label for="targetPeriods" class="field-label">Target periods</label>
-              <input id="targetPeriods" type="number" min="1" formControlName="targetPeriods" class="field-input" />
+              <input
+                id="targetPeriods"
+                type="number"
+                min="1"
+                formControlName="targetPeriods"
+                class="field-input"
+              />
             </div>
             <div>
               <label for="weekStart" class="field-label">Week starts</label>
@@ -124,7 +173,14 @@ const DEFAULT_TRIGGER: (typeof EVENT_TRIGGERS)[number] = 'order.created';
             </div>
             <div>
               <label for="threshold" class="field-label">Threshold per period</label>
-              <input id="threshold" type="number" min="0" step="0.0001" formControlName="threshold" class="field-input" />
+              <input
+                id="threshold"
+                type="number"
+                min="0"
+                step="0.0001"
+                formControlName="threshold"
+                class="field-input"
+              />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
@@ -155,12 +211,24 @@ const DEFAULT_TRIGGER: (typeof EVENT_TRIGGERS)[number] = 'order.created';
           @if (streakForm.controls.rewardKind.value === 'fixed_bonus') {
             <div>
               <label for="rewardAmount" class="field-label">Bonus amount</label>
-              <input id="rewardAmount" type="number" min="0" step="0.0001" formControlName="rewardAmount" class="field-input" />
+              <input
+                id="rewardAmount"
+                type="number"
+                min="0"
+                step="0.0001"
+                formControlName="rewardAmount"
+                class="field-input"
+              />
             </div>
           } @else {
             <div>
               <span id="rewardDefinitionId-label" class="field-label">Reward</span>
-              <app-searchable-select formControlName="rewardDefinitionId" [options]="rewardDefinitionOptions()" placeholder="Select a reward…" ariaLabelledby="rewardDefinitionId-label" />
+              <app-searchable-select
+                formControlName="rewardDefinitionId"
+                [options]="rewardDefinitionOptions()"
+                placeholder="Select a reward…"
+                ariaLabelledby="rewardDefinitionId-label"
+              />
             </div>
           }
         </form>
@@ -199,8 +267,18 @@ export class StreakCampaignFormPage implements OnInit {
   protected readonly targetAccountOptions = computed<SelectOption<string>[]>(() =>
     this.accountTypes().map((at) => ({ value: at.id, label: `${at.name} (${at.type})` })),
   );
+  /** The campaign's reward as loaded — kept in the list even if no longer eligible. */
+  private readonly loadedRewardId = signal<string | null>(null);
+  // CR 2026-09-30 (§3.7): mirrors the API's invalid_streak_reward check — only an active, approved
+  // Streak-completion reward can be paid by a streak.
   protected readonly rewardDefinitionOptions = computed<SelectOption<string>[]>(() =>
-    this.rewards().map((r) => ({ value: r.id, label: r.displayName })),
+    this.rewards()
+      .filter(
+        (r) =>
+          (r.isActive && r.status === 'active' && r.acquisition === 'streak_completion') ||
+          r.id === this.loadedRewardId(),
+      )
+      .map((r) => ({ value: r.id, label: r.displayName })),
   );
 
   protected readonly form = this.fb.group({
@@ -262,6 +340,7 @@ export class StreakCampaignFormPage implements OnInit {
     });
     this.conditions.set(campaign.conditions ? structuredClone(campaign.conditions) : []);
     const c = campaign.config;
+    this.loadedRewardId.set(c.reward.reward_definition_id ?? null);
     this.streakForm.patchValue({
       period: c.period,
       weekStart: c.week_start,
@@ -298,7 +377,9 @@ export class StreakCampaignFormPage implements OnInit {
     conditionErrors.push(...validateStreakConfig(config));
 
     if (this.form.invalid || conditionErrors.length > 0) {
-      this.formErrors.set(conditionErrors.length ? conditionErrors : ['Please fix the highlighted fields.']);
+      this.formErrors.set(
+        conditionErrors.length ? conditionErrors : ['Please fix the highlighted fields.'],
+      );
       return;
     }
 

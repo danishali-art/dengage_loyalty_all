@@ -1,6 +1,7 @@
 using System.Text.Json;
 using dEngage.Loyalty.Ledger;
 using dEngage.Loyalty.RuleEngine.Campaigns;
+using dEngage.Loyalty.RuleEngine.Processing;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
@@ -14,6 +15,7 @@ public class StreakCampaignModule(
     ILedgerService ledger,
     IOutboxService outbox,
     ITenantSlugResolver tenantSlugResolver,
+    IRewardFulfilmentService fulfilment,
     ILogger<StreakCampaignModule> logger) : IStreakCampaignModule
 {
     public string CampaignType => CampaignTypes.Streak;
@@ -174,29 +176,47 @@ public class StreakCampaignModule(
         }
         else // reward_definition
         {
+            // A4: only an approved reward is granted (a pending cashback is treated like a missing one).
             var definition = await db.RewardDefinitions
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
                     x.TenantId == tenantId &&
                     x.Id == streakConfig.Reward.RewardDefinitionId!.Value &&
-                    x.IsActive, ct);
+                    x.IsActive &&
+                    x.Status == RewardStatus.Active, ct);
 
             if (definition is not null)
             {
-                rewardRef = definition.Id.ToString();
+                // CR 2026-09-30 (A2): the reward is actually paid now — cashback credits its CASH
+                // wallet, a tier upgrade moves the tier — inside this completion's transaction, keyed
+                // on the completion so a re-run never pays twice.
+                var grantKey = $"streak:{config.Id}:{progress.ContactKey}:{completionNo}";
+                var granted = await fulfilment.FulfilAsync(
+                    tenantSlug, tenantId, definition, progress.ContactKey, eventId, grantKey, ct);
+
+                // §3.5: a cashback's ledger entry is the traceable reference (as fixed_bonus);
+                // otherwise the reward definition, as before.
+                rewardRef = granted.Outcome == RewardFulfilmentOutcome.CashCredited
+                    ? granted.Reference
+                    : definition.Id.ToString();
+
+                var payload = new Dictionary<string, object?>
+                {
+                    ["contact_key"] = progress.ContactKey,
+                    ["reward_id"] = definition.Id.ToString(),
+                    ["reward_name"] = definition.Name,
+                    ["reward_type"] = definition.RewardType,
+                    ["source"] = RewardAcquisition.StreakCompletion,
+                    ["completion_count"] = completionNo,
+                    ["source_event_id"] = eventId
+                };
+                foreach (var (key, value) in granted.EventFields) payload[key] = value;
+
                 await outbox.Enqueue(
                     tenantSlug,
                     dEngage.Loyalty.Shared.Events.OutboundEventTypes.RewardEarned,
                     progress.ContactKey,
-                    new
-                    {
-                        contact_key = progress.ContactKey,
-                        reward_name = definition.Name,
-                        reward_type = definition.RewardType,
-                        source = RewardAcquisition.StreakCompletion,
-                        completion_count = completionNo,
-                        source_event_id = eventId
-                    },
+                    payload,
                     dedupKey: $"reward_earned:streak:{config.Id}:{progress.ContactKey}:{completionNo}");
             }
             else
