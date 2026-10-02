@@ -55,11 +55,26 @@ public sealed class ProgramsAppService(
     public async Task<ProgramResponse> CreateAsync(string tenantId, CreateProgramRequest request, AuthenticatedPrincipal? principal, CancellationToken ct)
     {
         var tenantGuid = await tenantSlugResolver.ResolveAsync(tenantId, ct);
+
+        // A5: an explicit slug must be free; a derived one is made free.
+        string slug;
+        if (request.Slug is not null)
+        {
+            if (await SlugTakenAsync(tenantGuid, request.Slug, exceptId: null, ct))
+                throw new ConflictApiException("slug_taken", $"Another program already uses the slug '{request.Slug}'.");
+            slug = request.Slug;
+        }
+        else
+        {
+            slug = await FreeSlugAsync(tenantGuid, DeriveSlug(request.Name), ct);
+        }
+
         var entity = new ProgramEntity
         {
             Id = Guid.NewGuid(),
             TenantId = tenantGuid,
             Name = request.Name,
+            Slug = slug,
             Description = request.Description,
             // 1.3.CL item 8: always a draft, and inactive until it has been published.
             Status = ProgramStatus.Inactive,
@@ -86,6 +101,16 @@ public sealed class ProgramsAppService(
 
         // The qualifying-account lock moved to AccountTypesAppService with the field itself
         // (1.3.CL item 1) — the validator already rejects QualifyingAccountTypeId here.
+        // A5: the slug prefixes reward names that integrations send, so it is fixed once published.
+        if (request.Slug is not null && request.Slug != entity.Slug)
+        {
+            if (entity.PublicationStatus != ProgramPublicationStatus.Draft)
+                throw new ConflictApiException("slug_locked", "The slug of a published program cannot be changed.");
+            if (await SlugTakenAsync(entity.TenantId, request.Slug, exceptId: entity.Id, ct))
+                throw new ConflictApiException("slug_taken", $"Another program already uses the slug '{request.Slug}'.");
+            entity.Slug = request.Slug;
+        }
+
         if (request.Name is not null) entity.Name = request.Name;
         if (request.Description is not null) entity.Description = request.Description;
         if (request.Status is not null) entity.Status = request.Status;
@@ -181,7 +206,7 @@ public sealed class ProgramsAppService(
                 .OrderBy(r => r.Name)
                 .ToListAsync(ct))
             .Select(r => new PublishedReward(r.Id, r.Name, r.DisplayName, r.Acquisition, r.RewardType, r.StampAccountTypeId,
-                r.PointsPrice is { } price ? Money(price) : null, r.PointsAccountTypeId, Json(r.TypeConfig), r.IsActive))
+                r.PointsPrice is { } price ? Money(price) : null, r.PointsAccountTypeId, Json(r.TypeConfig), r.IsActive, r.Status))
             .ToList();
 
         // Card buckets are rules (Template set) and come along here.
@@ -204,7 +229,7 @@ public sealed class ProgramsAppService(
             .ToList();
 
         return new ProgramPublicationSnapshot(
-            new PublishedProgram(program.Id, program.Name, program.Description, program.Status),
+            new PublishedProgram(program.Id, program.Name, program.Description, program.Status, program.Slug),
             accountTypes, tiers, rewards, rules, streaks);
     }
 
@@ -222,5 +247,26 @@ public sealed class ProgramsAppService(
             (int?)null, p.CreatedAt,
             db.AccountTypes.Count(a => a.ProgramId == p.Id),
             db.Rules.Count(r => r.ProgramId == p.Id && r.Status != RuleStatus.Deleted),
-            p.PublicationStatus, p.HasUnpublishedChanges, p.PublishedVersion, p.PublishedAt, p.PublishedBy));
+            p.PublicationStatus, p.HasUnpublishedChanges, p.PublishedVersion, p.PublishedAt, p.PublishedBy, p.Slug));
+
+    // A5 default for a create without a slug: same rule as the migration backfill (lowercase,
+    // non [a-z0-9] runs -> '-', at most 32 chars so a "-N" suffix still fits, at least 2).
+    private static string DeriveSlug(string name)
+    {
+        var s = System.Text.RegularExpressions.Regex.Replace(name.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+        if (s.Length > 32) s = s[..32].Trim('-');
+        return s.Length < 2 ? $"program-{s}".Trim('-') : s;
+    }
+
+    private async Task<string> FreeSlugAsync(Guid tenantGuid, string baseSlug, CancellationToken ct)
+    {
+        var candidate = baseSlug;
+        for (var n = 2; await SlugTakenAsync(tenantGuid, candidate, exceptId: null, ct); n++)
+            candidate = $"{baseSlug}-{n}";
+        return candidate;
+    }
+
+    // Deleted programs keep their slug (the unique index covers every row), so they count too.
+    private Task<bool> SlugTakenAsync(Guid tenantGuid, string slug, Guid? exceptId, CancellationToken ct) =>
+        db.Programs.AnyAsync(p => p.TenantId == tenantGuid && p.Slug == slug && p.Id != exceptId, ct);
 }

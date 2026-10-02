@@ -1,4 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
+import { ApiError } from '../../../core/http/api-error';
+import { ProgramsService } from '../programs.service';
 import { PageHeader } from '../../../shared/ui/page-header';
 import { Button } from '../../../shared/ui/button';
 import { StatusPill } from '../../../shared/ui/status-pill';
@@ -8,7 +11,7 @@ import { DialogService } from '../../../core/ui/dialog.service';
 import { ToastService } from '../../../core/ui/toast.service';
 import { ProgramContextStore } from '../../../core/program/program-context.store';
 import { RewardsService } from './rewards.service';
-import { Reward } from './reward.model';
+import { Reward, isRetired } from './reward.model';
 import { RewardFormDialog, RewardFormData } from './reward-form.dialog';
 import { AccountTypesService } from '../account-types/account-types.service';
 import { AccountType } from '../account-types/account-type.model';
@@ -20,7 +23,7 @@ const PAGE_SIZE = 12;
 @Component({
   selector: 'app-rewards-list-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeader, Button, StatusPill, EmptyState, Paginator],
+  imports: [TranslatePipe, PageHeader, Button, StatusPill, EmptyState, Paginator],
   template: `
     <app-page-header
       heading="Rewards"
@@ -32,7 +35,11 @@ const PAGE_SIZE = 12;
     >
       <div actions>
         <app-button (click)="create()">
-          <svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+            <path
+              d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+            />
+          </svg>
           Add reward
         </app-button>
       </div>
@@ -55,10 +62,18 @@ const PAGE_SIZE = 12;
               <tbody>
                 @for (i of [0, 1, 2, 3, 4]; track i) {
                   <tr class="border-t border-gray-100" aria-hidden="true">
-                    <td class="px-4 py-3.5"><div class="h-4 w-36 animate-pulse rounded bg-gray-200"></div></td>
-                    <td class="px-4 py-3.5"><div class="h-4 w-20 animate-pulse rounded bg-gray-200"></div></td>
-                    <td class="px-4 py-3.5"><div class="h-4 w-24 animate-pulse rounded bg-gray-200"></div></td>
-                    <td class="px-4 py-3.5"><div class="h-5 w-16 animate-pulse rounded-full bg-gray-200"></div></td>
+                    <td class="px-4 py-3.5">
+                      <div class="h-4 w-36 animate-pulse rounded bg-gray-200"></div>
+                    </td>
+                    <td class="px-4 py-3.5">
+                      <div class="h-4 w-20 animate-pulse rounded bg-gray-200"></div>
+                    </td>
+                    <td class="px-4 py-3.5">
+                      <div class="h-4 w-24 animate-pulse rounded bg-gray-200"></div>
+                    </td>
+                    <td class="px-4 py-3.5">
+                      <div class="h-5 w-16 animate-pulse rounded-full bg-gray-200"></div>
+                    </td>
                     <td class="px-4 py-3.5"></td>
                   </tr>
                 }
@@ -67,7 +82,11 @@ const PAGE_SIZE = 12;
           </div>
         } @else if (!loading() && rewards().length === 0) {
           <div class="p-5">
-            <app-empty-state heading="No rewards yet" description="Create one so customers have something to redeem." icon="🎁" />
+            <app-empty-state
+              heading="No rewards yet"
+              description="Create one so customers have something to redeem."
+              icon="🎁"
+            />
           </div>
         } @else {
           <div class="overflow-x-auto">
@@ -84,16 +103,53 @@ const PAGE_SIZE = 12;
               <tbody>
                 @for (reward of rewards(); track reward.id) {
                   <tr class="border-t border-gray-100 hover:bg-gray-50">
-                    <td class="px-4 py-3.5">{{ reward.displayName }} <span class="font-mono text-xs text-gray-400">({{ reward.name }})</span></td>
-                    <td class="px-4 py-3.5 font-mono text-xs text-gray-600">{{ reward.rewardType }}</td>
-                    <td class="px-4 py-3.5 text-xs text-gray-500">{{ reward.acquisition }}</td>
                     <td class="px-4 py-3.5">
-                      <app-status-pill [tone]="reward.isActive ? 'success' : 'neutral'" [dot]="true">
-                        {{ reward.isActive ? 'Active' : 'Inactive' }}
-                      </app-status-pill>
+                      {{ reward.displayName }}
+                      <span class="font-mono text-xs text-gray-400">({{ reward.name }})</span>
                     </td>
-                    <td class="px-4 py-3.5 text-right">
-                      <button type="button" class="cursor-pointer rounded px-2 py-1 text-xs text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand" (click)="edit(reward)">Edit</button>
+                    <td class="px-4 py-3.5 text-xs text-gray-600">
+                      {{ 'rewards.type.' + reward.rewardType | translate }}
+                      @if (retired(reward)) {
+                        <span class="ml-1 text-gray-400"
+                          >({{ 'rewards.list.retired' | translate }})</span
+                        >
+                      }
+                    </td>
+                    <td class="px-4 py-3.5 text-xs text-gray-500">
+                      {{ 'rewards.acquisition.' + reward.acquisition | translate }}
+                    </td>
+                    <td class="px-4 py-3.5">
+                      <!-- CR 2026-09-30 (A4): an unapproved cashback can't be bought or earned yet. -->
+                      @if (reward.status === 'pending_approval') {
+                        <app-status-pill tone="neutral" [dot]="true">{{
+                          'rewards.list.pendingApproval' | translate
+                        }}</app-status-pill>
+                      } @else {
+                        <app-status-pill
+                          [tone]="reward.isActive ? 'success' : 'neutral'"
+                          [dot]="true"
+                        >
+                          {{ (reward.isActive ? 'common.active' : 'common.inactive') | translate }}
+                        </app-status-pill>
+                      }
+                    </td>
+                    <td class="px-4 py-3.5 text-right whitespace-nowrap">
+                      @if (reward.status === 'pending_approval') {
+                        <app-button
+                          size="sm"
+                          variant="secondary"
+                          [pending]="approving() === reward.id"
+                          (click)="approve(reward)"
+                          >{{ 'rewards.list.approve' | translate }}</app-button
+                        >
+                      }
+                      <button
+                        type="button"
+                        class="hover:text-brand cursor-pointer rounded px-2 py-1 text-xs text-gray-400 transition-colors hover:bg-gray-100"
+                        (click)="edit(reward)"
+                      >
+                        {{ (retired(reward) ? 'rewards.list.view' : 'action.edit') | translate }}
+                      </button>
                     </td>
                   </tr>
                 }
@@ -101,7 +157,12 @@ const PAGE_SIZE = 12;
             </table>
           </div>
           <div class="px-4">
-            <app-paginator [page]="page()" [pageSize]="pageSize" [total]="total()" (pageChange)="loadPage($event)" />
+            <app-paginator
+              [page]="page()"
+              [pageSize]="pageSize"
+              [total]="total()"
+              (pageChange)="loadPage($event)"
+            />
           </div>
         }
       </div>
@@ -114,6 +175,7 @@ export class RewardsListPage implements OnInit {
   private readonly rewardsService = inject(RewardsService);
   private readonly accountTypesService = inject(AccountTypesService);
   private readonly tiersService = inject(TiersService);
+  private readonly programsService = inject(ProgramsService);
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly programContext = inject(ProgramContextStore);
@@ -123,6 +185,10 @@ export class RewardsListPage implements OnInit {
   protected readonly page = signal(1);
   protected readonly total = signal(0);
   protected readonly loading = signal(true);
+  protected readonly approving = signal<string | null>(null);
+  protected readonly retired = isRetired;
+  /** CR 2026-09-30 (A5): reward names are `{slug}_{suffix}`. */
+  private programSlug = '';
   protected readonly programName = (): string => this.programContext.program()?.name ?? 'Program';
 
   private accountTypes: readonly AccountType[] = [];
@@ -130,8 +196,11 @@ export class RewardsListPage implements OnInit {
 
   ngOnInit(): void {
     void this.loadPage(1);
-    void this.accountTypesService.listAll(this.programId()).then((list) => (this.accountTypes = list));
+    void this.accountTypesService
+      .listAll(this.programId())
+      .then((list) => (this.accountTypes = list));
     void this.tiersService.list(this.programId()).then((result) => (this.tiers = result.data));
+    void this.programsService.get(this.programId()).then((p) => (this.programSlug = p.slug));
   }
 
   protected async loadPage(page: number): Promise<void> {
@@ -147,8 +216,15 @@ export class RewardsListPage implements OnInit {
   }
 
   protected create(): void {
-    const data: RewardFormData = { programId: this.programId(), accountTypes: this.accountTypes, tiers: this.tiers };
-    const ref = this.dialog.open<Reward, RewardFormData, RewardFormDialog>(RewardFormDialog, { data });
+    const data: RewardFormData = {
+      programId: this.programId(),
+      programSlug: this.programSlug,
+      accountTypes: this.accountTypes,
+      tiers: this.tiers,
+    };
+    const ref = this.dialog.open<Reward, RewardFormData, RewardFormDialog>(RewardFormDialog, {
+      data,
+    });
     ref.closed.subscribe((result) => {
       if (!result) return;
       this.toast.success(`Reward "${result.displayName}" created`);
@@ -157,12 +233,36 @@ export class RewardsListPage implements OnInit {
   }
 
   protected edit(existing: Reward): void {
-    const data: RewardFormData = { programId: this.programId(), accountTypes: this.accountTypes, tiers: this.tiers, existing };
-    const ref = this.dialog.open<Reward, RewardFormData, RewardFormDialog>(RewardFormDialog, { data });
+    const data: RewardFormData = {
+      programId: this.programId(),
+      programSlug: this.programSlug,
+      accountTypes: this.accountTypes,
+      tiers: this.tiers,
+      existing,
+    };
+    const ref = this.dialog.open<Reward, RewardFormData, RewardFormDialog>(RewardFormDialog, {
+      data,
+    });
     ref.closed.subscribe((result) => {
       if (!result) return;
       this.toast.success('Reward saved');
       void this.loadPage(this.page());
     });
+  }
+
+  // A4 (CR-04 parity): the server enforces creator ≠ approver — a self-approval attempt comes
+  // back as a normal error, the same way the rules list handles it.
+  protected async approve(reward: Reward): Promise<void> {
+    if (this.approving()) return;
+    this.approving.set(reward.id);
+    try {
+      await this.rewardsService.approve(this.programId(), reward.id);
+      this.toast.success(`Reward "${reward.displayName}" approved`);
+      await this.loadPage(this.page());
+    } catch (err) {
+      this.toast.error(err instanceof ApiError ? err.message : 'Could not approve this reward.');
+    } finally {
+      this.approving.set(null);
+    }
   }
 }

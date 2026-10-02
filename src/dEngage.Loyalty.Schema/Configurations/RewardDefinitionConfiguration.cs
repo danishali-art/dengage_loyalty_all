@@ -1,3 +1,4 @@
+using dEngage.Loyalty.Shared;
 using dEngage.Loyalty.Schema.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -25,6 +26,11 @@ public class RewardDefinitionConfiguration : IEntityTypeConfiguration<RewardDefi
         builder.Property(x => x.TypeConfig).HasColumnName("type_config").HasColumnType("jsonb").HasDefaultValue("{}").IsRequired();
         builder.Property(x => x.IsActive).HasColumnName("is_active").HasDefaultValue(true);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
+        // CR 2026-09-30 (A4). The column default backfills existing rows as approved — none of
+        // them ever needed an approval before.
+        builder.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired().HasDefaultValue(RewardStatus.Active);
+        builder.Property(x => x.CreatedBy).HasColumnName("created_by").HasMaxLength(255);
+        builder.Property(x => x.ApprovedBy).HasColumnName("approved_by").HasMaxLength(255);
 
         builder.HasOne(x => x.Program)
             .WithMany()
@@ -50,5 +56,13 @@ public class RewardDefinitionConfiguration : IEntityTypeConfiguration<RewardDefi
             .IsUnique()
             .HasFilter("acquisition = 'stamp_completion' AND is_active")
             .HasDatabaseName("ux_reward_definitions_active_stamp");
+
+        // CR 2026-09-30 (A5): reward.purchase looks rewards up by (tenant, name, active) — an
+        // active name must therefore be unique across the tenant's programs, not only within one.
+        // The program-slug prefix keeps new names apart; this index also covers grandfathered ones.
+        builder.HasIndex(x => new { x.TenantId, x.Name })
+            .IsUnique()
+            .HasFilter("is_active")
+            .HasDatabaseName("ux_reward_definitions_tenant_name_active");
     }
 }

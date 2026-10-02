@@ -27,7 +27,8 @@ public sealed class RewardsModule : TenantScopedModule
             var tenantId = RequireTenantScope(RouteParam(parameters, "tenantId"));
             var programId = RouteGuidParam(parameters, "programId");
             var request = await Request.ReadValidatedJsonBodyAsync(createValidator, ct);
-            return JsonResponses.Ok(await appService.CreateAsync(tenantId, programId, request, ct), HttpStatusCode.Created);
+            var createdBy = RequireAuthenticated().SubjectId;
+            return JsonResponses.Ok(await appService.CreateAsync(tenantId, programId, request, createdBy, ct), HttpStatusCode.Created);
         });
 
         MapPatch("/{rewardId}", async (parameters, ct) =>
@@ -46,6 +47,17 @@ public sealed class RewardsModule : TenantScopedModule
             var rewardId = RouteGuidParam(parameters, "rewardId");
             var body = await Request.ReadJsonBodyAsync<SetActiveRequest>(ct);
             return JsonResponses.Ok(await appService.SetActiveAsync(tenantId, programId, rewardId, body.IsActive, ct));
+        });
+
+        // CR 2026-09-30 (A4): moves a cashback reward out of PendingApproval — a different admin
+        // than its creator (same shape as PATCH .../rules/{ruleId}/approve, CR-04).
+        MapPatch("/{rewardId}/approve", async (parameters, ct) =>
+        {
+            var tenantId = RequireTenantScope(RouteParam(parameters, "tenantId"));
+            var programId = RouteGuidParam(parameters, "programId");
+            var rewardId = RouteGuidParam(parameters, "rewardId");
+            var approvedBy = RequireAuthenticated().SubjectId;
+            return JsonResponses.Ok(await appService.ApproveAsync(tenantId, programId, rewardId, approvedBy, ct));
         });
 
         MapDelete("/{rewardId}", async (parameters, ct) =>

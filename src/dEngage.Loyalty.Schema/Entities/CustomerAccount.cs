@@ -14,6 +14,11 @@ public class CustomerAccount
     public DateOnly? TierPeriodStart { get; set; }
     public DateOnly? TierExpiresAt { get; set; }
 
+    // CR 2026-09-30 (§3.6): set by a tier-upgrade reward with duration_days. TierDowngradeJob
+    // leaves the account alone until this date (UTC); after it, the normal grace/downgrade
+    // path applies again. Deliberately not TierExpiresAt, which means "grace ends".
+    public DateOnly? TierLockedUntil { get; set; }
+
     public AccountType AccountType { get; set; } = default!;
     public TierDefinition? Tier { get; set; }
     public ICollection<LedgerEntry> LedgerEntries { get; set; } = [];

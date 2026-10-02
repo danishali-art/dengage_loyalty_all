@@ -11,6 +11,7 @@ using dEngage.Loyalty.Shared;
 using Microsoft.EntityFrameworkCore;
 using CampaignEntity = dEngage.Loyalty.Schema.Entities.StreakCampaign;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
+using RewardEntity = dEngage.Loyalty.Schema.Entities.RewardDefinition;
 
 namespace dEngage.Loyalty.Api.StreakCampaigns;
 
@@ -28,6 +29,7 @@ public sealed class StreakCampaignsAppService(
     IProgramChangeTracker programChanges,
     IRepository<CampaignEntity> repository,
     IRepository<ProgramEntity> programRepository,
+    IRepository<RewardEntity> rewardRepository,
     ICampaignConfigCacheService campaignConfigCacheService,
     ITenantSlugResolver tenantSlugResolver) : IStreakCampaignsAppService
 {
@@ -65,6 +67,7 @@ public sealed class StreakCampaignsAppService(
     {
         await RequireProgramAsync(tenantId, programId, ct);
         ValidateDsl(request.Conditions, request.Config);
+        await RequireEligibleRewardAsync(tenantId, programId, request.Config, ct);
         var tenantGuid = await tenantSlugResolver.ResolveAsync(tenantId, ct);
 
         var entity = new CampaignEntity
@@ -99,6 +102,8 @@ public sealed class StreakCampaignsAppService(
         var conditions = request.Conditions ?? (entity.Conditions is null ? null : JsonSerializer.Deserialize<List<ConditionClause>>(entity.Conditions));
         var config = request.Config ?? StreakConfig.Parse(entity.Config);
         ValidateDsl(conditions, config);
+        if (request.Config is not null)
+            await RequireEligibleRewardAsync(tenantId, programId, config, ct);
 
         if (request.Name is not null) entity.Name = request.Name;
         if (request.Trigger is not null) entity.Trigger = request.Trigger;
@@ -120,6 +125,8 @@ public sealed class StreakCampaignsAppService(
     public async Task<StreakCampaignResponse> SetStatusAsync(string tenantId, Guid programId, Guid campaignId, string status, CancellationToken ct)
     {
         var entity = await Find(tenantId, programId, campaignId, ct);
+        if (status == RuleStatus.Active && entity.Status != RuleStatus.Active)
+            await RequireEligibleRewardAsync(tenantId, programId, StreakConfig.Parse(entity.Config), ct);
         entity.Status = status;
         entity.UpdatedAt = DateTime.UtcNow;
         await programChanges.MarkChangedAsync(programId, ct);
@@ -145,6 +152,23 @@ public sealed class StreakCampaignsAppService(
     {
         ConditionDsl.Validate(conditions);
         config.Validate();
+    }
+
+    // CR 2026-09-30 (§3.7): a streak that pays a reward definition must point at one it can
+    // actually grant — an active, approved, streak_completion reward of this program. Without
+    // this the campaign completes and grants nothing (StreakCampaignModule only logs a warning).
+    // Still no FK (declined 2026-09-17): checked here, and RewardsAppService refuses to deactivate
+    // or delete a reward an active campaign uses.
+    private async Task RequireEligibleRewardAsync(string tenantId, Guid programId, StreakConfig config, CancellationToken ct)
+    {
+        if (config.Reward?.Kind != StreakRewardKind.RewardDefinition || config.Reward.RewardDefinitionId is not { } rewardId)
+            return;
+
+        var reward = await rewardRepository.FindAsync(tenantId, rewardId, ct);
+        if (reward is null || reward.ProgramId != programId || !reward.IsActive
+            || reward.Status != RewardStatus.Active || reward.Acquisition != RewardAcquisition.StreakCompletion)
+            throw new ValidationApiException(
+                "invalid_streak_reward: reward.reward_definition_id must be an active, approved Streak-completion reward of this program.");
     }
 
     private async Task<CampaignEntity> Find(string tenantId, Guid programId, Guid campaignId, CancellationToken ct)

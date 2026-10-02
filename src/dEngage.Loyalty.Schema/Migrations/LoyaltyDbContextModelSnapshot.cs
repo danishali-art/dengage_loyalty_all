@@ -281,6 +281,10 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tier_id");
 
+                    b.Property<DateOnly?>("TierLockedUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("tier_locked_until");
+
                     b.Property<DateOnly?>("TierPeriodStart")
                         .HasColumnType("date")
                         .HasColumnName("tier_period_start");
@@ -713,6 +717,12 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("qualifying_account_type_id");
 
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("slug");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -734,6 +744,10 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.HasIndex("TenantId")
                         .HasDatabaseName("idx_programs_tenant_id");
 
+                    b.HasIndex("TenantId", "Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ux_programs_tenant_slug");
+
                     b.ToTable("programs", (string)null);
                 });
 
@@ -750,9 +764,19 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("acquisition");
 
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("approved_by");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
@@ -794,6 +818,14 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("stamp_account_type_id");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("active")
+                        .HasColumnName("status");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -812,6 +844,11 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.HasIndex("ProgramId");
 
                     b.HasIndex("StampAccountTypeId");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reward_definitions_tenant_name_active")
+                        .HasFilter("is_active");
 
                     b.HasIndex("TenantId", "ProgramId")
                         .HasDatabaseName("idx_reward_definitions_tenant_program");

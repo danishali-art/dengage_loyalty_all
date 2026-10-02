@@ -21,7 +21,15 @@ export interface Program {
   publishedVersion: number | null;
   publishedAt: string | null;
   publishedBy: string | null;
+  /**
+   * CR 2026-09-30 (A5): prefixes the program's reward names (`{slug}_{suffix}`). Lowercase letters,
+   * digits and single hyphens — never `_`. Editable while a draft, locked once published.
+   */
+  slug: string;
 }
+
+/** Mirrors ProgramSlugRules.Pattern (ProgramsValidators.cs). */
+export const PROGRAM_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
  * A new program always starts as an inactive draft (1.3.CL item 8), so there is no `status` here.
@@ -30,6 +38,8 @@ export interface Program {
 export interface CreateProgramRequest {
   name: string;
   description?: string | null;
+  /** Optional — derived from the name by the API when omitted. */
+  slug?: string | null;
 }
 
 export interface UpdateProgramRequest {
@@ -37,4 +47,6 @@ export interface UpdateProgramRequest {
   description?: string | null;
   /** Only 'active' once published — the API returns 409 program_not_published for a draft. */
   status?: 'active' | 'inactive';
+  /** Only while a draft — the API returns 409 slug_locked once published. */
+  slug?: string;
 }

@@ -159,6 +159,16 @@ public sealed class TiersAppService(
         if (await db.CustomerAccounts.AnyAsync(a => a.TenantId == tenantGuid && a.TierId == tierId, ct))
             throw new ConflictApiException("tier_in_use", "This tier is referenced by existing customer accounts.");
 
+        // CR 2026-09-30 (§3.6): an active tier-upgrade reward targeting this tier would have
+        // nothing to upgrade to. target_tier_id lives in the jsonb TypeConfig, so it is matched
+        // in memory (a program has few tier-upgrade rewards).
+        var tierUpgradeConfigs = await db.RewardDefinitions.AsNoTracking()
+            .Where(r => r.TenantId == tenantGuid && r.ProgramId == programId && r.IsActive && r.RewardType == RewardType.TierUpgrade)
+            .Select(r => r.TypeConfig)
+            .ToListAsync(ct);
+        if (tierUpgradeConfigs.Any(cfg => TargetTierId(cfg) == tierId))
+            throw new ConflictApiException("tier_in_use_by_reward", "An active tier-upgrade reward targets this tier — deactivate it first.");
+
         var program = await programRepository.FindAsync(tenantId, programId, ct);
         if (program?.Status == ProgramStatus.Active)
             throw new ConflictApiException("program_running", "Tiers cannot be deleted while the parent program is active.");
@@ -167,6 +177,16 @@ public sealed class TiersAppService(
         await configVersions.StageAsync(db, entity.TenantId, "Tier", entity.Id, entity, ConfigChangeType.Deleted, principal, null, ct);
         await programChanges.MarkChangedAsync(programId, ct);
         await repository.SaveChangesAsync(ct);
+    }
+
+    private static Guid? TargetTierId(string typeConfig)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(typeConfig);
+        return doc.RootElement.TryGetProperty("target_tier_id", out var v)
+               && v.ValueKind == System.Text.Json.JsonValueKind.String
+               && Guid.TryParse(v.GetString(), out var id)
+            ? id
+            : null;
     }
 
     private async Task<TierEntity> Find(string tenantId, Guid programId, Guid tierId, CancellationToken ct)

@@ -9,6 +9,9 @@ public static class OutboundEventTypes
     public const string PointsExpired = "loyalty.points.expired";
     public const string PointsTransferred = "loyalty.points.transferred";
     public const string PointsTransferFailed = "loyalty.points.transfer_failed";
+    // CR 2026-09-30 §3.9 step 4: redeem reports its outcome the way transfer does.
+    public const string PointsRedeemed = "loyalty.points.redeemed";
+    public const string PointsRedeemFailed = "loyalty.points.redeem_failed";
     public const string TierChanged = "loyalty.tier.changed";
     public const string StreakCompleted = "loyalty.streak.completed";
     public const string StreakBroken = "loyalty.streak.broken";

@@ -58,6 +58,27 @@ public sealed class PointsAccountTypeConfigValidator : IAccountTypeConfigValidat
                 targetId.ValueKind != JsonValueKind.String || !Guid.TryParse(targetId.GetString(), out _))
                 throw new ValidationApiException("POINTS 'redemption' config requires a 'target_account_type_id' (the wallet redeemed points convert into).");
         }
+
+        // CR 2026-09-30 addendum A: the points-transfer daily cap, now set from the portal.
+        // PointsTransferHandler deserializes daily_limit as a decimal from a JSON number — reject
+        // anything else here instead of letting every transfer fail at runtime.
+        if (config.TryGetProperty("transfer", out var transfer) && transfer.ValueKind != JsonValueKind.Null)
+        {
+            if (transfer.ValueKind != JsonValueKind.Object
+                || !transfer.TryGetProperty("daily_limit", out var dailyLimit)
+                || dailyLimit.ValueKind != JsonValueKind.Number
+                || !dailyLimit.TryGetDecimal(out var limit) || limit <= 0)
+                throw new ValidationApiException("POINTS 'transfer' config requires a numeric 'daily_limit' greater than 0.");
+        }
+    }
+
+    // Only POINTS can be transferred between customers (PointsTransferHandler). Moving CASH or
+    // stamps between customers is not offered (see the CR 2026-09-30 addendum A analysis: cash
+    // P2P is money transmission, stamps are not fungible).
+    internal static void RejectTransfer(JsonElement config, string type)
+    {
+        if (config.TryGetProperty("transfer", out var transfer) && transfer.ValueKind != JsonValueKind.Null)
+            throw new ValidationApiException($"{type} config cannot have 'transfer' — only POINTS can be transferred between customers.");
     }
 }
 
@@ -78,6 +99,7 @@ public sealed class CashAccountTypeConfigValidator : IAccountTypeConfigValidator
         // 1.3.CL item 3: CASH is real credit and cannot expire inside the loyalty system.
         if (config.TryGetProperty("expiration_days", out _))
             throw new ValidationApiException("CASH config cannot have 'expiration_days' — cash balances do not expire.");
+        PointsAccountTypeConfigValidator.RejectTransfer(config, Type);
     }
 }
 
@@ -91,6 +113,7 @@ public sealed class StampAccountTypeConfigValidator : IAccountTypeConfigValidato
     {
         if (config.ValueKind != JsonValueKind.Object)
             throw new ValidationApiException("STAMP config must be a JSON object.");
+        PointsAccountTypeConfigValidator.RejectTransfer(config, Type);
     }
 }
 

@@ -50,6 +50,9 @@ public class TierDowngradeJob(LoyaltyDbContext db, ILogger<TierDowngradeJob> log
               AND ca.tier_period_start IS NOT NULL
               AND ca.tier_expires_at   IS NULL
               AND (ca.tier_period_start + (td.qualifying_days || ' days')::interval)::date <= {0}
+              -- CR 2026-09-30 (§3.6): a reward-driven upgrade is protected until tier_locked_until;
+              -- grace only starts once the lock has passed.
+              AND (ca.tier_locked_until IS NULL OR ca.tier_locked_until <= {0})
             """, today);
 
         if (graceStarted > 0)
@@ -104,6 +107,8 @@ public class TierDowngradeJob(LoyaltyDbContext db, ILogger<TierDowngradeJob> log
                   AND ca.tier_period_start IS NOT NULL
                   AND td.qualifying_days   IS NOT NULL
                   AND ca.tier_expires_at <= {0}
+                  -- CR 2026-09-30 (§3.6): never downgrade a tier still locked by a reward.
+                  AND (ca.tier_locked_until IS NULL OR ca.tier_locked_until <= {0})
             ),
             best_tier AS (
                 SELECT DISTINCT ON (ea.account_id)
