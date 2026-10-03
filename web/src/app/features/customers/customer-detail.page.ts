@@ -104,7 +104,6 @@ const TABS: readonly Tab[] = [
   template: `
     <app-page-header
       [heading]="contactKey()"
-      [subtitle]="'customers.detail.subtitle' | translate"
       [crumbs]="[
         { label: 'nav.customers' | translate, link: ['/customers'] },
         { label: contactKey() },
@@ -122,6 +121,27 @@ const TABS: readonly Tab[] = [
           </svg>
         </app-icon-button>
       </div>
+      <!-- Option C (2026-10-03): the tabs sit in the header, under the customer name. -->
+      @if (!loading() && profile()) {
+        <nav tabs class="-mb-px flex gap-1 overflow-x-auto" role="tablist">
+          @for (t of tabs; track t) {
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="tab() === t"
+              class="cursor-pointer border-b-2 px-4 pt-1 pb-3 text-sm whitespace-nowrap transition-colors"
+              [class]="
+                tab() === t
+                  ? 'border-brand text-brand font-medium'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              "
+              (click)="selectTab(t)"
+            >
+              {{ 'customers.tab.' + t | translate }}
+            </button>
+          }
+        </nav>
+      }
     </app-page-header>
 
     <div class="mx-auto max-w-7xl space-y-6 px-8 py-6">
@@ -134,25 +154,6 @@ const TABS: readonly Tab[] = [
           icon="🔍"
         />
       } @else {
-        <div class="flex gap-1 border-b border-gray-200" role="tablist">
-          @for (t of tabs; track t) {
-            <button
-              type="button"
-              role="tab"
-              [attr.aria-selected]="tab() === t"
-              class="-mb-px cursor-pointer border-b-2 px-4 py-2 text-sm transition-colors"
-              [class]="
-                tab() === t
-                  ? 'border-brand text-brand font-medium'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              "
-              (click)="selectTab(t)"
-            >
-              {{ 'customers.tab.' + t | translate }}
-            </button>
-          }
-        </div>
-
         @switch (tab()) {
           @case ('overview') {
             <app-customer-overview-tab [profile]="profile()!" />

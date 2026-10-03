@@ -211,7 +211,6 @@
   "accountTypes.transfer.dailyLimit": "Daily transfer limit (points)",
   "accountTypes.transfer.dailyLimitHint": "The most points one customer can send per day (UTC). A transfer over the limit is refused with daily_limit_exceeded.",
   "accountTypes.transfer.dailyLimitError": "Enter a limit of at least 1 point.",
-  "customers.detail.subtitle": "Customer profile",
   "customers.detail.copyKey": "Copy contact key",
   "customers.detail.notFound": "Customer not found",
   "customers.detail.notFoundBody": "No profile exists yet for this contact key.",

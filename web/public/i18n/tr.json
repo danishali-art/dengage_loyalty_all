@@ -211,7 +211,6 @@
   "accountTypes.transfer.dailyLimit": "Günlük transfer limiti (puan)",
   "accountTypes.transfer.dailyLimitHint": "Bir müşterinin günde (UTC) gönderebileceği en fazla puan. Limiti aşan transfer daily_limit_exceeded ile reddedilir.",
   "accountTypes.transfer.dailyLimitError": "En az 1 puanlık bir limit girin.",
-  "customers.detail.subtitle": "Müşteri profili",
   "customers.detail.copyKey": "Contact key'i kopyala",
   "customers.detail.notFound": "Müşteri bulunamadı",
   "customers.detail.notFoundBody": "Bu contact key için henüz bir profil yok.",
