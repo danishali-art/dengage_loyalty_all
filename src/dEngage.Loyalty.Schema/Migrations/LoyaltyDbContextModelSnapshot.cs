@@ -370,6 +370,11 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("event_id");
 
+                    b.Property<string>("ContactKey")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("contact_key");
+
                     b.Property<string>("Error")
                         .HasColumnType("text")
                         .HasColumnName("error");
@@ -400,6 +405,9 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnName("status");
 
                     b.HasKey("TenantId", "EventId");
+
+                    b.HasIndex("TenantId", "ContactKey", "ReceivedAt")
+                        .HasDatabaseName("idx_event_inbox_tenant_contact_received");
 
                     b.ToTable("event_inbox", (string)null);
                 });
@@ -512,6 +520,9 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.HasIndex("TenantId", "IdempotencyKey")
                         .IsUnique()
                         .HasDatabaseName("ux_held_postings_tenant_idempotency");
+
+                    b.HasIndex("TenantId", "ContactKey", "CreatedAt")
+                        .HasDatabaseName("idx_held_postings_tenant_contact_date");
 
                     b.ToTable("held_postings", (string)null);
                 });
@@ -665,6 +676,9 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .IsUnique()
                         .HasDatabaseName("ux_outbox_dedup")
                         .HasFilter("dedup_key IS NOT NULL");
+
+                    b.HasIndex("TenantId", "ContactKey", "CreatedAt")
+                        .HasDatabaseName("idx_outbox_tenant_contact_date");
 
                     b.ToTable("outbox_events", (string)null);
                 });
@@ -1124,6 +1138,9 @@ namespace dEngage.Loyalty.Schema.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "ContactKey", "CreatedAt")
+                        .HasDatabaseName("idx_rule_fire_audit_tenant_contact_date");
+
                     b.HasIndex("TenantId", "RuleId", "CreatedAt")
                         .HasDatabaseName("idx_rule_fire_audit_tenant_rule_date");
 
@@ -1434,6 +1451,9 @@ namespace dEngage.Loyalty.Schema.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "ContactKey")
+                        .HasDatabaseName("idx_streak_log_tenant_contact");
+
                     b.HasIndex("TenantId", "CampaignId", "ContactKey", "CompletionNo")
                         .IsUnique()
                         .HasDatabaseName("ux_streak_log_completion");
@@ -1522,6 +1542,9 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("TenantId", "CampaignId", "ContactKey");
+
+                    b.HasIndex("TenantId", "ContactKey")
+                        .HasDatabaseName("idx_streak_progress_tenant_contact");
 
                     b.ToTable("streak_progress", (string)null);
                 });

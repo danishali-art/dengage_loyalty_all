@@ -24,4 +24,8 @@ public sealed class CursorPage<T>
 {
     public required IReadOnlyList<T> Data { get; init; }
     public string? NextCursor { get; init; }
+
+    // Optional, additive: the number of rows matching the request's filters (all pages), for a
+    // "1–25 of 120" paginator. Null where an endpoint doesn't count (omitted from the JSON).
+    public int? Total { get; init; }
 }

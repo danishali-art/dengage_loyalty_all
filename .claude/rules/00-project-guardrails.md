@@ -50,7 +50,8 @@ If a task seems to need breaking one of these, stop and explain why. Don't work 
   including in answers. Document new keys in `.env.example` with empty values.
 - `src/dEngage.Loyalty.Schema/Migrations/*` for migrations that were already applied, and
   `LoyaltyDbContextModelSnapshot.cs`: generate new migrations, never hand-edit these.
-- `scripts/loyalty_schema_reference.md` is generated. Regenerate it, don't hand-edit it.
+- `scripts/loyalty_schema_reference.md` is maintained by hand. Update it with every schema change,
+  checked against the EF Core configurations; don't leave it behind the migrations.
 - `scripts/*.sql` tenant seeds and backups (`loyalty_db*`, `*_pg_backup_*`) are reference data.
   Don't modify them unless asked.
 - `bin/`, `obj/`, `node_modules/`, `.vs/` and `web/dist/` are build output. Never edit them.
@@ -61,10 +62,10 @@ If a task seems to need breaking one of these, stop and explain why. Don't work 
 ## 5. Keep docs in step with code
 A change isn't done until the docs that describe it are updated in the same piece of work:
 - Behaviour or scope → `docs/SCOPE_BASELINE.md` (and `docs/SOW.md` if it's contractual).
-- Endpoints or DTOs → `LoyaltySaaSApi.md`. **This file is currently missing.** Don't invent its
-  contents. Tell the developer, and offer to regenerate it from `src/dEngage.Loyalty.Api/*/*Dtos.cs`
-  and `*Module.cs`.
-- DB schema → a new migration plus a regenerated `scripts/loyalty_schema_reference.md`.
+- Endpoints or DTOs → `LoyaltySaaSApi.md` (regenerated 2026-10-02 from
+  `src/dEngage.Loyalty.Api/*/*Dtos.cs` and `*Module.cs`). Keep it in step from the code; don't
+  document behaviour the code doesn't have.
+- DB schema → a new migration plus an updated `scripts/loyalty_schema_reference.md`.
 - A changed convention → the relevant `CLAUDE.md` or `.claude/rules/*.md` file.
 
 ## 6. No version control right now

@@ -28,5 +28,9 @@ public class StreakLogConfiguration : IEntityTypeConfiguration<StreakLog>
         builder.HasIndex(x => new { x.TenantId, x.CampaignId, x.ContactKey, x.CompletionNo })
             .IsUnique()
             .HasDatabaseName("ux_streak_log_completion");
+
+        // CR 2026-10-02 (Customer 360): per-customer lookups from the customer view.
+        builder.HasIndex(x => new { x.TenantId, x.ContactKey })
+            .HasDatabaseName("idx_streak_log_tenant_contact");
     }
 }

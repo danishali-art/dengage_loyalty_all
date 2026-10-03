@@ -38,7 +38,7 @@ public sealed class CardBucketsAppService(
     IRuleVersioningService versioning,
     ITenantSlugResolver tenantSlugResolver) : ICardBucketsAppService
 {
-    private const string Template = "card_bucket";
+    internal const string Template = "card_bucket";
     private const string Trigger = "card.transaction";
     private static readonly JsonSerializerOptions DslOptions = new();
 

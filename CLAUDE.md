@@ -61,6 +61,6 @@ committed anywhere before this repo was git-initialized.
 - `docs/SCOPE_BASELINE.md` — locked scope, reconciled against `docs/SOW.md`.
 - `LoyaltySaaSApi.md` — API contract (referenced by `web/CLAUDE.md`; recreate/regenerate from
   the `Api` controllers/DTOs if not recovered from prior history).
-- `scripts/loyalty_schema_reference.md` — DB schema reference (Turkish), generated from EF Core
-  migrations — regenerate via `dotnet ef migrations script`, don't hand-edit.
+- `scripts/loyalty_schema_reference.md` — DB schema reference (Turkish), maintained by hand: update
+  it in the same change as each migration, checked against the EF Core configurations.
 - `web/CLAUDE.md` — Angular portal conventions.

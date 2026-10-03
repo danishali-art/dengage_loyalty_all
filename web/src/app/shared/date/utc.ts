@@ -21,3 +21,21 @@ export function utcIsoToLocalInput(iso: string | null | undefined): string {
 export function nowUtcIso(): string {
   return new Date().toISOString();
 }
+
+/**
+ * For filters an admin fills in their own local time (CR 2026-10-02, Customer 360): a
+ * `datetime-local` value is read as the browser's local wall-clock time and sent as UTC.
+ * (Unlike `localInputToUtcIso`, which treats the input itself as UTC for rule windows.)
+ */
+export function localDateTimeToUtcIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/** The `datetime-local` value for the start of the local day `days` days before `now`. */
+export function localDaysAgoInput(days: number, now: Date = new Date()): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`;
+}

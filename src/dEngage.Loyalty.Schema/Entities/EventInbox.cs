@@ -12,4 +12,9 @@ public class EventInbox
     public DateTime? ProcessedAt { get; set; }
     public string Status { get; set; } = InboxStatus.Pending;
     public string? Error { get; set; }
+
+    // CR 2026-10-02 (Customer 360): the event data's contact_key, recorded on arrival so the
+    // customer view can list a customer's events. Null for events received before the CR and
+    // for events that carry no contact_key.
+    public string? ContactKey { get; set; }
 }

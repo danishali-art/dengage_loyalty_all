@@ -36,5 +36,9 @@ public class RuleFireAuditConfiguration : IEntityTypeConfiguration<RuleFireAudit
         builder.HasIndex(x => new { x.TenantId, x.SourceEventId, x.RuleId })
             .IsUnique()
             .HasDatabaseName("ux_rule_fire_audit_source_event_rule");
+
+        // CR 2026-10-02 (Customer 360): per-customer lookups from the customer view.
+        builder.HasIndex(x => new { x.TenantId, x.ContactKey, x.CreatedAt })
+            .HasDatabaseName("idx_rule_fire_audit_tenant_contact_date");
     }
 }

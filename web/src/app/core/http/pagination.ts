@@ -12,6 +12,8 @@ export interface Page<T> {
 export interface CursorPage<T> {
   readonly data: readonly T[];
   readonly nextCursor: string | null;
+  /** Rows matching the filters across all pages, where the endpoint counts them. */
+  readonly total?: number;
 }
 
 export interface PageQuery {
