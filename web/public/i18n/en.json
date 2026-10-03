@@ -411,5 +411,18 @@
   "customers.tiers.topTierShort": "Top tier",
   "customers.tiers.points": "Qualifying points",
   "customers.tiers.nextTier": "Next tier",
-  "customers.tiers.noneTiered": "None of this customer's programs has a tier system."
+  "customers.tiers.noneTiered": "None of this customer's programs has a tier system.",
+  "customers.list.subtitle": "Find a customer by contact key, or browse them all.",
+  "customers.list.searchLabel": "Search customers",
+  "customers.list.searchPlaceholder": "Search by contact key, e.g. cust_1001",
+  "customers.list.searchHint": "Matches any part of the contact key. Press Enter on an exact key to open that customer.",
+  "customers.list.empty": "No customers yet",
+  "customers.list.emptyBody": "Customers appear here once an ingested event creates their first balance.",
+  "customers.list.noMatch": "No customer matches",
+  "customers.list.noMatchBody": "Check the contact key, or clear the search.",
+  "customers.list.col.contactKey": "Contact key",
+  "customers.list.col.firstSeen": "First seen",
+  "customers.list.col.lastActivity": "Last activity",
+  "customers.list.col.programs": "Programs",
+  "customers.list.col.accounts": "Accounts"
 }

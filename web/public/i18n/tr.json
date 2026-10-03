@@ -411,5 +411,18 @@
   "customers.tiers.topTierShort": "En üst tier",
   "customers.tiers.points": "Qualifying puan",
   "customers.tiers.nextTier": "Sonraki tier",
-  "customers.tiers.noneTiered": "Bu müşterinin programlarının hiçbirinde tier sistemi yok."
+  "customers.tiers.noneTiered": "Bu müşterinin programlarının hiçbirinde tier sistemi yok.",
+  "customers.list.subtitle": "Bir müşteriyi contact key ile bulun ya da hepsine göz atın.",
+  "customers.list.searchLabel": "Müşteri ara",
+  "customers.list.searchPlaceholder": "Contact key ile arayın, ör. cust_1001",
+  "customers.list.searchHint": "Contact key'in herhangi bir kısmıyla eşleşir. Tam bir key yazıp Enter'a basarsanız o müşteri açılır.",
+  "customers.list.empty": "Henüz müşteri yok",
+  "customers.list.emptyBody": "Müşteriler, işlenen bir event ilk bakiyelerini oluşturduğunda burada görünür.",
+  "customers.list.noMatch": "Eşleşen müşteri yok",
+  "customers.list.noMatchBody": "Contact key'i kontrol edin ya da aramayı temizleyin.",
+  "customers.list.col.contactKey": "Contact key",
+  "customers.list.col.firstSeen": "İlk görülme",
+  "customers.list.col.lastActivity": "Son hareket",
+  "customers.list.col.programs": "Programlar",
+  "customers.list.col.accounts": "Hesaplar"
 }
