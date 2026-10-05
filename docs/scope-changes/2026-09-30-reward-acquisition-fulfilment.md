@@ -1,6 +1,9 @@
 # Scope Change Impact Analysis: Reward acquisition, cashback / tier-upgrade fulfilment, event simulator
 
 **Status:** **Approved** 2026-10-01 by Product Owner + Architect (confirmed by the developer, Moiz). **P1–P4 implemented and verified** (§11). P5 stays deferred (A7). See the approval record below.
+
+> **Superseded in part by CR 2026-10-05 ([2026-10-05-remove-complaints-and-stamps.md](2026-10-05-remove-complaints-and-stamps.md)):** stamp completion (reset + `loyalty.reward.earned` with `source: stamp_completion`, O1) and `stampAccountTypeId` were removed.
+
 **Date:** 2026-09-30
 **Author:** Claude Code, at the request of Moiz
 **Source:** Change log items 1–7 (Add Reward popup, reward/acquisition taxonomy, configuration field, rule binding, event simulator), plus item 8 (burn events and burn rules), added 2026-09-30 after the burn-event review.

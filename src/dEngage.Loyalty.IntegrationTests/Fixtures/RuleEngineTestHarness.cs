@@ -61,18 +61,17 @@ public sealed class RuleEngineTestHarness : IDisposable
 
         var handlerRegistry = new RuleTypeHandlerRegistry(new IRuleTypeHandler[]
         {
-            new SpendRuleHandler(), new FixedBonusRuleHandler(), new StampRuleHandler(),
-            new RedemptionRuleHandler(), new ExpiryRuleHandler(), new ManualAdjustmentRuleHandler()
+            new SpendRuleHandler(), new FixedBonusRuleHandler(),
+            new RedemptionRuleHandler(), new ManualAdjustmentRuleHandler()
         });
 
         var matcher = new RuleMatcher(ruleCache.Object, campaignCache.Object);
         var tierContext = new TierContextLoader(Db, tenantSlugResolver);
         var limitEvaluator = new RuleLimitEvaluator(Db);
         var winner = new WinnerSelector(handlerRegistry, LimitCache.Object, limitEvaluator, NullLogger<WinnerSelector>.Instance);
-        var stampCompletion = new StampCompletionHandler(Db, ledger, outbox, tenantSlugResolver, NullLogger<StampCompletionHandler>.Instance);
         var auditWriter = new RuleFireAuditWriter(Db, tenantSlugResolver);
         var budgetReservation = new BudgetReservationService(Db, tenantSlugResolver, limitEvaluator);
-        var ledgerPoster = new LedgerPoster(Db, ledger, outbox, stampCompletion, auditWriter, budgetReservation, tenantSlugResolver, NullLogger<LedgerPoster>.Instance);
+        var ledgerPoster = new LedgerPoster(Db, ledger, outbox, auditWriter, budgetReservation, tenantSlugResolver, NullLogger<LedgerPoster>.Instance);
         var limitSync = new LimitCounterSync(LimitCache.Object, NullLogger<LimitCounterSync>.Instance);
         var tierEval = new TierEvaluationService(Db, outbox, tenantSlugResolver, NullLogger<TierEvaluationService>.Instance);
         var campaignModules = new CampaignModuleRegistry(Array.Empty<ICampaignModule>());

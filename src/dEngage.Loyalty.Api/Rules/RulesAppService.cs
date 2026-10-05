@@ -140,6 +140,7 @@ public sealed class RulesAppService(
     public async Task<RuleResponse> ApproveAsync(string tenantId, Guid programId, Guid ruleId, string approvedBy, CancellationToken ct)
     {
         var entity = await Find(tenantId, programId, ruleId, ct);
+        await RequireNotRetiredAsync(tenantId, entity, ct);
 
         if (entity.Status != RuleStatus.PendingApproval)
             throw new ValidationApiException($"Rule '{ruleId}' is not pending approval.");
@@ -161,6 +162,7 @@ public sealed class RulesAppService(
     public async Task<RuleResponse> UpdateAsync(string tenantId, Guid programId, Guid ruleId, UpdateRuleRequest request, CancellationToken ct)
     {
         var entity = await Find(tenantId, programId, ruleId, ct);
+        await RequireNotRetiredAsync(tenantId, entity, ct);
 
         var conditions = request.Conditions ?? FlatConditionsMigrator.ParseConditions(entity.Conditions);
         ValidateDsl(conditions);
@@ -230,6 +232,10 @@ public sealed class RulesAppService(
         if (entity.Status == RuleStatus.PendingApproval)
             throw new ValidationApiException($"Rule '{ruleId}' is pending approval — use POST .../approve, not status.");
 
+        // Disabling or deleting a retired rule stays allowed; only switching it back on is refused.
+        if (status == RuleStatus.Active)
+            await RequireNotRetiredAsync(tenantId, entity, ct);
+
         entity.Status = status;
         entity.UpdatedAt = DateTime.UtcNow;
         await programChanges.MarkChangedAsync(programId, ct);
@@ -279,6 +285,22 @@ public sealed class RulesAppService(
     }
 
     private static void ValidateDsl(ConditionTree? conditions) => GroupedConditionDsl.Validate(conditions);
+
+    // CR 2026-10-05 (D1, D15): StampRule/ExpiryRule, the points.expired trigger and STAMP
+    // targets are retired. Those rules were disabled by migration and stay readable as history,
+    // but can't be edited, approved or re-activated — same shape as RewardsAppService's
+    // reward_type_retired.
+    private async Task RequireNotRetiredAsync(string tenantId, RuleEntity entity, CancellationToken ct)
+    {
+        var retired = RuleTypes.IsRetired(entity.Type)
+            || entity.Trigger == EventTypes.PointsExpired
+            || (entity.TargetAccountTypeId is { } targetId
+                && await (await accountTypeRepository.Query(tenantId, ct))
+                    .AnyAsync(a => a.Id == targetId && a.Type == nameof(AccountType.STAMP), ct));
+        if (retired)
+            throw new ConflictApiException("rule_type_retired",
+                $"Rule '{entity.Id}' uses a retired rule type, trigger or STAMP wallet — it is kept for history and can't be edited or re-activated.");
+    }
 
     private async Task<RuleEntity> Find(string tenantId, Guid programId, Guid ruleId, CancellationToken ct)
     {

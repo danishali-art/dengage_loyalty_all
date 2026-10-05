@@ -139,7 +139,6 @@ export class Sidebar {
     { label: 'nav.dashboard', link: '/dashboard', icon: '◱', show: () => true },
     { label: 'nav.programs', link: '/programs', icon: '▦', show: () => true },
     { label: 'nav.customers', link: '/customers', icon: '☻', show: () => true },
-    { label: 'nav.complaints', link: '/complaints', icon: '✉', show: () => true },
     { label: 'nav.events', link: '/events', icon: '⚡', show: () => this.flags.enabled('eventSimulator') },
     { label: 'nav.platform', link: '/platform', icon: '⚙', show: () => this.session.isPlatformAdmin() },
     { label: 'nav.reports', link: '/reports', icon: '▤', show: () => this.flags.enabled('reports') },

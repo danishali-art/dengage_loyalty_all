@@ -68,12 +68,10 @@ builder.Services.AddScoped<IOutboxService, OutboxService>();
 builder.Services.AddScoped<IRuleCacheService, RuleCacheService>();
 builder.Services.AddScoped<ILimitCacheService, LimitCacheService>();
 builder.Services.AddSingleton<IRuleTypeHandler, SpendRuleHandler>();
-builder.Services.AddSingleton<IRuleTypeHandler, StampRuleHandler>();
 builder.Services.AddSingleton<IRuleTypeHandler, FixedBonusRuleHandler>();
 // CR-02: pipeline-compatible new rule types (TransferRule/ReversalRule bypass this registry
 // entirely — see WinnerSelector/RuleEngine.cs).
 builder.Services.AddSingleton<IRuleTypeHandler, RedemptionRuleHandler>();
-builder.Services.AddSingleton<IRuleTypeHandler, ExpiryRuleHandler>();
 builder.Services.AddSingleton<IRuleTypeHandler, ManualAdjustmentRuleHandler>();
 builder.Services.AddSingleton<IRuleTypeHandlerRegistry, RuleTypeHandlerRegistry>();
 builder.Services.AddScoped<IRuleMatcher, RuleMatcher>();
@@ -81,7 +79,6 @@ builder.Services.AddScoped<ITierContextLoader, TierContextLoader>();
 builder.Services.AddScoped<IRuleLimitEvaluator, RuleLimitEvaluator>();
 builder.Services.AddScoped<IBudgetReservationService, BudgetReservationService>();
 builder.Services.AddScoped<IWinnerSelector, WinnerSelector>();
-builder.Services.AddScoped<IStampCompletionHandler, StampCompletionHandler>();
 // CR 2026-09-30 (A2): pays out cashback / tier-upgrade rewards for RewardPurchaseHandler and
 // StreakCampaignModule.
 builder.Services.AddScoped<IRewardFulfilmentService, RewardFulfilmentService>();
@@ -122,7 +119,6 @@ builder.Services.AddScoped<IEventHandler, KycCompletedHandler>();
 builder.Services.AddScoped<IEventHandler, CardTransactionHandler>();
 builder.Services.AddScoped<IEventHandler, RemittanceHandler>();
 builder.Services.AddScoped<IEventHandler, PointsAdjustedHandler>();
-builder.Services.AddScoped<IEventHandler, PointsExpiredHandler>();
 builder.Services.AddScoped<IEventHandler, GenericEventHandler>();
 builder.Services.AddScoped<IEventHandlerRegistry, EventHandlerRegistry>();
 

@@ -13,7 +13,6 @@ public sealed class LedgerPoster(
     LoyaltyDbContext db,
     ILedgerService ledger,
     IOutboxService outbox,
-    IStampCompletionHandler stampCompletion,
     IRuleFireAuditWriter auditWriter,
     IBudgetReservationService budgetReservation,
     ITenantSlugResolver tenantSlugResolver,
@@ -44,7 +43,6 @@ public sealed class LedgerPoster(
         foreach (var (rule, originalDelta, accountTypeId, resolutionSnapshot) in appliedRules)
         {
             var accountId = accountIds[accountTypeId];
-            var isStamp = rule.Type == RuleTypes.StampRule;
             var reason = ReasonFor(rule.Type);
             var idempotencyKey = $"{eventId}:{rule.Id}";
             // CR-10 (A11): "profile.* condition values arrive in the event payload and are
@@ -119,9 +117,6 @@ public sealed class LedgerPoster(
                     delta, reason, eventId, idempotencyKey,
                     rule.Id, metadata, ct);
                 ledgerEntryId = entry.Id;
-
-                if (isStamp)
-                    await stampCompletion.ProcessAsync(tenantId, accountId, evt.ContactKey, rule, eventId, ct);
             }
 
             await auditWriter.RecordAsync(
@@ -261,16 +256,16 @@ public sealed class LedgerPoster(
         return (delta, false);
     }
 
-    // CR-02: beyond Earn/StampEarn, the three new pipeline-compatible rule types each get
-    // their own reason so the ledger/audit trail can tell an operator correction apart from a
-    // customer redemption or a scheduled expiry. RedemptionRule reuses the legacy
+    // CR-02: beyond Earn, the pipeline-compatible rule types each get their own reason so the
+    // ledger/audit trail can tell an operator correction apart from a customer redemption.
+    // (StampRule → stamp_earn and ExpiryRule → points_expired were retired by CR 2026-10-05; those
+    // reasons stay in the ledger as history, and wallet expiry still posts points_expired from
+    // PointsExpirationJob.) RedemptionRule reuses the legacy
     // PointsRedeemed reason — same semantic (points debited via redemption), one reason code
     // regardless of which path produced it.
     private static string ReasonFor(string ruleType) => ruleType switch
     {
-        RuleTypes.StampRule => LedgerReason.StampEarn,
         RuleTypes.RedemptionRule => LedgerReason.PointsRedeemed,
-        RuleTypes.ExpiryRule => LedgerReason.PointsExpired,
         RuleTypes.ManualAdjustmentRule => LedgerReason.PointsAdjusted,
         _ => LedgerReason.Earn
     };

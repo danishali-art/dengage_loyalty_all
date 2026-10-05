@@ -6,8 +6,10 @@ public sealed class CreateAccountTypeRequestValidator : AbstractValidator<Create
 {
     public CreateAccountTypeRequestValidator()
     {
-        RuleFor(x => x.Type).Must(t => t is "POINTS" or "CASH" or "STAMP")
-            .WithMessage("Type must be 'POINTS', 'CASH', or 'STAMP'.");
+        // CR 2026-10-05 (D1): STAMP is retired — existing STAMP wallets stay as customer history,
+        // but no new one can be created.
+        RuleFor(x => x.Type).Must(t => t is "POINTS" or "CASH")
+            .WithMessage("Type must be 'POINTS' or 'CASH'.");
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
     }
 }

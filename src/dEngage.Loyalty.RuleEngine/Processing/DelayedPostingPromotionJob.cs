@@ -11,12 +11,6 @@ namespace dEngage.Loyalty.RuleEngine.Processing;
 // inventing a new one for this new concurrency surface. Runs hourly (Consumer's
 // DelayedPostingPromotionWorker), not nightly like the expiry job — a hold measured in
 // fractional days needs timelier promotion than a once-a-day sweep would give.
-//
-// Known limitation: does not run IStampCompletionHandler for a delayed StampRule posting —
-// that needs a full CachedRule (name, etc.) that reconstructing here would require a
-// RuleCacheService round-trip this job doesn't otherwise need. Delayed StampRule postings are
-// an unusual combination (holding back a stamp doesn't map to the "protect against a refund
-// window" motivation Delayed posting exists for); flagged as a gap, not silently handled wrong.
 public sealed class DelayedPostingPromotionJob(
     LoyaltyDbContext db,
     ILedgerService ledger,

@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using dEngage.Loyalty.Api.Complaints;
 using dEngage.Loyalty.Api.ConfigVersions;
 using dEngage.Loyalty.Api.Dashboard;
 using dEngage.Loyalty.Api.Framework.Auth;
@@ -18,8 +17,8 @@ using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
-// End-to-end HTTP coverage for the Phase 4 backend features (config version history, complaints,
-// program immutability/soft-delete) against the real Nancy pipeline — proves the wiring in
+// End-to-end HTTP coverage for the Phase 4 backend features (config version history,
+// program immutability/soft-delete; complaints were removed by CR 2026-10-05) against the real Nancy pipeline — proves the wiring in
 // Program.cs (services + modules) actually works, not just that the app services compile.
 public sealed class Phase4FeaturesSmokeTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
@@ -143,25 +142,15 @@ public sealed class Phase4FeaturesSmokeTests : IClassFixture<CustomWebApplicatio
         getAfterDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    // CR 2026-10-05 (remove complaints/stamps): the Complaints module was removed end to end —
+    // guards against the routes coming back with the module registration.
     [Fact]
-    public async Task Complaint_lifecycle_create_list_and_resolve_updates_the_summary()
+    public async Task Complaints_routes_are_gone()
     {
-        var create = await _client.PostAsync($"/api/v1/tenants/{TenantSlug}/complaints", Json(
-            new CreateComplaintRequest(null, "cust-1", "Points not credited", "Customer says points never arrived.")));
-        create.StatusCode.Should().Be(HttpStatusCode.Created);
-        var complaint = await create.Content.ReadFromJsonAsync<ComplaintResponse>(JsonConventions.Options);
-        complaint!.Status.Should().Be(ComplaintStatus.Open);
-
-        var summaryBefore = await (await _client.GetAsync($"/api/v1/tenants/{TenantSlug}/complaints/summary"))
-            .Content.ReadFromJsonAsync<ComplaintSummaryResponse>(JsonConventions.Options);
-        summaryBefore!.Open.Should().BeGreaterThanOrEqualTo(1);
-
-        var resolve = await _client.PatchAsync($"/api/v1/tenants/{TenantSlug}/complaints/{complaint.Id}/status", Json(
-            new UpdateComplaintStatusRequest(ComplaintStatus.Resolved)));
-        resolve.StatusCode.Should().Be(HttpStatusCode.OK);
-        var resolved = await resolve.Content.ReadFromJsonAsync<ComplaintResponse>(JsonConventions.Options);
-        resolved!.Status.Should().Be(ComplaintStatus.Resolved);
-        resolved.ResolvedAt.Should().NotBeNull();
+        (await _client.GetAsync($"/api/v1/tenants/{TenantSlug}/complaints"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await _client.PostAsync($"/api/v1/tenants/{TenantSlug}/complaints", Json(new { subject = "x" })))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // Dashboard/summary is covered separately in E2E/DashboardEndpointE2ETests.cs against a real

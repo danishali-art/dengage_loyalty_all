@@ -27,7 +27,7 @@ The process for a scope change:
 ## Backend architecture
 
 - `src/dEngage.Loyalty.Api` — HTTP API (Nancy-based modules), one folder per resource:
-  AccountTypes, Auth, CardBuckets, Complaints, ConfigVersions, Customers, Dashboard, Events,
+  AccountTypes, Auth, CardBuckets, ConfigVersions, Customers, Dashboard, Events,
   Platform, Programs, Rewards, Rules, StreakCampaigns, Tiers.
 - `src/dEngage.Loyalty.Api.Framework` — cross-cutting API concerns: auth, tenancy, rate
   limiting, pagination, validation, error handling.

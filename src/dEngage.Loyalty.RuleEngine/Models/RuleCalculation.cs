@@ -38,14 +38,6 @@ public class RuleCalculation
     [JsonPropertyName("allowNegative")]
     public string? AllowNegative { get; set; }
 
-    // ExpiryRule: lot age threshold in days.
-    [JsonPropertyName("ageDays")]
-    public decimal? AgeDays { get; set; }
-
-    // ExpiryRule consumption order ("FIFO" | "LIFO").
-    [JsonPropertyName("order")]
-    public string? Order { get; set; }
-
     // ManualAdjustmentRule reason code: "goodwill" | "correction" | "dispute" | "migration".
     [JsonPropertyName("reason")]
     public string? Reason { get; set; }

@@ -28,8 +28,6 @@ public static class IntegrationTest
             var stars = await GetBalanceAsync("test_user", "Stars");
             // floor(150 * 0.30) = 45 (Kış winner) + 50 first purchase = 95
             Assert("Stars = 95", stars, 95m);
-            var stamp = await GetBalanceAsync("test_user", "Kahve Damgası");
-            Assert("Stamp = 0 (not sandwich)", stamp, 0m);
         });
 
         // ── TEST 2: Mobile channel → not Mobil+Kahve 4x, sandwich → Mobil 2x
@@ -45,27 +43,23 @@ public static class IntegrationTest
         });
 
         // ── TEST 3: Coffee, store → not Kahve 1.5x, Kış p:100 winner ────
-        await RunTest("T03 — Store coffee → Kış 3x winner + 1 stamp", async () =>
+        await RunTest("T03 — Store coffee → Kış 3x winner", async () =>
         {
             await SendOrderAsync(channel, "test_user", 100m, "store", "coffee");
             await WaitAsync();
             var stars = await GetBalanceAsync("test_user", "Stars");
             // 125 + floor(100 * 0.30) = 125 + 30 = 155
             Assert("Stars = 155", stars, 155m);
-            var stamp = await GetBalanceAsync("test_user", "Kahve Damgası");
-            Assert("Stamp = 1", stamp, 1m);
         });
 
         // ── TEST 4: Mobile + coffee → Kış p:100 > Mobil+Kahve p:50 ───────
-        await RunTest("T04 — Mobile + coffee → Kış 3x winner (p:100) + 1 stamp", async () =>
+        await RunTest("T04 — Mobile + coffee → Kış 3x winner (p:100)", async () =>
         {
             await SendOrderAsync(channel, "test_user", 200m, "mobile", "coffee");
             await WaitAsync();
             var stars = await GetBalanceAsync("test_user", "Stars");
             // 155 + floor(200 * 0.30) = 155 + 60 = 215
             Assert("Stars = 215", stars, 215m);
-            var stamp = await GetBalanceAsync("test_user", "Kahve Damgası");
-            Assert("Stamp = 2", stamp, 2m);
         });
 
         // ── TEST 5: First-purchase bonus must not come again ──────────────
@@ -91,10 +85,11 @@ public static class IntegrationTest
             Assert("Stars unchanged = 245", stars, 245m);
         });
 
-        // ── TEST 7: 10 coffees → stamp completes, free_drink is written ───
-        await RunTest("T07 — 10 coffee orders → stamp completes, free_drink earned", async () =>
+        // ── TEST 7: 8 more coffees → Kış 3x each ──────────────────────────
+        // (Was the stamp-card completion test; stamps were retired by CR 2026-10-05. The orders
+        // stay because T08+ build on this balance.)
+        await RunTest("T07 — 8 more coffee orders → Kış 3x, +120★", async () =>
         {
-            // There are 2 stamps now, 8 more needed
             // 8 x 50TL store/coffee: Kış 3x winner → 8 x floor(50*0.30)=15 → +120★
             for (int i = 0; i < 8; i++)
             {
@@ -102,10 +97,8 @@ public static class IntegrationTest
                 await Task.Delay(400);
             }
             await WaitAsync(4000);
-            var stamp = await GetBalanceAsync("test_user", "Kahve Damgası");
-            Assert("Stamp reset = 0", stamp, 0m);
-            var rewards = await GetRewardCountAsync("test_user", "free_drink");
-            Assert("free_drink reward written = 1", rewards, 1);
+            var stars = await GetBalanceAsync("test_user", "Stars");
+            Assert("Stars = 365", stars, 365m);
         });
 
         // ── TEST 8: Points redeem — insufficient balance ───────────────────
@@ -332,9 +325,8 @@ public static class IntegrationTest
         AnsiConsole.WriteLine();
 
         // ── K01: Stackable + non-stackable together ───────────────────────
-        // Order: store/coffee → Kış (p:100, stackable:false) winner + Kahve Damgası (stackable:true)
-        // Both apply at the same time, the stamp must increase too
-        await RunTest("K01 — Stackable+NonStackable: Kış winner + Kahve Damgası at the same time", async () =>
+        // Order: store/coffee → Kış (p:100, stackable:false) winner + İlk Alışveriş (stackable:true)
+        await RunTest("K01 — Stackable+NonStackable: Kış winner + first-purchase bonus at the same time", async () =>
         {
             await ResetUserAsync("combo_user");
             await SendOrderAsync(channel, "combo_user", 100m, "store", "coffee");
@@ -342,8 +334,6 @@ public static class IntegrationTest
             var stars = await GetBalanceAsync("combo_user", "Stars");
             // floor(100*0.30)=30 (Kış) + 50 (İlk alışveriş) = 80
             Assert("K01 Stars = 80", stars, 80m);
-            var stamp = await GetBalanceAsync("combo_user", "Kahve Damgası");
-            Assert("K01 Stamp = 1 (stackable worked)", stamp, 1m);
         });
 
         // ── K02: İlk Alışveriş bonus is stackable, always applies ────────
@@ -357,8 +347,6 @@ public static class IntegrationTest
             var stars = await GetBalanceAsync("combo2_user", "Stars");
             // floor(200*0.30)=60 (Kış) + 50 (İlk alışveriş stackable) = 110
             Assert("K02 Stars = 110 (60 Kış + 50 bonus)", stars, 110m);
-            var stamp = await GetBalanceAsync("combo2_user", "Kahve Damgası");
-            Assert("K02 Stamp = 0 (sandwich, the stamp rule requires coffee)", stamp, 0m);
         });
 
         // ── K03: Winner change — Kış has no condition, so it always wins ──
@@ -373,57 +361,6 @@ public static class IntegrationTest
             // Kış winner: floor(300*0.30)=90 + 50 İlk Alışveriş = 140
             // (Mobil+Kahve 4x or Kahve 1.5x not applied — Kış winner, stackable:false)
             Assert("K03 Stars = 140 (Kış winner, not 4x)", stars, 140m);
-        });
-
-        // ══ STAMP EDGE CASE TESTS ═════════════════════════════════════════
-        AnsiConsole.WriteLine();
-        AnsiConsole.Write(new Rule("[cyan bold]Stamp Edge Case Tests[/]").RuleStyle("grey"));
-        AnsiConsole.WriteLine();
-
-        // ── D01: Stamp completes exactly at the 10th coffee, 11th starts a new cycle ──
-        await RunTest("D01 — 20 coffees → 2 free_drink, stamp resets again", async () =>
-        {
-            await ResetUserAsync("stamp20_user");
-            // 20 x 50TL store/coffee → 2 cycles
-            for (int i = 0; i < 20; i++)
-            {
-                await SendOrderAsync(channel, "stamp20_user", 50m, "store", "coffee");
-                await Task.Delay(300);
-            }
-            await WaitAsync(5000);
-            var stamp = await GetBalanceAsync("stamp20_user", "Kahve Damgası");
-            Assert("D01 Stamp reset (2nd cycle completed) = 0", stamp, 0m);
-            var rewards = await GetRewardCountAsync("stamp20_user", "free_drink");
-            Assert("D01 2 free_drink earned", rewards, 2);
-        });
-
-        // ── D02: 9 coffees → stamp not completed, no free_drink ─────────
-        await RunTest("D02 — 9 coffees → stamp 9, no free_drink", async () =>
-        {
-            await ResetUserAsync("stamp9_user");
-            for (int i = 0; i < 9; i++)
-            {
-                await SendOrderAsync(channel, "stamp9_user", 50m, "store", "coffee");
-                await Task.Delay(300);
-            }
-            await WaitAsync(3000);
-            var stamp = await GetBalanceAsync("stamp9_user", "Kahve Damgası");
-            Assert("D02 Stamp = 9", stamp, 9m);
-            var rewards = await GetRewardCountAsync("stamp9_user", "free_drink");
-            Assert("D02 free_drink = 0", rewards, 0);
-        });
-
-        // ── D03: Sandwich order gives no stamp ────────────────────────────
-        await RunTest("D03 — A sandwich order gives no stamp", async () =>
-        {
-            await ResetUserAsync("nostamp_user");
-            await SendOrderAsync(channel, "nostamp_user", 100m, "store", "sandwich");
-            await WaitAsync();
-            var stamp = await GetBalanceAsync("nostamp_user", "Kahve Damgası");
-            Assert("D03 Stamp = 0 (sandwich, no coffee rule)", stamp, 0m);
-            var stars = await GetBalanceAsync("nostamp_user", "Stars");
-            // floor(100*0.30)=30 (Kış) + 50 bonus = 80
-            Assert("D03 Stars = 80 (stars granted)", stars, 80m);
         });
 
         // ══ IDEMPOTENCY STRESS TESTS ═════════════════════════════════════
@@ -1000,8 +937,8 @@ public static class IntegrationTest
             Assert("RF04 ratio=1.5 → clamp 1.0, balance after full refund", starsAfterRefund, 0m);
         });
 
-        // ── RF05: Refund a stamp order → both points and stamp are reclaimed
-        await RunTest("RF05 — Refunding a coffee order → both Stars and Stamp are reclaimed", async () =>
+        // ── RF05: Refund a coffee order → points are reclaimed
+        await RunTest("RF05 — Refunding a coffee order → Stars are reclaimed", async () =>
         {
             await ResetUserAsync("rf05_user");
             var orderId = Guid.NewGuid().ToString();
@@ -1012,10 +949,8 @@ public static class IntegrationTest
                 items = new[] { new { sku = "X", category = "coffee", qty = 1, total = "100.00" } }
             });
             await WaitAsync();
-            var stampAfterOrder = await GetBalanceAsync("rf05_user", "Kahve Damgası");
             var starsAfterOrder = await GetBalanceAsync("rf05_user", "Stars");
-            Assert("RF05 Stamp = 1", stampAfterOrder, 1m);
-            // floor(100*0.30)=30 (Kış StampEarn) + 50 bonus (Earn) = 80
+            // floor(100*0.30)=30 (Kış) + 50 bonus = 80
             Assert("RF05 Stars = 80", starsAfterOrder, 80m);
 
             PublishRaw(channel, "order.refunded", Guid.NewGuid().ToString(), new
@@ -1026,11 +961,8 @@ public static class IntegrationTest
             });
             await WaitAsync();
             var starsAfterRefund = await GetBalanceAsync("rf05_user", "Stars");
-            var stampAfterRefund = await GetBalanceAsync("rf05_user", "Kahve Damgası");
             // Stars: -30 (Kış earn) - 50 (bonus) = 0
             Assert("RF05 Stars = 0 (all earns reclaimed)", starsAfterRefund, 0m);
-            // Stamp: the StampEarn entry is also covered by the Refund → stamp -1 → 0
-            Assert("RF05 Stamp = 0 (StampEarn was also refunded)", stampAfterRefund, 0m);
         });
 
         // ══ ZERO AND NEGATIVE VALUE EDGE CASES ═══════════════════════════
@@ -1039,7 +971,7 @@ public static class IntegrationTest
         AnsiConsole.WriteLine();
 
         // ── Z01: 0 TL order → delta=0, never written
-        await RunTest("Z01 — 0.00 TL order → no points, no stamp", async () =>
+        await RunTest("Z01 — 0.00 TL order → no points", async () =>
         {
             await ResetUserAsync("zero_user");
             await SendOrderAsync(channel, "zero_user", 0m, "web", "sandwich");
@@ -1213,27 +1145,6 @@ public static class IntegrationTest
             Assert("LB04 Refund entries with positive delta = 0", badCount, 0);
         });
 
-        // ── LB05: StampReset entries always negative, StampEarn positive
-        await RunTest("LB05 — StampReset carries negative delta, StampEarn positive", async () =>
-        {
-            await using var pg = new Npgsql.NpgsqlConnection(PG);
-            await pg.OpenAsync();
-            const string sqlReset = """
-                SELECT COUNT(*) FROM ledger_entries
-                WHERE tenant_id='starbucks' AND reason='StampReset' AND delta >= 0
-                """;
-            const string sqlEarn = """
-                SELECT COUNT(*) FROM ledger_entries
-                WHERE tenant_id='starbucks' AND reason='StampEarn' AND delta <= 0
-                """;
-            await using var cmd1 = new Npgsql.NpgsqlCommand(sqlReset, pg);
-            var badReset = Convert.ToInt32(await cmd1.ExecuteScalarAsync());
-            await using var cmd2 = new Npgsql.NpgsqlCommand(sqlEarn, pg);
-            var badEarn = Convert.ToInt32(await cmd2.ExecuteScalarAsync());
-            Assert("LB05 Positive StampReset = 0", badReset, 0);
-            Assert("LB05 Negative StampEarn = 0", badEarn, 0);
-        });
-
         // ══ CHAINED SCENARIO TESTS ════════════════════════════════════════
         AnsiConsole.WriteLine();
         AnsiConsole.Write(new Rule("[cyan bold]Chained Scenario Tests[/]").RuleStyle("grey"));
@@ -1305,29 +1216,6 @@ public static class IntegrationTest
             var starsAfter3 = await GetBalanceAsync("chain2_user", "Stars");
             // Bonus: İlk Alışveriş was already used (limit=50 total), not granted
             Assert("S02 #3 Stars = 1500 (Kış remaining=1500)", starsAfter3, 1500m);
-        });
-
-        // ── S03: 30 coffees → 3 free_drink, stamp cycle counts correctly
-        await RunTest("S03 — 30 coffee orders → 3 free_drink, completion_count 1,2,3", async () =>
-        {
-            await ResetUserAsync("chain3_user");
-            for (int i = 0; i < 30; i++)
-            {
-                await SendOrderAsync(channel, "chain3_user", 50m, "store", "coffee");
-                await Task.Delay(250);
-            }
-            await WaitAsync(6000);
-
-            var stamp  = await GetBalanceAsync("chain3_user", "Kahve Damgası");
-            var drinks = await GetRewardCountAsync("chain3_user", "free_drink");
-            Assert("S03 Stamp = 0 (3 cycles completed)", stamp, 0m);
-            Assert("S03 3 free_drink earned", drinks, 3);
-
-            // Are completion_counts 1, 2, 3 in order?
-            var counts = await GetRewardCompletionCountsAsync("chain3_user");
-            Assert("S03 completion_count[0] = 1", counts[0], 1);
-            Assert("S03 completion_count[1] = 2", counts[1], 2);
-            Assert("S03 completion_count[2] = 3", counts[2], 3);
         });
 
         // ── S04: Cash add, spend, add, spend: balance correct at each step
@@ -1608,18 +1496,6 @@ public static class IntegrationTest
         return result is DBNull or null ? 0m : (decimal)result;
     }
 
-    static async Task<int> GetRewardCountAsync(string contactKey, string rewardType)
-    {
-        await using var db = new NpgsqlConnection(PG);
-        await db.OpenAsync();
-        const string sql = "SELECT COUNT(*) FROM reward_log WHERE tenant_id=@t AND contact_key=@c AND reward_type=@r";
-        await using var cmd = new NpgsqlCommand(sql, db);
-        cmd.Parameters.AddWithValue("t", TENANT);
-        cmd.Parameters.AddWithValue("c", contactKey);
-        cmd.Parameters.AddWithValue("r", rewardType);
-        return Convert.ToInt32(await cmd.ExecuteScalarAsync());
-    }
-
     static async Task ExecuteSqlAsync(string sql)
     {
         await using var db = new NpgsqlConnection(PG);
@@ -1710,21 +1586,6 @@ public static class IntegrationTest
         cmd.Parameters.AddWithValue("t", TENANT);
         cmd.Parameters.AddWithValue("c", contactKey);
         return Convert.ToInt32(await cmd.ExecuteScalarAsync());
-    }
-
-    static async Task<List<int>> GetRewardCompletionCountsAsync(string contactKey)
-    {
-        await using var db = new NpgsqlConnection(PG);
-        await db.OpenAsync();
-        const string sql = "SELECT completion_count FROM reward_log WHERE tenant_id=@t AND contact_key=@c ORDER BY completion_count";
-        await using var cmd = new NpgsqlCommand(sql, db);
-        cmd.Parameters.AddWithValue("t", TENANT);
-        cmd.Parameters.AddWithValue("c", contactKey);
-        var result = new List<int>();
-        await using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-            result.Add(reader.GetInt32(0));
-        return result;
     }
 
     static async Task FlushRuleCacheAsync()

@@ -6,7 +6,6 @@ namespace dEngage.Loyalty.Shared;
 public static class RuleTypes
 {
     public const string SpendRule = "SpendRule";
-    public const string StampRule = "StampRule";
     public const string FixedBonusRule = "FixedBonusRule";
 
     // CR-02 (docs/scope-change-rules): Burn/Reverse/Adjust rule types. Additive — the existing
@@ -16,14 +15,22 @@ public static class RuleTypes
     public const string RedemptionRule = "RedemptionRule";
     public const string TransferRule = "TransferRule";
     public const string ReversalRule = "ReversalRule";
-    public const string ExpiryRule = "ExpiryRule";
     public const string ManualAdjustmentRule = "ManualAdjustmentRule";
+
+    // CR 2026-10-05 (D1, D15): retired — no new rule can use them and existing rows were disabled
+    // by migration. Kept because rules/rule_versions rows still carry them as history.
+    // ExpiryRule never fired (nothing publishes points.expired); wallet expiry is
+    // PointsExpirationJob, which doesn't use rules.
+    public const string StampRule = "StampRule";
+    public const string ExpiryRule = "ExpiryRule";
 
     public static readonly string[] All =
     {
-        SpendRule, StampRule, FixedBonusRule,
-        RedemptionRule, TransferRule, ReversalRule, ExpiryRule, ManualAdjustmentRule
+        SpendRule, FixedBonusRule,
+        RedemptionRule, TransferRule, ReversalRule, ManualAdjustmentRule
     };
+
+    public static bool IsRetired(string ruleType) => ruleType is StampRule or ExpiryRule;
 
     // TransferRule/ReversalRule bypass the shared WinnerSelector/LedgerPoster pipeline
     // (dual-entry posting / inherited target account respectively — see

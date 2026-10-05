@@ -2608,3 +2608,99 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005140753_RemoveComplaintsCr1005') THEN
+    DROP TABLE complaints;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005140753_RemoveComplaintsCr1005') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261005140753_RemoveComplaintsCr1005', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
+    UPDATE programs
+    SET has_unpublished_changes = true
+    WHERE publication_status = 'published'
+      AND (id IN (SELECT program_id FROM rules WHERE status IN ('active', 'pending_approval')
+    AND (type IN ('StampRule', 'ExpiryRule')
+      OR trigger = 'points.expired'
+      OR target_account_type_id IN (SELECT id FROM account_types WHERE type = 'STAMP')))
+        OR id IN (SELECT program_id FROM streak_campaigns WHERE status = 'active' AND trigger = 'points.expired'));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
+    UPDATE rules
+    SET status     = 'disabled',
+        updated_at = now()
+    WHERE status IN ('active', 'pending_approval')
+    AND (type IN ('StampRule', 'ExpiryRule')
+      OR trigger = 'points.expired'
+      OR target_account_type_id IN (SELECT id FROM account_types WHERE type = 'STAMP'));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
+    UPDATE streak_campaigns
+    SET status     = 'disabled',
+        updated_at = now()
+    WHERE status = 'active' AND trigger = 'points.expired';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
+    ALTER TABLE reward_definitions DROP CONSTRAINT "FK_reward_definitions_account_types_stamp_account_type_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
+    DROP INDEX "IX_reward_definitions_stamp_account_type_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
+    DROP INDEX ux_reward_definitions_active_stamp;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
+    ALTER TABLE reward_definitions DROP COLUMN stamp_account_type_id;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261005141326_RetireStampsAndExpiryRuleCr1005', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+

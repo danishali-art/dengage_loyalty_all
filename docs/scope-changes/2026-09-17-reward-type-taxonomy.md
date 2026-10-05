@@ -1,6 +1,9 @@
 # Scope Change Impact Analysis: Reward Type Taxonomy
 
 **Status:** Approved 2026-09-17 by Product Owner + Architect — implemented on branch `feature/reward-type-taxonomy`
+
+> **Superseded in part by CR 2026-10-05 ([2026-10-05-remove-complaints-and-stamps.md](2026-10-05-remove-complaints-and-stamps.md)):** stamps are retired and `reward_definitions.stamp_account_type_id` (with its FK and indexes) was dropped.
+
 **Date:** 2026-09-17
 **Author:** Claude Code, at the request of danishaliqau@gmail.com
 **Affects:** `docs/SOW.md` §2.2 (Rewards row), `docs/SCOPE_BASELINE.md`, `scripts/loyalty_schema_reference.md`

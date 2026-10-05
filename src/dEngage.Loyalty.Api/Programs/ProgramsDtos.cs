@@ -37,7 +37,7 @@ public sealed record PublishedTier(
     Guid Id, string Name, string DisplayName, string MinPoints, int? QualifyingDays, int GraceDays, int SortOrder);
 public sealed record PublishedReward(
     Guid Id, string Name, string DisplayName, string Acquisition, string RewardType,
-    Guid? StampAccountTypeId, string? PointsPrice, Guid? PointsAccountTypeId, JsonElement TypeConfig, bool IsActive,
+    string? PointsPrice, Guid? PointsAccountTypeId, JsonElement TypeConfig, bool IsActive,
     string Status);
 // RuleId + Version is the same pair ledger postings reference (CR-09), so a publish can be
 // matched to exactly the rule versions that were live.

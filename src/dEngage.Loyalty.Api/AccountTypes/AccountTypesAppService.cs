@@ -28,11 +28,17 @@ public sealed class AccountTypesAppService(
     ITenantSlugResolver tenantSlugResolver,
     IRuleCacheService ruleCacheService) : IAccountTypesAppService
 {
+    private const string RetiredStampType = nameof(AccountType.STAMP);
+
     public async Task<PagedResult<AccountTypeResponse>> ListAsync(string tenantId, Guid programId, PageRequest page, CancellationToken ct)
     {
         await RequireProgramAsync(tenantId, programId, ct);
 
-        var query = (await repository.Query(tenantId, ct)).Where(a => a.ProgramId == programId).OrderBy(a => a.Name);
+        // CR 2026-10-05 (D8): retired STAMP wallets are hidden from the list and so from every
+        // account-type picker. GetAsync still returns one, so historical references resolve.
+        var query = (await repository.Query(tenantId, ct))
+            .Where(a => a.ProgramId == programId && a.Type != RetiredStampType)
+            .OrderBy(a => a.Name);
         var total = await query.CountAsync(ct);
 
         // Materialize first, then project — ToResponse parses Config (JsonDocument.Parse), which
@@ -87,6 +93,9 @@ public sealed class AccountTypesAppService(
     public async Task<AccountTypeResponse> UpdateAsync(string tenantId, Guid programId, Guid accountTypeId, UpdateAccountTypeRequest request, CancellationToken ct)
     {
         var entity = await Find(tenantId, programId, accountTypeId, ct);
+        if (entity.Type == RetiredStampType)
+            throw new ConflictApiException("account_type_retired",
+                "STAMP account types are retired — they are kept for customer history and can't be edited.");
         var program = await RequireProgramAsync(tenantId, programId, ct);
 
         if (request.Name is not null) entity.Name = request.Name;

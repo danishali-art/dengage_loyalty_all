@@ -13,26 +13,18 @@ namespace dEngage.Loyalty.IntegrationTests.Engine;
 // "500 SAR grocery transaction, grocery 3% (priority 200) beats base 1% (priority 100) in
 // group earn-rate; monthly bonus 200 wins group one-off; weekend x2 and birthday +50 stack;
 // coffee stamp wins group stamp-card. Result: ((15 + 200) x 2) + 50 = 480 points, 1 stamp."
+// The stamp leg was dropped when stamps were retired (CR 2026-10-05); it posted to a separate
+// wallet, so the 480-point result is unchanged.
 public sealed class StackingResolutionWorkedExampleTests : IDisposable
 {
     private readonly RuleEngineTestHarness _harness = new();
     private readonly Guid _programId;
     private readonly Guid _pointsAccountTypeId;
-    private readonly Guid _stampsAccountTypeId;
 
     public StackingResolutionWorkedExampleTests()
     {
         _programId = _harness.AddProgram();
         _pointsAccountTypeId = _harness.AddAccountType(_programId, "POINTS", "Points");
-        _stampsAccountTypeId = _harness.AddAccountType(_programId, "STAMP", "Stamps");
-
-        // A stamp_target higher than this test's single stamp — this test is about stacking
-        // resolution, not stamp-card completion, so avoid StampCompletionHandler's
-        // reward-definition path entirely (an empty/default Config reads stamp_target=0,
-        // which completes the card on the very first stamp).
-        var stampAccountType = _harness.Db.AccountTypes.Single(a => a.Id == _stampsAccountTypeId);
-        stampAccountType.Config = """{"stamp_target": 10, "reward_type": "n/a"}""";
-        _harness.Db.SaveChanges();
 
         _harness.LimitCache.Setup(c => c.GetTotalAsync(RuleEngineTestHarness.TenantSlug, It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0m);
@@ -99,17 +91,6 @@ public sealed class StackingResolutionWorkedExampleTests : IDisposable
             Priority = 100, Stackable = true, StackMode = RuleStackMode.Additive,
             Version = 1
         });
-
-        // stamp-card group, independent wallet.
-        _harness.AddRule(new CachedRule
-        {
-            Id = Guid.NewGuid(), ProgramId = _programId, Name = "Coffee Stamp",
-            Type = RuleTypes.StampRule, Trigger = "card.transaction",
-            Calculation = new RuleCalculation(),
-            TargetAccountTypeId = _stampsAccountTypeId,
-            Priority = 100, Stackable = false, ExclusivityGroup = "stamp-card",
-            Version = 1
-        });
     }
 
     public void Dispose() => _harness.Dispose();
@@ -122,7 +103,7 @@ public sealed class StackingResolutionWorkedExampleTests : IDisposable
     }
 
     [Fact]
-    public async Task Worked_reference_case_yields_480_points_and_1_stamp()
+    public async Task Worked_reference_case_yields_480_points()
     {
         var occurredAt = NextSaturday(DateTime.UtcNow).Date.AddHours(12);
         var evt = new EvaluationEvent
@@ -138,6 +119,5 @@ public sealed class StackingResolutionWorkedExampleTests : IDisposable
             RuleEngineTestHarness.TenantSlug, _programId, "evt-grocery", evt, CancellationToken.None);
 
         _harness.GetBalance("grocery_shopper", _pointsAccountTypeId).Should().Be(480m);
-        _harness.GetBalance("grocery_shopper", _stampsAccountTypeId).Should().Be(1m);
     }
 }

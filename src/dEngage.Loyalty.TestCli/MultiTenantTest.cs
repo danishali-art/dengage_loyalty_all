@@ -81,7 +81,7 @@ public static class MultiTenantTest
             await Task.Delay(1500);
 
             // sbux_bob: 10 orders × 200 TL = 60 pts × 10 = 600 pts (altin = 1000, not enough)
-            // But make 3 of them coffee → let him earn stamps too
+            // 3 of them are coffee orders (they no longer earn stamps — retired by CR 2026-10-05)
             ctx.Status("sbux_bob: 10 orders...");
             for (int i = 0; i < 7; i++)
                 await SendOrderAsync(SBUX, "sbux_bob", 200m, "mobile", "food");

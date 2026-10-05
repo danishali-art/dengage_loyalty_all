@@ -26,21 +26,13 @@ public sealed class CreateRewardRequestValidator : AbstractValidator<CreateRewar
             .WithMessage("tier_upgrade_requires_streak_completion: a tier upgrade can only be earned through streak completion.");
 
         // Acquisition-specific fields, both ways: required for the acquisition type they belong
-        // to, and rejected for every other one — a stray StampAccountTypeId on a points_purchase
-        // reward is as invalid as a missing one on a stamp_completion reward.
+        // to, and rejected for every other one.
         RuleFor(x => x.PointsPrice).NotNull().GreaterThan(0)
             .When(x => x.Acquisition == RewardAcquisition.PointsPurchase)
             .WithMessage("PointsPrice is required for points_purchase rewards.");
         RuleFor(x => x.PointsAccountTypeId).NotNull()
             .When(x => x.Acquisition == RewardAcquisition.PointsPurchase)
             .WithMessage("PointsAccountTypeId is required for points_purchase rewards.");
-        RuleFor(x => x.StampAccountTypeId).NotNull()
-            .When(x => x.Acquisition == RewardAcquisition.StampCompletion)
-            .WithMessage("StampAccountTypeId is required for stamp_completion rewards.");
-
-        RuleFor(x => x.StampAccountTypeId).Null()
-            .When(x => x.Acquisition != RewardAcquisition.StampCompletion)
-            .WithMessage("StampAccountTypeId must only be set for stamp_completion rewards.");
         RuleFor(x => x.PointsPrice).Null()
             .When(x => x.Acquisition != RewardAcquisition.PointsPurchase)
             .WithMessage("PointsPrice must only be set for points_purchase rewards.");

@@ -14,6 +14,14 @@ internal static class RetiredStackingMessages
         "stacking_field_retired: 'stackMode' only accepts 'Additive' — multiplier stacking is no longer supported.";
 }
 
+internal static class RetiredRuleMessages
+{
+    // CR 2026-10-05 (D15): points.expired is no longer a trigger. It must be rejected by name —
+    // an unknown trigger is otherwise treated as a tenant generic type and accepted.
+    public const string PointsExpiredTrigger =
+        "trigger_retired: 'points.expired' is no longer a rule trigger. Points expiry is configured on the POINTS account type.";
+}
+
 // Structural/required-field checks only — the condition DSL itself is validated by
 // RuleEngine.Models.ConditionDsl in RulesAppService, reused rather than re-implemented.
 // Streak campaigns have their own dedicated validators — see Api/StreakCampaigns.
@@ -28,13 +36,15 @@ public sealed class CreateRuleRequestValidator : AbstractValidator<CreateRuleReq
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Trigger).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Trigger).NotEqual(EventTypes.PointsExpired).WithMessage(RetiredRuleMessages.PointsExpiredTrigger);
+        // CR 2026-10-05: StampRule and ExpiryRule are retired, so they are no longer in RuleTypes.All.
         RuleFor(x => x.Type).Must(t => RuleTypes.All.Contains(t))
             .WithMessage($"Type must be one of: {string.Join(", ", RuleTypes.All)}. " +
                          "Streak campaigns are managed under /streak-campaigns, not /rules.");
 
         // CR-03: single compatibility predicate, shared with RuleMatcher's runtime matching via
         // RuleTypeCatalog — prevents configuring a rule type the trigger event could never
-        // satisfy (e.g. StampRule on a Burn event). A trigger with no known EventDefinition
+        // satisfy (e.g. SpendRule on an event with no money field). A trigger with no known EventDefinition
         // (tenant-approved generic event) is always treated as compatible — see
         // RuleTypeCatalog.IsCompatible.
         RuleFor(x => x)
@@ -56,7 +66,7 @@ public sealed class CreateRuleRequestValidator : AbstractValidator<CreateRuleReq
         RuleFor(x => x.Calculation).NotNull()
             .When(x => x.Type is RuleTypes.SpendRule or RuleTypes.FixedBonusRule
                 or RuleTypes.RedemptionRule or RuleTypes.TransferRule
-                or RuleTypes.ReversalRule or RuleTypes.ExpiryRule)
+                or RuleTypes.ReversalRule)
             .WithMessage("Calculation is required for this rule type.");
 
         RuleFor(x => x.Calculation!.Factor).NotNull().GreaterThan(0)
@@ -80,13 +90,6 @@ public sealed class CreateRuleRequestValidator : AbstractValidator<CreateRuleReq
         RuleFor(x => x.Calculation!.AllowNegative).Must(v => v is "allow negative" or "clamp to zero")
             .When(x => x.Type == RuleTypes.ReversalRule && x.Calculation is not null)
             .WithMessage("Calculation.allowNegative must be 'allow negative' or 'clamp to zero' for ReversalRule.");
-
-        RuleFor(x => x.Calculation!.AgeDays).NotNull().GreaterThan(0)
-            .When(x => x.Type == RuleTypes.ExpiryRule && x.Calculation is not null)
-            .WithMessage("Calculation.ageDays is required and must be positive for ExpiryRule.");
-        RuleFor(x => x.Calculation!.Order).Must(o => o is "FIFO" or "LIFO")
-            .When(x => x.Type == RuleTypes.ExpiryRule && x.Calculation is not null)
-            .WithMessage("Calculation.order must be 'FIFO' or 'LIFO' for ExpiryRule.");
 
         RuleFor(x => x.Calculation!.Reason).Must(r => r is "goodwill" or "correction" or "dispute" or "migration")
             .When(x => x.Type == RuleTypes.ManualAdjustmentRule && x.Calculation is not null)
@@ -187,6 +190,7 @@ public sealed class UpdateRuleRequestValidator : AbstractValidator<UpdateRuleReq
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(255).When(x => x.Name is not null);
         RuleFor(x => x.Trigger).NotEmpty().MaximumLength(100).When(x => x.Trigger is not null);
+        RuleFor(x => x.Trigger).NotEqual(EventTypes.PointsExpired).WithMessage(RetiredRuleMessages.PointsExpiredTrigger);
         RuleFor(x => x.Priority).GreaterThanOrEqualTo(0).When(x => x.Priority is not null);
         RuleFor(x => x.Limits!).SetValidator(new RuleLimitsValidator()).When(x => x.Limits is not null);
         // 1.3.CL item 5 — see CreateRuleRequestValidator.

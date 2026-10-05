@@ -54,20 +54,6 @@ public class RuleTypeHandlerRegistryTests
     }
 
     [Fact]
-    public void StampRuleHandler_returns_one_stamp_for_positive_amount()
-    {
-        var handler = new StampRuleHandler();
-        handler.Compute(new RuleCalculation(), Event(1m)).Should().Be(1m);
-    }
-
-    [Fact]
-    public void StampRuleHandler_returns_zero_for_zero_amount_order()
-    {
-        var handler = new StampRuleHandler();
-        handler.Compute(new RuleCalculation(), Event(0m)).Should().Be(0m);
-    }
-
-    [Fact]
     public void FixedBonusRuleHandler_returns_configured_amount()
     {
         var handler = new FixedBonusRuleHandler();
@@ -79,12 +65,12 @@ public class RuleTypeHandlerRegistryTests
     {
         var registry = new RuleTypeHandlerRegistry(new IRuleTypeHandler[]
         {
-            new SpendRuleHandler(), new StampRuleHandler(), new FixedBonusRuleHandler()
+            new SpendRuleHandler(), new FixedBonusRuleHandler(), new RedemptionRuleHandler()
         });
 
         registry.Resolve(RuleTypes.SpendRule).Should().BeOfType<SpendRuleHandler>();
-        registry.Resolve(RuleTypes.StampRule).Should().BeOfType<StampRuleHandler>();
         registry.Resolve(RuleTypes.FixedBonusRule).Should().BeOfType<FixedBonusRuleHandler>();
+        registry.Resolve(RuleTypes.RedemptionRule).Should().BeOfType<RedemptionRuleHandler>();
     }
 
     [Fact]
