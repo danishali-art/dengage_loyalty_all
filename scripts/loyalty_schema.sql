@@ -2547,3 +2547,64 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
+    ALTER TABLE event_inbox ADD contact_key character varying(255);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
+    CREATE INDEX idx_streak_progress_tenant_contact ON streak_progress (tenant_id, contact_key);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
+    CREATE INDEX idx_streak_log_tenant_contact ON streak_log (tenant_id, contact_key);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
+    CREATE INDEX idx_rule_fire_audit_tenant_contact_date ON rule_fire_audit (tenant_id, contact_key, created_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
+    CREATE INDEX idx_outbox_tenant_contact_date ON outbox_events (tenant_id, contact_key, created_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
+    CREATE INDEX idx_held_postings_tenant_contact_date ON held_postings (tenant_id, contact_key, created_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
+    CREATE INDEX idx_event_inbox_tenant_contact_received ON event_inbox (tenant_id, contact_key, received_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261002162724_CustomerViewCr1002', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+

@@ -39,7 +39,9 @@ References **only Shared**. Everything else depends on it, so changes here rippl
   `scripts/provision_tenant.sql` and the `InitialCreate` / `EventLog` migrations). Raw SQL in
   migrations must work with partitions.
 - Ledger tables stay append-only. Migrations never `UPDATE` or `DELETE` ledger rows.
-- After a schema change, regenerate `scripts/loyalty_schema_reference.md`. Keep
+- After a schema change, update `scripts/loyalty_schema_reference.md` by hand in the same change
+  (new/changed tables, columns, types, keys, indexes, with their Turkish descriptions), checked
+  against the EF Core configurations and the latest migration id. Keep
   `scripts/loyalty_schema.sql` / `provision_tenant.sql` in step if provisioning depends on the change.
 
 ### Tenant resolution

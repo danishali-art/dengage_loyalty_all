@@ -99,6 +99,21 @@ Everything below is scoped to one tenant and, within it, to one program.
 
 - 360° read-only customer view: balances across all wallets, current tier + progress to next
   tier, tier-change history, paginated transaction ledger — searchable by contact key.
+  **Built (CR 2026-10-02, P1):** every ledger row shows the event, rule (with the version it was
+  posted under) or streak campaign, wallet and program it came from, filterable by program,
+  wallet, reason group, date range and event id; the customer's events (received from this
+  release on) with their outcome; an event drawer showing what the event did — postings incl. a
+  transfer's counterparty, held postings, rule decisions, streak/reward/tier effects, messages sent
+  (without payload) — and the event payload with phone and card/national-id fields masked. No
+  birthday information and no complaints in the view.
+  **Built (CR 2026-10-02, P2):** a header with the tier in each program, streaks in progress and
+  failed events; an overview per program (balances, pending and soon-expiring amounts, tier status,
+  streaks, recent activity); the customer's usage of per-customer rule caps and every rule
+  decision; streak progress and history; rewards bought or earned with what they paid; tier
+  history with its cause.
+  **Built (CR 2026-10-02, P3):** each card bucket with the customer's usage against its caps and
+  its postings; the messages the platform sent about the customer (type, status, attempts, times —
+  never the content; published messages are kept 30 days).
 - One deliberate exception to that read-only scope: `POST customers/{ref}/birthday` (MM-DD only)
   registers a customer's birthday so the birthday-bonus rule/job can fire — no other customer
   field is writable from the admin API.
@@ -270,4 +285,7 @@ revision history below.
 | 1.2 | 2026-09-22 | Scope Change (approved, CR-01–CR-11): Rules engine rework — §2.2 Rules, §2.3 event taxonomy/pipeline, §2.4 birthday endpoint, §3 known limitations, §4 architecture. See `docs/scope-changes/2026-09-22-rules-engine-taxonomy.md`. | Claude Code |
 | 1.3 | 2026-09-28 | Scope Change (approved, 1.3.CL — program / account type changes): §2.2 Programs (Draft → Publish, Active toggle), Account Types (warning days, tier-qualifying flag, decimals, CASH currency/no expiry), Rules (exclusivity groups and multipliers retired), Configuration history (publish snapshots); §2.3 warnings; §3 program-status limitation corrected. See `docs/scope-changes/2026-09-28-program-account-type-changes.md`. | Claude Code |
 | 1.4 (draft) | 2026-10-01 | Scope change 2026-09-30 **approved** 2026-10-01. Phase P1 is built (Rules allowlist, Event Simulator, redemption outcome events — marked "Built"); phases P2–P4 built the same day (marked "Built (CR 2026-09-30, P2–P4)"); P5 deferred. Items: §2.2 Programs (program slug), Rules (burn-trigger rule-type allowlist), Streak Campaigns (reward eligibility), Rewards (Purchase with points / Streak completion × Cashback / Tier upgrade, engine fulfilment, cashback approval, slug-prefixed names); §2.3 Event Simulator; §2.4 redemption outcome events and `reward_id`; §3 burn-rule and burn-side money-control limitations. See `docs/scope-changes/2026-09-30-reward-acquisition-fulfilment.md`. | Claude Code, at the request of Moiz |
+| 1.5 (draft) | 2026-10-02 | Scope change 2026-10-02 (Customer 360) **approved** by PO + Solution Architect; phase P1 built: §2.4 customer view (activity sources and filters, events, event drawer with masked payload). See `docs/scope-changes/2026-10-02-customer-360.md`. | Claude Code, at the request of Moiz |
+| 1.5 (draft) | 2026-10-02 | CR 2026-10-02 (Customer 360) phase P3 built: §2.4 card buckets, messages sent. CR complete. | Claude Code, at the request of Moiz |
+| 1.5 (draft) | 2026-10-02 | CR 2026-10-02 (Customer 360) phase P2 built: §2.4 header, per-program overview, rules & caps, streaks, rewards, tiers. | Claude Code, at the request of Moiz |
 | 1.4 (draft) | 2026-10-01 | CR 2026-09-30 addendum A: §2.2 Account Types (points-transfer daily limit); §3 CASH transfer/redeem kept out of scope by design. | Claude Code, at the request of Moiz |

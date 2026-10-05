@@ -41,5 +41,9 @@ public class OutboxEventConfiguration : IEntityTypeConfiguration<OutboxEvent>
             .IsUnique()
             .HasFilter("dedup_key IS NOT NULL")
             .HasDatabaseName("ux_outbox_dedup");
+
+        // CR 2026-10-02 (Customer 360): per-customer lookups from the customer view.
+        builder.HasIndex(x => new { x.TenantId, x.ContactKey, x.CreatedAt })
+            .HasDatabaseName("idx_outbox_tenant_contact_date");
     }
 }

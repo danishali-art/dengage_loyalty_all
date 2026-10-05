@@ -135,7 +135,8 @@ public class EventConsumerWorker(
                 EventType = envelope.EventType,
                 Payload = JsonSerializer.Serialize(envelope),
                 ReceivedAt = DateTime.UtcNow,
-                Status = InboxStatus.Pending
+                Status = InboxStatus.Pending,
+                ContactKey = InboxContactKey(envelope)
             };
             db.EventInbox.Add(inbox);
             await db.SaveChangesAsync(ct);
@@ -184,10 +185,8 @@ public class EventConsumerWorker(
     // insert's rowcount for its own idempotency.
     private static async Task AppendEventLogAsync(LoyaltyDbContext db, EventEnvelope envelope, CancellationToken ct)
     {
-        if (envelope.Data.ValueKind != JsonValueKind.Object ||
-            !envelope.Data.TryGetProperty("contact_key", out var ck) ||
-            ck.ValueKind != JsonValueKind.String ||
-            string.IsNullOrEmpty(ck.GetString()))
+        var contactKey = ReadContactKey(envelope);
+        if (contactKey is null)
             return; // only order.refunded among built-ins carries no contact_key
 
         var occurredAt = envelope.OccurredAt == default
@@ -196,9 +195,23 @@ public class EventConsumerWorker(
 
         await db.Database.ExecuteSqlInterpolatedAsync($@"
             INSERT INTO event_log (tenant_id, event_id, contact_key, event_type, occurred_at)
-            VALUES ({envelope.Tenant}, {envelope.EventId}, {ck.GetString()}, {envelope.EventType}, {occurredAt})
+            VALUES ({envelope.Tenant}, {envelope.EventId}, {contactKey}, {envelope.EventType}, {occurredAt})
             ON CONFLICT (tenant_id, event_id) DO NOTHING", ct);
     }
+
+    private static string? ReadContactKey(EventEnvelope envelope) =>
+        envelope.Data.ValueKind == JsonValueKind.Object &&
+        envelope.Data.TryGetProperty("contact_key", out var ck) &&
+        ck.ValueKind == JsonValueKind.String &&
+        !string.IsNullOrEmpty(ck.GetString())
+            ? ck.GetString()
+            : null;
+
+    // CR 2026-10-02 (Customer 360): recorded on the inbox row so the customer view can list a
+    // customer's events. A key longer than the column is left out rather than failing the
+    // inbox insert — the event must still be deduplicated and processed.
+    internal static string? InboxContactKey(EventEnvelope envelope) =>
+        ReadContactKey(envelope) is { Length: <= 255 } contactKey ? contactKey : null;
 
     private static Task DispatchAsync(EventEnvelope envelope, IServiceScope scope, CancellationToken ct) =>
         scope.ServiceProvider.GetRequiredService<IEventHandlerRegistry>()

@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="dEngage.Loyalty.TestCli" />
+    <InternalsVisibleTo Include="dEngage.Loyalty.Engine.Tests" />
   </ItemGroup>
 
   <ItemGroup>

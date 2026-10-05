@@ -20,5 +20,9 @@ public class StreakProgressConfiguration : IEntityTypeConfiguration<StreakProgre
         builder.Property(x => x.Completions).HasColumnName("completions");
         builder.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+        // CR 2026-10-02 (Customer 360): per-customer lookups from the customer view.
+        builder.HasIndex(x => new { x.TenantId, x.ContactKey })
+            .HasDatabaseName("idx_streak_progress_tenant_contact");
     }
 }
