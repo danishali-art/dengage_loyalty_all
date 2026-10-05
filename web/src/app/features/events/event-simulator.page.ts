@@ -23,7 +23,7 @@ import { EventStatus } from './event.model';
 // The API already leaves these out of `publishable` (EventTypes.IsExternallyPublishable — they're
 // produced by the nightly jobs and always rejected on publish). Filtering here too is the O9
 // fallback for an API that predates the `publishable` list.
-const SCHEDULED_EVENT_TYPES: readonly string[] = ['birthdaybonus', 'points.expired'];
+const SCHEDULED_EVENT_TYPES: readonly string[] = ['birthdaybonus'];
 
 /** Field guidance per event type, checked against the Consumer handlers that read each payload. */
 interface EventHelp {

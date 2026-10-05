@@ -10,7 +10,6 @@ public static class RewardTest
     const string PG     = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
     const string TENANT = "starbucks";
     const string StarsAccountId = "018fcd02-0000-7000-8000-000000000001";
-    const string StampAccountId = "018fcd02-0000-7000-8000-000000000003";
     const string OutboundExchange = "loyalty.outbound";
     const string TestQueue = "q.test.outbound";
 
@@ -22,7 +21,7 @@ public static class RewardTest
     {
         _tid = await ScalarStringAsync($"SELECT id::text FROM tenants WHERE slug='{TENANT}'") ?? "";
         AnsiConsole.Write(new Rule("[yellow bold]Reward + Outbox Test — Starbucks[/]").RuleStyle("grey"));
-        AnsiConsole.MarkupLine("[grey]reward_definitions is seeded, stamp/purchase/outbox flows are tested.[/]\n");
+        AnsiConsole.MarkupLine("[grey]reward_definitions is seeded, purchase/outbox flows are tested.[/]\n");
 
         // The listener queue must be bound BEFORE any publishes — if bound later,
         // earlier messages are lost at the exchange (topic exchanges do not store messages).
@@ -33,39 +32,7 @@ public static class RewardTest
 
         await SetupAsync();
 
-        var stampTarget = await ScalarIntAsync(
-            $"SELECT (config->>'stamp_target')::int FROM account_types WHERE id = '{StampAccountId}'");
-
-        // ── RW01: stamp card completes → reward.earned outbox (CR 2026-09-30 A1/O1) ──
-        // Stamp-completion reward definitions are retired; the completion is still announced,
-        // named after the STAMP account's config.reward_type, with reward_type null.
-        var stampRewardName = await ScalarStringAsync(
-            $"SELECT config->>'reward_type' FROM account_types WHERE id = '{StampAccountId}'") ?? "";
-        await RunTest($"RW01 — {stampTarget} coffees → stamp card fills, '{stampRewardName}' notified + reward.earned outbox", async () =>
-        {
-            for (int i = 0; i < stampTarget; i++)
-            {
-                await SendOrderAsync(channel, "rw_user1", 50m, "store", "coffee");
-                await Task.Delay(400);
-            }
-            await WaitAsync(4000);
-
-            var stamp = await GetBalanceAsync("rw_user1", "Kahve Damgası");
-            Assert("stamp reset to 0", stamp, 0m);
-
-            var rewardCount = await ScalarIntAsync(
-                $"SELECT COUNT(*) FROM reward_log WHERE tenant_id='{_tid}' AND contact_key='rw_user1' AND reward_name='{stampRewardName}' AND status='notified' AND reward_definition_id IS NULL AND delivered_at IS NOT NULL");
-            Assert($"reward_log: {stampRewardName} notified (no definition)", rewardCount, 1);
-
-            var outboxCount = await ScalarIntAsync($"""
-                SELECT COUNT(*) FROM outbox_events
-                WHERE tenant_id='{_tid}' AND contact_key='rw_user1'
-                  AND event_type='loyalty.reward.earned'
-                  AND payload->'data'->>'reward_type' IS NULL
-                  AND payload->'data'->>'source' = 'stamp_completion'
-                """);
-            Assert("outbox: reward.earned (stamp, reward_type null)", outboxCount, 1);
-        });
+        // (RW01, the stamp-card completion test, was removed with stamps — CR 2026-10-05.)
 
         // ── RW02: reward.purchase — successful purchase ───────────────────
         await RunTest("RW02 — 500★ buys 'cashback_50' → −500★, +50 on the card + reward.earned outbox", async () =>
@@ -189,7 +156,7 @@ public static class RewardTest
         // ── RW06: Publisher — outbox rows are pushed to RabbitMQ ──────────
         // Orders now also produce points.earned/tier.changed; this suite only
         // counts reward.* events (the other producers are OutboundTest's scope).
-        await RunTest("RW06 — Publisher: reward outbox rows published, 4 reward messages land on the queue", async () =>
+        await RunTest("RW06 — Publisher: reward outbox rows published, 3 reward messages land on the queue", async () =>
         {
             // The publisher polls once per second; wait until pending is drained (max 10 s)
             var pending = -1;
@@ -204,7 +171,7 @@ public static class RewardTest
 
             var publishedCount = await ScalarIntAsync(
                 $"SELECT COUNT(*) FROM outbox_events WHERE tenant_id='{_tid}' AND status='published' AND published_at IS NOT NULL AND event_type LIKE 'loyalty.reward.%'");
-            Assert("outbox published reward.* = 4", publishedCount, 4);
+            Assert("outbox published reward.* = 3", publishedCount, 3);
 
             int earned = 0, failed = 0, other = 0;
             string? sampleRoutingKey = null;
@@ -220,7 +187,7 @@ public static class RewardTest
                 else other++;
             }
 
-            Assert("queue: reward.earned = 3", earned, 3);
+            Assert("queue: reward.earned = 2", earned, 2);
             Assert("queue: purchase_failed = 1", failed, 1);
             Assert("queue: no unrecognized events", other, 0);
             Assert("routing key {tenant}.{event_type}",
@@ -259,20 +226,19 @@ public static class RewardTest
         await using var seed = new NpgsqlCommand($$"""
             INSERT INTO reward_definitions
                 (id, tenant_id, program_id, name, display_name, acquisition,
-                 stamp_account_type_id, points_price, points_account_type_id,
+                 points_price, points_account_type_id,
                  reward_type, type_config, is_active, created_at)
             SELECT gen_random_uuid(), '{{_tid}}'::uuid, p.id, d.name, d.display_name, d.acquisition,
-                   d.stamp_id::uuid, d.price, d.points_id::uuid, d.reward_type, d.type_config::jsonb, true, now()
+                   d.price, d.points_id::uuid, d.reward_type, d.type_config::jsonb, true, now()
             FROM (SELECT id FROM programs WHERE tenant_id = '{{_tid}}' LIMIT 1) p
             CROSS JOIN (VALUES
-                -- CR 2026-09-30: stamp-completion definitions are retired (RW01 runs without one);
-                -- the purchasable reward is a cashback paid into the tenant's CASH card.
+                -- The purchasable reward is a cashback paid into the tenant's CASH card.
                 ('cashback_50', '50 TL Cashback', 'points_purchase',
-                 NULL, 500::numeric, @stars_account, 'cashback',
+                 500::numeric, @stars_account, 'cashback',
                  (SELECT jsonb_build_object('amount', '50.00', 'currency', at.config->>'currency', 'cash_account_type_id', at.id::text)::text
                   FROM account_types at
                   WHERE at.tenant_id = '{{_tid}}'::uuid AND at.type = 'CASH' AND at.name = 'Starbucks Card'))
-            ) AS d(name, display_name, acquisition, stamp_id, price, points_id, reward_type, type_config)
+            ) AS d(name, display_name, acquisition, price, points_id, reward_type, type_config)
             """, db);
         seed.Parameters.AddWithValue("stars_account", StarsAccountId);
         await seed.ExecuteNonQueryAsync();

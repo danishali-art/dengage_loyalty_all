@@ -8,17 +8,21 @@
  */
 import { ConditionTree } from '../../../shared/forms/condition-tree-dsl';
 
+/** The rule types a rule can be created with — mirrors `RuleTypes.All` on the server. */
 export const RULE_TYPES = [
   'SpendRule',
-  'StampRule',
   'FixedBonusRule',
   'RedemptionRule',
   'TransferRule',
   'ReversalRule',
-  'ExpiryRule',
   'ManualAdjustmentRule',
 ] as const;
-export type RuleType = (typeof RULE_TYPES)[number];
+/**
+ * Retired by CR 2026-10-05: never offered, but existing (disabled) rules still come back with
+ * them, so they stay part of `RuleType` for display.
+ */
+export const RETIRED_RULE_TYPES = ['StampRule', 'ExpiryRule'] as const;
+export type RuleType = (typeof RULE_TYPES)[number] | (typeof RETIRED_RULE_TYPES)[number];
 
 export interface RuleCalculation {
   rate?: string | null; // SpendRule
@@ -29,8 +33,6 @@ export interface RuleCalculation {
   maxPerDay?: string | null; // TransferRule
   mode?: 'proportional' | 'full' | null; // ReversalRule
   allowNegative?: 'allow negative' | 'clamp to zero' | null; // ReversalRule
-  ageDays?: string | null; // ExpiryRule
-  order?: 'FIFO' | 'LIFO' | null; // ExpiryRule
   reason?: 'goodwill' | 'correction' | 'dispute' | 'migration' | null; // ManualAdjustmentRule
 }
 

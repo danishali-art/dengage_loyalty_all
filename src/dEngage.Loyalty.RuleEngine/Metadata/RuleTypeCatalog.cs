@@ -7,7 +7,8 @@ namespace dEngage.Loyalty.RuleEngine.Metadata;
 // RulesValidators (Api, structural check at create/update time) and, going forward, the
 // rules/metadata endpoint the Angular rule builder (CR-11) reads instead of hardcoding its own
 // RULE_TYPES/EVENT_TRIGGERS arrays. TIER_POINTS is deferred (see plan) — no rule type here lists
-// it as a valid target.
+// it as a valid target. CR 2026-10-05: StampRule and ExpiryRule are retired and STAMP is no
+// longer a target, so neither the API nor the rule builder offers them.
 public sealed record RuleTypeMetadata(
     string RuleType,
     EventCategory Category,
@@ -28,10 +29,6 @@ public static class RuleTypeCatalog
                 new[] { EventFieldKind.Money }, new[] { "POINTS", "CASH" },
                 "Rate applied to the event amount after currency normalisation."),
 
-            [RuleTypes.StampRule] = new(RuleTypes.StampRule, EventCategory.Earn,
-                Array.Empty<EventFieldKind>(), new[] { "STAMP" },
-                "Counter increment. Not fungible, never transfers."),
-
             [RuleTypes.RedemptionRule] = new(RuleTypes.RedemptionRule, EventCategory.Burn,
                 new[] { EventFieldKind.Number }, new[] { "POINTS" },
                 "Debits. Balance is checked inside the posting transaction."),
@@ -44,12 +41,8 @@ public static class RuleTypeCatalog
                 new[] { EventFieldKind.Money, EventFieldKind.String }, Array.Empty<string>(),
                 "Reads the historical posting, not the current rule config. Target is inherited, never configured."),
 
-            [RuleTypes.ExpiryRule] = new(RuleTypes.ExpiryRule, EventCategory.Adjust,
-                Array.Empty<EventFieldKind>(), new[] { "POINTS" },
-                "Runs on a schedule over points lots."),
-
             [RuleTypes.ManualAdjustmentRule] = new(RuleTypes.ManualAdjustmentRule, EventCategory.Adjust,
-                new[] { EventFieldKind.String }, new[] { "POINTS", "CASH", "STAMP" },
+                new[] { EventFieldKind.String }, new[] { "POINTS", "CASH" },
                 "Requires an authenticated operator and a reason code.")
         };
 

@@ -69,7 +69,7 @@ When an endpoint or DTO changes, update this file in the same change (`.claude/r
 | POST | `` | `CreateAccountTypeRequest { type, name, config, isTierQualifying? }` → 201 |
 | PATCH | `/{accountTypeId}` | `UpdateAccountTypeRequest { name?, config?, isTierQualifying? }` → `AccountTypeResponse` |
 
-- `type` is `POINTS` \| `STAMP` \| `CASH` (immutable). `config` is free-form JSON with snake_case keys validated per type by `AccountTypeConfigValidators` (e.g. POINTS `decimals`, `expiration_days`, `warning_days`, `redemption`, `transfer.daily_limit`; CASH `currency`, `decimals`, no expiry, no transfer).
+- `type` is `POINTS` \| `CASH` (immutable). **CR 2026-10-05 (breaking):** `STAMP` is retired — creating one is a 400, `GET ` (list) no longer returns existing STAMP wallets, `GET /{accountTypeId}` still returns one, and `PATCH` on one is 409 `account_type_retired`. `config` is free-form JSON with snake_case keys validated per type by `AccountTypeConfigValidators` (e.g. POINTS `decimals`, `expiration_days`, `warning_days`, `redemption`, `transfer.daily_limit`; CASH `currency`, `decimals`, no expiry, no transfer).
 - `AccountTypeResponse { id, type, name, config, createdAt, isTierQualifying }`.
 
 ## Tiers — `/api/v1/tenants/{tenantId}/programs/{programId}/tiers`
@@ -96,10 +96,10 @@ When an endpoint or DTO changes, update this file in the same change (`.claude/r
 | PATCH | `/{rewardId}/approve` | → `RewardResponse` (cashback approval; the approver must differ from the creator) |
 | DELETE | `/{rewardId}` | → 204 |
 
-- `CreateRewardRequest { name, displayName, acquisition, rewardType, stampAccountTypeId?, pointsPrice?, pointsAccountTypeId?, typeConfig?, isActive }`. Creatable: `acquisition` `points_purchase` \| `streak_completion`; `rewardType` `cashback` (either acquisition) \| `tier_upgrade` (streak only). `name` must be `{programSlug}_[a-z0-9_]+`.
+- `CreateRewardRequest { name, displayName, acquisition, rewardType, pointsPrice?, pointsAccountTypeId?, typeConfig?, isActive }`. Creatable: `acquisition` `points_purchase` \| `streak_completion`; `rewardType` `cashback` (either acquisition) \| `tier_upgrade` (streak only). `name` must be `{programSlug}_[a-z0-9_]+`.
 - `typeConfig` (snake_case): cashback `{ amount, currency, cash_account_type_id }`; tier_upgrade `{ target_tier_id, duration_days? }`.
-- `UpdateRewardRequest { name?, displayName?, stampAccountTypeId?, pointsPrice?, pointsAccountTypeId?, typeConfig? }`.
-- `RewardResponse { id, name, displayName, acquisition, rewardType, stampAccountTypeId?, pointsPrice?, pointsAccountTypeId?, typeConfig, isActive, createdAt, status, createdBy?, approvedBy? }` — `status` is `active` \| `pending_approval`. Retired acquisition/type values can still appear on old rows.
+- `UpdateRewardRequest { name?, displayName?, pointsPrice?, pointsAccountTypeId?, typeConfig? }`.
+- `RewardResponse { id, name, displayName, acquisition, rewardType, pointsPrice?, pointsAccountTypeId?, typeConfig, isActive, createdAt, status, createdBy?, approvedBy? }` — `status` is `active` \| `pending_approval`. Retired acquisition/type values can still appear on old rows. **CR 2026-10-05 (breaking):** `stampAccountTypeId` was removed from the requests, the response and the publish snapshot's `rewards`.
 
 ## Rules — `/api/v1/tenants/{tenantId}/programs/{programId}/rules`
 
@@ -117,8 +117,8 @@ When an endpoint or DTO changes, update this file in the same change (`.claude/r
 - `CreateRuleRequest { name, trigger, targetAccountTypeId?, type, calculation?, conditions?, limits?, priority, stackable, exclusivityGroup?, stackMode?, configuration?, activeFrom?, activeTo? }` — `targetAccountTypeId` is null only for `ReversalRule`; `exclusivityGroup` must be null and `stackMode` null or `Additive` (retired by 1.3.CL).
 - `UpdateRuleRequest` — the same fields, all optional, without `type`.
 - `RuleResponse { id, name, type, trigger, targetAccountTypeId?, calculation?, conditions?, limits?, priority, stackable, exclusivityGroup?, stackMode, configuration?, version, activeFrom?, activeTo?, status, createdBy?, approvedBy?, createdAt, updatedAt }` — `status` is `active` \| `disabled` \| `deleted` \| `pending_approval`.
-- `type`: `SpendRule`, `StampRule`, `FixedBonusRule`, `RedemptionRule`, `TransferRule`, `ReversalRule`, `ExpiryRule`, `ManualAdjustmentRule`.
-- `calculation` (engine `RuleCalculation`): `rate`, `amount`, `ratio`, `minRedeem`, `fee`, `maxPerDay`, `mode`, `allowNegative`, `ageDays`, `order`, `reason` — the subset per type.
+- `type`: `SpendRule`, `FixedBonusRule`, `RedemptionRule`, `TransferRule`, `ReversalRule`, `ManualAdjustmentRule`. **CR 2026-10-05 (breaking):** `StampRule` and `ExpiryRule` are retired, the `points.expired` trigger is refused (400 `trigger_retired`), and STAMP is no longer a valid target. Existing rules of those kinds were disabled; they can still be read and deleted, but editing, approving or setting them `active` is 409 `rule_type_retired`. Their type can still appear in `RuleResponse`.
+- `calculation` (engine `RuleCalculation`): `rate`, `amount`, `ratio`, `minRedeem`, `fee`, `maxPerDay`, `mode`, `allowNegative`, `reason` — the subset per type (`ageDays`/`order` were removed with `ExpiryRule`).
 - `conditions` (engine `ConditionTree`): `{ op, groups: [{ op, conditions: [{ field, operator, value: { type, data, currency?, inferred? } }] }] }`.
 - `limits` (engine `RuleLimits`, snake_case): `per_customer_total`, `per_customer_per_day`, `max_per_event`, `min_event_amount`, `cooldown_hours`, `max_customers`, `rule_budget_total`, `rule_budget_per_period`, `per_customer_per_period`, `period`, `reset_window`, `on_breach` (default `Clamp`).
 - `configuration` (engine `RuleSettings`): `rounding`, `posting` (default `Immediate`), `holdDays`, `expiryOverrideDays`, `reversible` (default true), `testMode`, `notifyOnAward`.
@@ -151,6 +151,8 @@ A card bucket is stored as a `FixedBonusRule` (template `card_bucket`) authored 
 | PATCH | `/{campaignId}` | `UpdateStreakCampaignRequest` (same fields, all optional) → `StreakCampaignResponse` |
 | PATCH | `/{campaignId}/status` | `{ status }` (`active` \| `disabled`) → `StreakCampaignResponse` |
 | DELETE | `/{campaignId}` | → 204 |
+
+- `trigger` `points.expired` is refused (400 `trigger_retired`, CR 2026-10-05); a campaign already on it was disabled and can't be edited or set `active` (409 `trigger_retired`).
 
 - `conditions` is the flat list `[{ field, op, value }]` (`op`: `eq`, `ne`, `in`, `gte`, `lte`, `gt`, `lt`, `exists`, `occurred_within` with value `{ after_event, hours }`).
 - `config` (engine `StreakConfig`, snake_case): `period` (`day` \| `week` \| `month`), `week_start` (`monday` \| `sunday`), `target_periods`, `aggregate { metric: sum \| count, threshold }`, `timezone` (IANA id), `on_complete` (`restart` \| `stop`), `reward { kind: fixed_bonus \| reward_definition, amount?, reward_definition_id? }`.
@@ -226,18 +228,6 @@ Ingestion routes need **API-key** auth and return **202** `EventAcceptedResponse
 | GET | `/types` | JWT or API key (tenant scope) | → `EventTypesResponse { builtIn, generic, publishable }` |
 | GET | `/{eventId}` | JWT or API key (tenant scope) | → `EventStatusResponse { eventId, eventType, status, receivedAt, processedAt?, error? }` |
 
-## Complaints — `/api/v1/tenants/{tenantId}/complaints`
-
-| Method | Route | Body / query → Response |
-|---|---|---|
-| GET | `` | query `status`, `programId`, paging → page of `ComplaintResponse` |
-| GET | `/summary` | query `programId` → `ComplaintSummaryResponse { open, inProgress, resolved, total }` |
-| GET | `/{complaintId}` | → `ComplaintResponse` |
-| POST | `` | `CreateComplaintRequest { programId?, customerKey?, subject, description? }` → 201 |
-| PATCH | `/{complaintId}/status` | `UpdateComplaintStatusRequest { status }` (`open` \| `in_progress` \| `resolved`) → `ComplaintResponse` |
-
-`ComplaintResponse { id, programId?, customerKey?, subject, description?, status, createdAt, resolvedAt? }`.
-
 ## Config versions — `/api/v1/tenants/{tenantId}/config-versions` (read-only)
 
 | Method | Route | Query → Response |
@@ -251,7 +241,7 @@ A program publish writes `entityType` `ProgramPublication` with snapshot `{ prog
 
 | Method | Route | Query → Response |
 |---|---|---|
-| GET | `/summary` | `programId?`, `fromDate?`, `toDate?` → `DashboardSummaryResponse { programCount, tierCount, customerAccountCount, totalBalance, redemptionCount, streakActiveCount, streakCompletedInRange, complaints: ComplaintSummaryResponse }` |
+| GET | `/summary` | `programId?`, `fromDate?`, `toDate?` → `DashboardSummaryResponse { programCount, tierCount, customerAccountCount, totalBalance, redemptionCount, streakActiveCount, streakCompletedInRange }` (`complaints` removed by CR 2026-10-05) |
 
 ## Revision history
 
@@ -261,3 +251,4 @@ A program publish writes `entityType` `ProgramPublication` with snapshot `{ prog
 | 2026-10-02 | CR 2026-10-02 (Customer 360) P2: profile `summary`/`programs`, tier-history program/cause, `rule-fires`, `cap-usage`, `streaks`, `rewards`. | Claude Code, at the request of Moiz |
 | 2026-10-02 | CR 2026-10-02 (Customer 360) P3: `card-buckets`, `messages`, ledger `ruleId` filter. | Claude Code, at the request of Moiz |
 | 2026-10-03 | Customer cursor lists (`ledger`, `events`, `rule-fires`, `messages`) return an additive `total`. | Claude Code, at the request of Moiz |
+| 2026-10-05 | CR 2026-10-05 (breaking): Complaints endpoints and `DashboardSummaryResponse.complaints` removed; STAMP account types retired and hidden from the list; `stampAccountTypeId` removed from rewards; `StampRule`, `ExpiryRule` and the `points.expired` trigger retired (`events/types` no longer lists `points.expired`). See `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md`. | Claude Code, at the request of Moiz |

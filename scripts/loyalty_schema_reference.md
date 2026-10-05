@@ -2,7 +2,7 @@
 
 Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları ve kolonları açıklar.
 
-- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261002162724_CustomerViewCr1002`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
+- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261005141326_RetireStampsAndExpiryRuleCr1005`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
 - **Kurulum:** boş bir PostgreSQL veritabanına `psql -d loyalty_dev -f loyalty_schema.sql`. Ardından **her tenant için** [`provision_tenant.sql`](provision_tenant.sql) (partition oluşturur) ve tenant'ın seed script'i (örn. [`starbucks_loyalty.sql`](starbucks_loyalty.sql)) çalıştırılır.
 - Tüm parasal/puan kolonları `numeric(20,4)`'tür; tüm zaman kolonları `timestamptz` (UTC) tutulur.
 - Event/mesaj davranışlarının detayı için: `docsv2/01_inbound_events.md`, `docsv2/02_outbound_events.md`.
@@ -12,7 +12,7 @@ Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları
 | Tablo | Rol |
 |-------|-----|
 | [`programs`](#programs) | Tenant'ın loyalty programı (kök tanım) |
-| [`account_types`](#account_types) | Cüzdan tanımları — POINTS / STAMP / CASH + tip bazlı `config` |
+| [`account_types`](#account_types) | Cüzdan tanımları — POINTS / CASH (+ geçmişten kalan STAMP) + tip bazlı `config` |
 | [`customer_accounts`](#customer_accounts) | Müşteri × cüzdan bakiyesi + güncel tier durumu |
 | [`rules`](#rules) | Kazanım kuralları (8 tip — CR-02: Spend / Stamp / FixedBonus / Redemption / Transfer / Reversal / Expiry / ManualAdjustment) |
 | [`rule_versions`](#rule_versions) | Kuralın önceki (superseded) versiyonları — CR-09 versiyonlama |
@@ -30,7 +30,6 @@ Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları
 | [`streak_log`](#streak_log) | — |
 | [`streak_progress`](#streak_progress) | — |
 | [`admin_users`](#admin_users) | — |
-| [`complaints`](#complaints) | — |
 | [`config_versions`](#config_versions) | — |
 | [`event_log`](#event_log) | — |
 | [`streak_applied_event`](#streak_applied_event) | — |
@@ -45,7 +44,7 @@ Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları
 ```
 programs ─┬─< account_types ─┬─< customer_accounts >── tier_definitions
           │                  ├─< rules (target_account_type_id)
-          │                  └─< reward_definitions (stamp/points hesabı)
+          │                  └─< reward_definitions (points hesabı)
           ├─< tier_definitions
           └─< reward_definitions
 ledger_entries >── customer_accounts, rules        (partitioned, FK'sız)
@@ -98,7 +97,7 @@ Cüzdan (hesap tipi) tanımları. Bir programda birden fazla cüzdan olur; müş
 | `id` | uuid | ✗ |  | PK — inbound event'lerdeki `account_type_id` / `source_account_type_id` budur |
 | `tenant_id` | uuid | ✗ |  | Tenant |
 | `program_id` | uuid | ✗ |  | FK → `programs` (CASCADE) |
-| `type` | varchar(20) | ✗ |  | `POINTS` / `STAMP` / `CASH` |
+| `type` | varchar(20) | ✗ |  | `POINTS` / `CASH`. `STAMP` CR 2026-10-05 ile kullanımdan kaldırıldı: yeni STAMP cüzdanı açılamaz, mevcut satırlar müşteri geçmişi olarak kalır ve cüzdan listesinde gösterilmez |
 | `name` | varchar(255) | ✗ |  | Görünen ad (örn. "Stars", "Cashback Wallet") |
 | `config` | jsonb | ✗ |  | Tip bazlı konfigürasyon (aşağıda); boş olabilir: `{}` |
 | `is_tier_qualifying` | boolean | ✗ |  | — |
@@ -109,7 +108,7 @@ Cüzdan (hesap tipi) tanımları. Bir programda birden fazla cüzdan olur; müş
 | type | Anahtarlar | Örnek |
 |------|-----------|-------|
 | `POINTS` | `decimal_places`, `expiration_days` (null/yok = süresiz), `redemption { target_account_type_id, rate, min_points }` | `{"expiration_days": 180, "redemption": {"target_account_type_id": "…", "rate": 0.10, "min_points": 200}}` |
-| `STAMP` | `stamp_target` (kart kaç damgada dolar), `reward_type` (doluşta verilecek ödül/kupon tipi) | `{"stamp_target": 10, "reward_type": "free_drink"}` |
+| `STAMP` (kullanımdan kaldırıldı, sadece geçmiş satırlar) | `stamp_target` (kart kaç damgada dolar), `reward_type` (doluşta verilecek ödül/kupon tipi) | `{"stamp_target": 10, "reward_type": "free_drink"}` |
 | `CASH` | `currency`, `decimal_places` | `{"currency": "USD", "decimal_places": 2}` |
 
 `redemption` bloğu `points.redeem` akışının sözleşmesidir: `rate` (1 puanın para karşılığı), `min_points` (tek seferde bozdurulabilecek asgari puan), `target_account_type_id` (tutarın yazılacağı CASH cüzdan). Blok yoksa redeem `redemption_not_configured` ile reddedilir.
@@ -172,7 +171,7 @@ yalnızca `active` satırlar — `pending_approval` eşleşmeye girmez).
 | `tenant_id` | uuid | ✗ |  | Tenant (iç kimlik, slug değil — `20260903200505_TenantIdGuidForeignKeys` ile bu branch'ten önce `varchar`'dan dönüştürüldü) |
 | `program_id` | uuid | ✗ |  | FK → `programs` (CASCADE) |
 | `name` | varchar(255) | ✗ |  | Kural adı — outbound `applied_rules[].name` olarak dışarı gider |
-| `type` | varchar(50) | ✗ |  | `SpendRule` / `StampRule` / `FixedBonusRule` / `RedemptionRule` / `TransferRule` / `ReversalRule` / `ExpiryRule` / `ManualAdjustmentRule` (CR-02) — oluşturulduktan sonra değiştirilemez |
+| `type` | varchar(50) | ✗ |  | `SpendRule` / `FixedBonusRule` / `RedemptionRule` / `TransferRule` / `ReversalRule` / `ManualAdjustmentRule` (CR-02) — oluşturulduktan sonra değiştirilemez. `StampRule` ve `ExpiryRule` CR 2026-10-05 ile kaldırıldı; bu tipteki (ve `points.expired` tetikleyicili ya da STAMP hedefli) eski kurallar migration ile `disabled` yapıldı |
 | `trigger` | varchar(50) | ✗ |  | Tetikleyici event tipi — built-in event kataloğundaki 14 tipten biri ya da tenant onaylı generic tip |
 | `conditions` | jsonb | ✓ |  | Gruplu AND/OR koşul ağacı (CR-05); null = koşulsuz (aşağıda) |
 | `calculation` | jsonb | ✗ |  | Tipe özgü kazanım/hesap parametreleri (aşağıda) |
@@ -197,7 +196,7 @@ yalnızca `active` satırlar — `pending_approval` eşleşmeye girmez).
 
 | Kolon | Şema | Örnekler |
 |-------|------|----------|
-| `calculation` | Tipe göre alt küme — `rate` (Spend), `amount` (FixedBonus, ManualAdjustment'ta opsiyonel fallback), `ratio`+`minRedeem` (Redemption), `ratio`+`fee`+`maxPerDay` (Transfer), `mode`("proportional"\|"full")+`allowNegative`("allow negative"\|"clamp to zero") (Reversal), `ageDays`+`order`("FIFO"\|"LIFO") (Expiry), `reason`("goodwill"\|"correction"\|"dispute"\|"migration") (ManualAdjustment) — StampRule boş obje kullanır | `{"rate": 0.10}` |
+| `calculation` | Tipe göre alt küme — `rate` (Spend), `amount` (FixedBonus, ManualAdjustment'ta opsiyonel fallback), `ratio`+`minRedeem` (Redemption), `ratio`+`fee`+`maxPerDay` (Transfer), `mode`("proportional"\|"full")+`allowNegative`("allow negative"\|"clamp to zero") (Reversal), `reason`("goodwill"\|"correction"\|"dispute"\|"migration") (ManualAdjustment) — kaldırılan StampRule/ExpiryRule kurallarının eski satırlarında boş obje ya da `ageDays`/`order` kalmış olabilir | `{"rate": 0.10}` |
 | `conditions` | Gruplu AND/OR ağacı: `{"op":"AND\|OR","groups":[{"op":"AND\|OR","conditions":[{"field","operator","value":{"type","data","currency?","inferred?"}}]}]}`. `operator` ∈ `gte,lte,between,eq,neq,in,not_in,starts_with,exists,is_null`. Alan bulunamazsa: pozitif operatörler `false`, `not_in`/`neq`/`is_null` `true` döner. | `{"op":"AND","groups":[{"op":"AND","conditions":[{"field":"amount","operator":"gte","value":{"type":"money","data":100}}]}]}` |
 | `limits` | `per_customer_total`, `per_customer_per_day`, `max_per_event`, `min_event_amount`, `cooldown_hours`, `max_customers`, `rule_budget_total`, `rule_budget_per_period`, `per_customer_per_period`, `period`("Day\|Week\|Month\|Year"), `reset_window`("Calendar\|Rolling"), `on_breach`("Clamp\|Skip", varsayılan Clamp) — bütçe alanları `rule_limit_counters`'a karşı postalama transaction'ı içinde rezerve edilir (CR-07/CR-09) | `{"rule_budget_per_period": 10000, "period": "Month", "on_breach": "Skip"}` |
 | `configuration` | `rounding`("down\|nearest\|up", null=programdan miras), `posting`("Immediate\|Delayed" — "Pending" henüz desteklenmiyor), `holdDays` (Delayed iken zorunlu), `expiryOverrideDays`, `reversible`(varsayılan true), `testMode`(varsayılan false — postalamadan sadece audit), `notifyOnAward`(varsayılan false) | `{"posting": "Delayed", "holdDays": 3}` |
@@ -419,9 +418,8 @@ eklemek demektir, şema migration'ı gerekmez. Detay: `docs/scope-changes/2026-0
 | `program_id` | uuid | ✗ |  | FK → `programs` (CASCADE) |
 | `name` | varchar(100) | ✗ |  | Slug ad — inbound `reward.purchase`'taki `reward_name` bununla eşleşir |
 | `display_name` | varchar(255) | ✗ |  | Görünen ad |
-| `acquisition` | varchar(30) | ✗ |  | Edinim tipi (NASIL kazanılır): `stamp_completion` (kart dolunca otomatik) / `points_purchase` (puanla satın alma) / `streak_completion` (streak kampanyası tamamlanınca) |
+| `acquisition` | varchar(30) | ✗ |  | Edinim tipi (NASIL kazanılır): `points_purchase` (puanla satın alma) / `streak_completion` (streak kampanyası tamamlanınca). `stamp_completion` (kart dolunca otomatik) CR 2026-09-30 ile kullanımdan kaldırıldı, sadece eski satırlarda kalır |
 | `reward_type` | varchar(30) | ✗ |  | Ödül tipi (ödül NE'dir): `points_bonus` / `discount` / `cashback` / `free_product` / `gift_card` / `tier_upgrade` — registry'de doğrulanır, kapalı bir liste değildir |
-| `stamp_account_type_id` | uuid | ✓ |  | `stamp_completion` için: hangi STAMP cüzdanının doluşu (FK); diğer acquisition tiplerinde NULL olmalı |
 | `points_price` | numeric(20,4) | ✓ |  | `points_purchase` için: puan fiyatı; diğer acquisition tiplerinde NULL olmalı |
 | `points_account_type_id` | uuid | ✓ |  | `points_purchase` için: puanın düşüleceği POINTS cüzdanı (FK); diğer acquisition tiplerinde NULL olmalı |
 | `type_config` | jsonb | ✗ | `'{}'` | `reward_type`'a özgü alanlar (örn. discount için `discount_kind`/`value`, free_product için `product_sku`/`quantity`) — registry tarafından doğrulanır, default `{}` |
@@ -434,19 +432,21 @@ eklemek demektir, şema migration'ı gerekmez. Detay: `docs/scope-changes/2026-0
 > **Not:** `external_coupon_type` kolonu kaldırıldı (2026-09-17, `RewardTypeTaxonomy` migration'ı) —
 > outbound `loyalty.reward.earned` event'inde artık `coupon_type` yerine `reward_type` gider.
 > Gerekçe ve etki analizi: `docs/scope-changes/2026-09-17-reward-type-taxonomy.md`.
+>
+> **Not:** `stamp_account_type_id` kolonu, FK'sı ve iki index'i (`IX_reward_definitions_stamp_account_type_id`,
+> `ux_reward_definitions_active_stamp`) kaldırıldı (2026-10-05, `RetireStampsAndExpiryRuleCr1005` migration'ı).
+> Etki analizi: `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md`.
 
 **PK:** `PK_reward_definitions (id)`.
 
-**FK:** `points_account_type_id` → `account_types.id` (NO ACTION); `program_id` → `programs.id` (CASCADE); `stamp_account_type_id` → `account_types.id` (NO ACTION); `tenant_id` → `tenants.id` (CASCADE).
+**FK:** `points_account_type_id` → `account_types.id` (NO ACTION); `program_id` → `programs.id` (CASCADE); `tenant_id` → `tenants.id` (CASCADE).
 
 **Index:**
 
 - `IX_reward_definitions_points_account_type_id (points_account_type_id)`
 - `IX_reward_definitions_program_id (program_id)`
-- `IX_reward_definitions_stamp_account_type_id (stamp_account_type_id)`
 - `idx_reward_definitions_tenant_program (tenant_id, program_id)`
 - `uq_reward_definitions_tenant_program_name (tenant_id, program_id, name)` UNIQUE
-- `ux_reward_definitions_active_stamp (tenant_id, stamp_account_type_id)` UNIQUE WHERE `acquisition = 'stamp_completion' AND is_active` — bir damga cüzdanında aynı anda **tek** aktif doluş ödülü olabilir
 - `ux_reward_definitions_tenant_name_active (tenant_id, name)` UNIQUE WHERE `is_active`
 
 ---
@@ -505,7 +505,7 @@ Kazanılan ödüllerin kaydı (damga doluşu, puanla satın alma ya da streak ta
 | `metadata` | jsonb | ✓ |  | Harekete özgü ek bilgi (örn. redeem'de `{redeemed_points, cash_amount, rate}`) |
 | `created_at` | timestamptz | ✗ |  | FIFO expire modelinin yaş referansı |
 
-**`reason` sözlüğü:** `earn` (kural kazanımı) · `stamp_earn` (+1 damga) · `stamp_reset` (kart doluşunda sıfırlama) · `cash_load` / `cash_spend` (nakit yükleme/harcama) · `points_redeemed` / `points_redeemed_cash` (puan→nakit dönüşümün iki bacağı) · `refund` (iade geri alımı) · `points_expired` (gece sönmesi) · `reward_purchase` (puanla ödül alımı).
+**`reason` sözlüğü:** `earn` (kural kazanımı) · `stamp_earn` (+1 damga) · `stamp_reset` (kart doluşunda sıfırlama) — bu ikisi CR 2026-10-05'ten beri yazılmaz, sadece geçmiş kayıtlarda bulunur · `cash_load` / `cash_spend` (nakit yükleme/harcama) · `points_redeemed` / `points_redeemed_cash` (puan→nakit dönüşümün iki bacağı) · `refund` (iade geri alımı) · `points_expired` (gece sönmesi) · `reward_purchase` (puanla ödül alımı).
 
 **PK:** `PK_ledger_entries (tenant_id, id)`.
 
@@ -680,32 +680,6 @@ Transactional outbox: dışarı gidecek bildirimler, iş verisiyle **aynı trans
 
 - `idx_admin_users_tenant_id (tenant_id)`
 - `uq_admin_users_email (email)` UNIQUE
-
----
-
-## complaints
-
-| Kolon | Tip | Null | Varsayılan | Açıklama |
-|-------|-----|------|------------|----------|
-| `id` | uuid | ✗ |  | — |
-| `tenant_id` | uuid | ✗ |  | — |
-| `program_id` | uuid | ✓ |  | — |
-| `customer_key` | varchar(255) | ✓ |  | — |
-| `subject` | varchar(255) | ✗ |  | — |
-| `description` | text | ✓ |  | — |
-| `status` | varchar(20) | ✗ | `'open'` | — |
-| `created_at` | timestamptz | ✗ |  | — |
-| `resolved_at` | timestamptz | ✓ |  | — |
-
-**PK:** `PK_complaints (id)`.
-
-**FK:** `program_id` → `programs.id` (NO ACTION); `tenant_id` → `tenants.id` (CASCADE).
-
-**Index:**
-
-- `IX_complaints_program_id (program_id)`
-- `idx_complaints_tenant_program (tenant_id, program_id)`
-- `idx_complaints_tenant_status (tenant_id, status)`
 
 ---
 

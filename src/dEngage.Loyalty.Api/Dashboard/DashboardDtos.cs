@@ -1,5 +1,3 @@
-using dEngage.Loyalty.Api.Complaints;
-
 namespace dEngage.Loyalty.Api.Dashboard;
 
 public sealed record DashboardSummaryResponse(
@@ -9,5 +7,4 @@ public sealed record DashboardSummaryResponse(
     decimal TotalBalance,
     int RedemptionCount,
     int StreakActiveCount,
-    int StreakCompletedInRange,
-    ComplaintSummaryResponse Complaints);
+    int StreakCompletedInRange);

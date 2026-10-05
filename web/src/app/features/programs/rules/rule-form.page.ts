@@ -454,37 +454,6 @@ export function buildTriggerOptions(
                 </select>
               </div>
             }
-            @case ('ExpiryRule') {
-              <div>
-                @let calcAgeDaysError =
-                  fieldError('calcAgeDays', {
-                    required: 'Age is required.',
-                    min: 'Age must be 0 or greater.',
-                  });
-                <label for="calcAgeDays" class="field-label"
-                  >Age (days before expiry)
-                  <span class="text-danger-fg" aria-hidden="true">*</span></label
-                >
-                <input
-                  id="calcAgeDays"
-                  type="number"
-                  min="0"
-                  step="1"
-                  formControlName="calcAgeDays"
-                  class="field-input"
-                  [attr.aria-invalid]="calcAgeDaysError ? 'true' : null"
-                  [attr.aria-describedby]="calcAgeDaysError ? 'calcAgeDays-error' : null"
-                />
-                <app-field-hint id="calcAgeDays-error" [error]="calcAgeDaysError" />
-              </div>
-              <div>
-                <label for="calcOrder" class="field-label">Expiry order</label>
-                <select id="calcOrder" formControlName="calcOrder" class="field-input">
-                  <option value="FIFO">FIFO — oldest lots first</option>
-                  <option value="LIFO">LIFO — newest lots first</option>
-                </select>
-              </div>
-            }
             @case ('ManualAdjustmentRule') {
               <div>
                 <label for="calcReason" class="field-label">Reason code</label>
@@ -506,9 +475,6 @@ export function buildTriggerOptions(
                   placeholder="Uses operator.amount from the event"
                 />
               </div>
-            }
-            @case ('StampRule') {
-              <p class="text-xs text-gray-500">A stamp counter increment. Nothing to configure.</p>
             }
           }
         </form>
@@ -796,11 +762,6 @@ export class RuleFormPage implements OnInit {
       calcMaxPerDay: this.fb.control<number | null>(null),
       calcMode: this.fb.control<'proportional' | 'full'>('proportional'),
       calcAllowNegative: this.fb.control<'allow negative' | 'clamp to zero'>('clamp to zero'),
-      calcAgeDays: this.fb.control<number | null>(30, [
-        requiredWhen((root) => root.get('type')?.value === 'ExpiryRule'),
-        Validators.min(0),
-      ]),
-      calcOrder: this.fb.control<'FIFO' | 'LIFO'>('FIFO'),
       calcReason: this.fb.control<'goodwill' | 'correction' | 'dispute' | 'migration'>(
         'correction',
       ),
@@ -981,7 +942,7 @@ export class RuleFormPage implements OnInit {
     // calcRatio is empty leaves it permanently (and invisibly, since @switch hides the field)
     // marked invalid, and the form can never be saved again.
     this.form.controls.type.valueChanges.subscribe(() => {
-      for (const key of ['calcRate', 'calcAmount', 'calcRatio', 'calcAgeDays'] as const) {
+      for (const key of ['calcRate', 'calcAmount', 'calcRatio'] as const) {
         this.form.controls[key].updateValueAndValidity({ emitEvent: false });
       }
     });
@@ -1040,8 +1001,6 @@ export class RuleFormPage implements OnInit {
       calcMaxPerDay: numberOrNull(calc?.maxPerDay),
       calcMode: calc?.mode ?? 'proportional',
       calcAllowNegative: calc?.allowNegative ?? 'clamp to zero',
-      calcAgeDays: numberOrNull(calc?.ageDays) ?? 30,
-      calcOrder: calc?.order ?? 'FIFO',
       calcReason: calc?.reason ?? 'correction',
 
       limitPerCustomerTotal: toInput(limits?.per_customer_total),
@@ -1074,8 +1033,6 @@ export class RuleFormPage implements OnInit {
         return { rate: decimalString(v.calcRate ?? 0) };
       case 'FixedBonusRule':
         return { amount: decimalString(v.calcAmount ?? 0) };
-      case 'StampRule':
-        return null;
       case 'RedemptionRule': {
         const calc: RuleCalculation = { ratio: decimalString(v.calcRatio ?? 0) };
         const minRedeem = toDecimalStringOrNull(v.calcMinRedeem);
@@ -1092,14 +1049,16 @@ export class RuleFormPage implements OnInit {
       }
       case 'ReversalRule':
         return { mode: v.calcMode, allowNegative: v.calcAllowNegative };
-      case 'ExpiryRule':
-        return { ageDays: decimalString(v.calcAgeDays ?? 0), order: v.calcOrder };
       case 'ManualAdjustmentRule': {
         const calc: RuleCalculation = { reason: v.calcReason };
         const amount = toDecimalStringOrNull(v.calcAmount);
         if (amount) calc.amount = amount;
         return calc;
       }
+      // Retired by CR 2026-10-05 — never offered; the API refuses to save them.
+      case 'StampRule':
+      case 'ExpiryRule':
+        return null;
     }
   }
 

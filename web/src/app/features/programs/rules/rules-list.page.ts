@@ -260,9 +260,13 @@ export class RulesListPage implements OnInit {
     () => new Map(this.accountTypes().map((a) => [a.id, a])),
   );
 
+  // CR 2026-10-05 (D8): the account-type list hides retired STAMP wallets, so a disabled rule
+  // that targeted one has no entry here — label it instead of showing a bare id.
   protected readonly accountLabel = (accountTypeId: string): string => {
     const account = this.accountsById().get(accountTypeId);
-    return account ? `${account.name} (${account.type})` : accountTypeId;
+    return account
+      ? `${account.name} (${account.type})`
+      : String(this.translate.instant('rules.groups.retiredAccount'));
   };
 
   /** Screen-reader caption for one sub-table, e.g. "order.created → Beans (POINTS): Exclusive". */

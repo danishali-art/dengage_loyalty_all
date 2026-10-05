@@ -1,4 +1,3 @@
-using dEngage.Loyalty.Api.Complaints;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
@@ -16,8 +15,7 @@ public interface IDashboardAppService
 // accountTypeCount/ruleCount — avoids N round-trips and N loading states on one dashboard view.
 public sealed class DashboardAppService(
     LoyaltyDbContext db,
-    ITenantSlugResolver tenantSlugResolver,
-    IComplaintsAppService complaints) : IDashboardAppService
+    ITenantSlugResolver tenantSlugResolver) : IDashboardAppService
 {
     public async Task<DashboardSummaryResponse> GetSummaryAsync(string tenantId, Guid? programId, DateTime? from, DateTime? to, CancellationToken ct)
     {
@@ -55,10 +53,8 @@ public sealed class DashboardAppService(
         if (to is not null) streakLog = streakLog.Where(s => s.CreatedAt < to);
         var streakCompletedInRange = await streakLog.CountAsync(ct);
 
-        var complaintSummary = await complaints.SummaryAsync(tenantId, programId, ct);
-
         return new DashboardSummaryResponse(
             programCount, tierCount, accountCount, totalBalance,
-            redemptionCount, streakActiveCount, streakCompletedInRange, complaintSummary);
+            redemptionCount, streakActiveCount, streakCompletedInRange);
     }
 }

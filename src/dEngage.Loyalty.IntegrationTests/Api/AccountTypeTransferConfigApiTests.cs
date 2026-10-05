@@ -102,8 +102,9 @@ public sealed class AccountTypeTransferConfigApiTests : IClassFixture<CustomWebA
     }
 
     [Fact]
-    public async Task Stamps_cannot_be_transferred_between_customers()
+    public async Task A_stamp_wallet_cannot_be_created_at_all()
     {
+        // CR 2026-10-05 (D1): STAMP is retired, so the request fails before the transfer check.
         var response = await PostAsync("STAMP", new { stamp_target = 5, transfer = new { daily_limit = 3 } });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

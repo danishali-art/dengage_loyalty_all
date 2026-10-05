@@ -72,9 +72,9 @@ public sealed class PointsAccountTypeConfigValidator : IAccountTypeConfigValidat
         }
     }
 
-    // Only POINTS can be transferred between customers (PointsTransferHandler). Moving CASH or
-    // stamps between customers is not offered (see the CR 2026-09-30 addendum A analysis: cash
-    // P2P is money transmission, stamps are not fungible).
+    // Only POINTS can be transferred between customers (PointsTransferHandler). Moving CASH
+    // between customers is not offered (see the CR 2026-09-30 addendum A analysis: cash P2P is
+    // money transmission).
     internal static void RejectTransfer(JsonElement config, string type)
     {
         if (config.TryGetProperty("transfer", out var transfer) && transfer.ValueKind != JsonValueKind.Null)
@@ -103,26 +103,12 @@ public sealed class CashAccountTypeConfigValidator : IAccountTypeConfigValidator
     }
 }
 
-// No admin UI form exists yet for STAMP (per ux/en/fintech) — accept any JSON object rather than
-// guessing a shape product hasn't defined.
-public sealed class StampAccountTypeConfigValidator : IAccountTypeConfigValidator
-{
-    public string Type => "STAMP";
-
-    public void Validate(JsonElement config)
-    {
-        if (config.ValueKind != JsonValueKind.Object)
-            throw new ValidationApiException("STAMP config must be a JSON object.");
-        PointsAccountTypeConfigValidator.RejectTransfer(config, Type);
-    }
-}
-
 public sealed class AccountTypeConfigValidatorSelector(IEnumerable<IAccountTypeConfigValidator> validators)
 {
     public void Validate(string type, string configJson)
     {
         var validator = validators.FirstOrDefault(v => v.Type == type)
-            ?? throw new ValidationApiException($"Unknown account type '{type}'. Must be POINTS, CASH, or STAMP.");
+            ?? throw new ValidationApiException($"Unknown account type '{type}'. Must be POINTS or CASH.");
 
         JsonDocument document;
         try

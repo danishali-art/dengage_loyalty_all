@@ -1,10 +1,3 @@
-export interface ComplaintSummary {
-  open: number;
-  inProgress: number;
-  resolved: number;
-  total: number;
-}
-
 export interface DashboardSummary {
   programCount: number;
   tierCount: number;
@@ -15,7 +8,6 @@ export interface DashboardSummary {
   redemptionCount: number;
   streakActiveCount: number;
   streakCompletedInRange: number;
-  complaints: ComplaintSummary;
 }
 
 export interface DashboardFilter {

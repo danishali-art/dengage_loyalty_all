@@ -62,7 +62,6 @@ export interface Reward {
   displayName: string;
   acquisition: RewardAcquisition;
   rewardType: RewardType;
-  stampAccountTypeId: string | null;
   pointsPrice: string | null;
   pointsAccountTypeId: string | null;
   typeConfig: RewardTypeConfig;

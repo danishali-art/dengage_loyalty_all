@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using dEngage.Loyalty.Schema;
@@ -11,9 +12,11 @@ using dEngage.Loyalty.Schema;
 namespace dEngage.Loyalty.Schema.Migrations
 {
     [DbContext(typeof(LoyaltyDbContext))]
-    partial class LoyaltyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261005140753_RemoveComplaintsCr1005")]
+    partial class RemoveComplaintsCr1005
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -769,6 +772,10 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("reward_type");
 
+                    b.Property<Guid?>("StampAccountTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("stamp_account_type_id");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -794,6 +801,8 @@ namespace dEngage.Loyalty.Schema.Migrations
 
                     b.HasIndex("ProgramId");
 
+                    b.HasIndex("StampAccountTypeId");
+
                     b.HasIndex("TenantId", "Name")
                         .IsUnique()
                         .HasDatabaseName("ux_reward_definitions_tenant_name_active")
@@ -801,6 +810,11 @@ namespace dEngage.Loyalty.Schema.Migrations
 
                     b.HasIndex("TenantId", "ProgramId")
                         .HasDatabaseName("idx_reward_definitions_tenant_program");
+
+                    b.HasIndex("TenantId", "StampAccountTypeId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reward_definitions_active_stamp")
+                        .HasFilter("acquisition = 'stamp_completion' AND is_active");
 
                     b.HasIndex("TenantId", "ProgramId", "Name")
                         .IsUnique()
@@ -1805,6 +1819,10 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("dEngage.Loyalty.Schema.Entities.AccountType", "StampAccountType")
+                        .WithMany()
+                        .HasForeignKey("StampAccountTypeId");
+
                     b.HasOne("dEngage.Loyalty.Schema.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
@@ -1814,6 +1832,8 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.Navigation("PointsAccountType");
 
                     b.Navigation("Program");
+
+                    b.Navigation("StampAccountType");
                 });
 
             modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.RewardLog", b =>

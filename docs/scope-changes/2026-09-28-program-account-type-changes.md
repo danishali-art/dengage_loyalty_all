@@ -1,6 +1,9 @@
 # Scope Change Impact Analysis: Program & Account Type changes (1.3.CL)
 
 **Status:** Approved 2026-09-28 by Product Owner + Architect (confirmed by the developer) — **implemented and verified** (see §10). No git in this environment, so there is no branch; the file list in §10 is the review record.
+
+> **Superseded in part by CR 2026-10-05 ([2026-10-05-remove-complaints-and-stamps.md](2026-10-05-remove-complaints-and-stamps.md)):** the STAMP account type is retired (can't be created or edited, hidden from the account-type list).
+
 **Date:** 2026-09-28
 **Author:** Claude Code, at the request of danishaliqau@gmail.com
 **Source:** Change log **1.3.CL — program account type changes** (items 1–9)

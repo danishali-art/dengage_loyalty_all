@@ -37,7 +37,7 @@ public sealed class EventsAppService(
                 $"Event type '{eventType}' is not a built-in type and is not configured in RabbitMq:GenericEventTypes for this deployment.");
         }
 
-        // CR-01: Scheduled-source events (birthdaybonus, points.expired) are synthesized
+        // CR-01: Scheduled-source events (birthdaybonus) are synthesized
         // internally on a deterministic key — accepting them from a caller would let a bad
         // actor spoof or duplicate an engine-owned trigger (A10 guarantee #10).
         if (!EventTypes.IsExternallyPublishable(eventType))

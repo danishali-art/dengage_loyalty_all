@@ -205,7 +205,7 @@ public sealed class ProgramsAppService(
                 .Where(r => r.TenantId == tenantId && r.ProgramId == programId)
                 .OrderBy(r => r.Name)
                 .ToListAsync(ct))
-            .Select(r => new PublishedReward(r.Id, r.Name, r.DisplayName, r.Acquisition, r.RewardType, r.StampAccountTypeId,
+            .Select(r => new PublishedReward(r.Id, r.Name, r.DisplayName, r.Acquisition, r.RewardType,
                 r.PointsPrice is { } price ? Money(price) : null, r.PointsAccountTypeId, Json(r.TypeConfig), r.IsActive, r.Status))
             .ToList();
 

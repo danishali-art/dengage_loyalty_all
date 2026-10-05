@@ -71,7 +71,7 @@ such types in the resource folder.
   1. the per-tenant ingestion rate limit (`RateLimit:EventIngestionPerMinutePerTenant`),
   2. built-in or allow-listed `RabbitMq:GenericEventTypes` only,
   3. **no internally scheduled types** (`EventTypes.IsExternallyPublishable`, for example
-     birthday bonus and `points.expired`).
+     the birthday bonus; `points.expired` is no longer an event type since CR 2026-10-05).
   Never bypass these checks.
 - The envelope `Data` is serialized with `JsonConventions.EventDataOptions` (**snake_case**).
 - The request's `Idempotency-Key` becomes the `EventId` (a random Guid if absent), which the

@@ -1,6 +1,9 @@
 # Scope Change Impact Analysis: Rules Engine Taxonomy (CR-01 through CR-11)
 
 **Status:** Approved 2026-09-22 by Product Owner + Architect — implemented on branch `feature/reward-type-taxonomy`
+
+> **Superseded in part by CR 2026-10-05 ([2026-10-05-remove-complaints-and-stamps.md](2026-10-05-remove-complaints-and-stamps.md)):** the `StampRule` and `ExpiryRule` types, the `points.expired` trigger and STAMP targets were removed (8 → 6 rule types, 14 → 13 built-in events).
+
 **Date:** 2026-09-22
 **Author:** Claude Code, at the request of danishaliqau@gmail.com
 **Affects:** `docs/SOW.md` §2.2/§2.3/§2.4/§3/§4, `docs/SCOPE_BASELINE.md`, `scripts/loyalty_schema_reference.md`

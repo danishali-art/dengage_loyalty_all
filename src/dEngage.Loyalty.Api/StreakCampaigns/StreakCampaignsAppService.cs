@@ -8,6 +8,7 @@ using dEngage.Loyalty.RuleEngine.Campaigns.Streak;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
+using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 using CampaignEntity = dEngage.Loyalty.Schema.Entities.StreakCampaign;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
@@ -98,6 +99,7 @@ public sealed class StreakCampaignsAppService(
     public async Task<StreakCampaignResponse> UpdateAsync(string tenantId, Guid programId, Guid campaignId, UpdateStreakCampaignRequest request, CancellationToken ct)
     {
         var entity = await Find(tenantId, programId, campaignId, ct);
+        RequireNotRetired(entity);
 
         var conditions = request.Conditions ?? (entity.Conditions is null ? null : JsonSerializer.Deserialize<List<ConditionClause>>(entity.Conditions));
         var config = request.Config ?? StreakConfig.Parse(entity.Config);
@@ -125,6 +127,8 @@ public sealed class StreakCampaignsAppService(
     public async Task<StreakCampaignResponse> SetStatusAsync(string tenantId, Guid programId, Guid campaignId, string status, CancellationToken ct)
     {
         var entity = await Find(tenantId, programId, campaignId, ct);
+        if (status == RuleStatus.Active)
+            RequireNotRetired(entity);
         if (status == RuleStatus.Active && entity.Status != RuleStatus.Active)
             await RequireEligibleRewardAsync(tenantId, programId, StreakConfig.Parse(entity.Config), ct);
         entity.Status = status;
@@ -133,6 +137,15 @@ public sealed class StreakCampaignsAppService(
         await repository.SaveChangesAsync(ct);
         await campaignConfigCacheService.LoadFromDbAsync(tenantId, programId, ct);
         return ToResponse(entity);
+    }
+
+    // CR 2026-10-05 (D15): campaigns on the retired points.expired trigger never progressed and
+    // were disabled by migration. They stay readable but can't be edited or re-activated.
+    private static void RequireNotRetired(CampaignEntity entity)
+    {
+        if (entity.Trigger == EventTypes.PointsExpired)
+            throw new ConflictApiException("trigger_retired",
+                $"Streak campaign '{entity.Id}' uses the retired 'points.expired' trigger — it is kept for history and can't be edited or re-activated.");
     }
 
     // Soft-delete, same audit-preserving convention as RulesAppService.DeleteAsync — this table

@@ -39,11 +39,6 @@ export const routes: Routes = [
           import('./features/customers/customers.routes').then((m) => m.CUSTOMERS_ROUTES),
       },
       {
-        path: 'complaints',
-        canActivate: [tenantResolvedGuard],
-        loadChildren: () => import('./features/complaints/complaints.routes').then((m) => m.COMPLAINTS_ROUTES),
-      },
-      {
         path: 'platform',
         canMatch: [roleGuard('platform_admin')],
         loadChildren: () => import('./features/platform/platform.routes').then((m) => m.PLATFORM_ROUTES),

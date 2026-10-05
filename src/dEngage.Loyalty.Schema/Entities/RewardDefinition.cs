@@ -11,7 +11,6 @@ public class RewardDefinition : ITenantScopedEntity
     public string DisplayName { get; set; } = default!;
     public string Acquisition { get; set; } = default!;
     public string RewardType { get; set; } = default!;
-    public Guid? StampAccountTypeId { get; set; }
     public decimal? PointsPrice { get; set; }
     public Guid? PointsAccountTypeId { get; set; }
     public string TypeConfig { get; set; } = "{}";
@@ -25,6 +24,5 @@ public class RewardDefinition : ITenantScopedEntity
     public string? ApprovedBy { get; set; }
 
     public Program Program { get; set; } = default!;
-    public AccountType? StampAccountType { get; set; }
     public AccountType? PointsAccountType { get; set; }
 }

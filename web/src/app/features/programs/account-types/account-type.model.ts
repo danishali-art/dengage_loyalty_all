@@ -1,3 +1,7 @@
+/**
+ * STAMP was retired by CR 2026-10-05: it can't be created and the account-type list no longer
+ * returns it. It stays here because Customer 360 still shows customers' historical stamp wallets.
+ */
 export type AccountTypeKind = 'POINTS' | 'CASH' | 'STAMP';
 
 /**

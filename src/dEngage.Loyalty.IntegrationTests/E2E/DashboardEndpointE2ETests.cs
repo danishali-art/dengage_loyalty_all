@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using dEngage.Loyalty.Api.Complaints;
 using dEngage.Loyalty.Api.Dashboard;
 using dEngage.Loyalty.Api.Framework.Auth;
 using dEngage.Loyalty.Api.Framework.Json;
@@ -57,19 +56,16 @@ public sealed class DashboardEndpointE2ETests : IAsyncLifetime
         System.Text.Json.JsonSerializer.Serialize(body, JsonConventions.Options), System.Text.Encoding.UTF8, "application/json");
 
     [Fact]
-    public async Task Dashboard_summary_reflects_created_programs_and_complaints()
+    public async Task Dashboard_summary_reflects_created_programs()
     {
         await _client.PostAsync($"/api/v1/tenants/{TenantSlug}/programs", Json(
             new CreateProgramRequest("Dashboard Test Program", null)));
-        await _client.PostAsync($"/api/v1/tenants/{TenantSlug}/complaints", Json(
-            new CreateComplaintRequest(null, "cust-2", "Dashboard smoke complaint", null)));
 
         var response = await _client.GetAsync($"/api/v1/tenants/{TenantSlug}/dashboard/summary");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var summary = await response.Content.ReadFromJsonAsync<DashboardSummaryResponse>(JsonConventions.Options);
 
         summary!.ProgramCount.Should().Be(1);
-        summary.Complaints.Total.Should().Be(1);
         summary.TotalBalance.Should().Be(0m);
     }
 }

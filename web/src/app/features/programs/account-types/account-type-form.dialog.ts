@@ -56,7 +56,6 @@ export interface AccountTypeFormData {
           <select id="type" formControlName="type" class="field-input">
             <option value="POINTS">⭐ POINTS</option>
             <option value="CASH">💳 CASH</option>
-            <option value="STAMP">🎟 STAMP</option>
           </select>
           @if (isEdit) {
             <p class="mt-1 text-xs text-gray-500">Type cannot be changed after creation.</p>
@@ -272,21 +271,6 @@ export interface AccountTypeFormData {
           <!-- 1.3.CL item 3: no Expiration (days) — cash is real credit and never expires. -->
           <p class="text-xs text-gray-500">{{ 'accountTypes.cash.noExpiry' | translate }}</p>
         }
-
-        @if (form.controls.type.value === 'STAMP') {
-          <div>
-            <label for="stampConfig" class="field-label">Config (JSON)</label>
-            <textarea
-              id="stampConfig"
-              formControlName="stampConfigJson"
-              rows="5"
-              class="field-input resize-none font-mono text-xs"
-            ></textarea>
-            <p class="mt-1 text-xs text-gray-500">
-              No standard shape is defined for STAMP yet — any JSON object is accepted.
-            </p>
-          </div>
-        }
       </form>
       <app-button footer variant="secondary" (click)="closeAnimated()">Cancel</app-button>
       <app-button footer type="submit" [pending]="pending()" (click)="submit()">{{
@@ -337,7 +321,6 @@ export class AccountTypeFormDialog {
       Validators.min(1),
     ]),
     currency: this.fb.control<string>({ value: this.initialCurrency(), disabled: this.isEdit }),
-    stampConfigJson: this.fb.control(this.initialStampJson()),
   });
 
   protected readonly currencies = SUPPORTED_CURRENCIES;
@@ -413,11 +396,6 @@ export class AccountTypeFormDialog {
     const c = this.data.existing?.config as CashConfig | undefined;
     return c?.currency ?? DEFAULT_CURRENCY;
   }
-  private initialStampJson(): string {
-    if (this.data.existing?.type === 'STAMP')
-      return JSON.stringify(this.data.existing.config, null, 2);
-    return '{}';
-  }
 
   private buildConfig(): Record<string, unknown> {
     const v = this.form.getRawValue();
@@ -448,14 +426,7 @@ export class AccountTypeFormDialog {
       }
       return config;
     }
-    if (v.type === 'CASH') {
-      return { currency: v.currency, decimals: Number(v.decimals) };
-    }
-    try {
-      return JSON.parse(v.stampConfigJson || '{}') as Record<string, unknown>;
-    } catch {
-      return {};
-    }
+    return { currency: v.currency, decimals: Number(v.decimals) };
   }
 
   protected async submit(): Promise<void> {
@@ -466,14 +437,6 @@ export class AccountTypeFormDialog {
     ) {
       markAllDirtyAndTouched(this.form);
       return;
-    }
-    if (this.form.controls.type.value === 'STAMP') {
-      try {
-        JSON.parse(this.form.controls.stampConfigJson.value || '{}');
-      } catch {
-        this.formErrors.set(['Config must be valid JSON.']);
-        return;
-      }
     }
     if (
       this.form.controls.type.value === 'POINTS' &&

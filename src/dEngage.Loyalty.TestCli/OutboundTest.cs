@@ -20,7 +20,8 @@ using Spectre.Console;
 /// and the publisher flow are verified.
 ///
 /// Expected counts depend on the seed rules:
-///   Kış 3x (winner, p100) + stamp coffee +1 + İlk Alışveriş +50 (one-time).
+///   Kış 3x (winner, p100) + İlk Alışveriş +50 (one-time). (The coffee stamp rule was removed
+///   with stamps, CR 2026-10-05.)
 ///   Tier: yesil(0) → altin(1000) → siyah(5000), via Stars.
 /// </summary>
 public static class OutboundTest
@@ -52,7 +53,7 @@ public static class OutboundTest
         var e4 = Guid.NewGuid().ToString();
 
         // ── OB01: order → points.earned payload + first tier assignment ───
-        await RunTest("OB01 — 1000TL mobile/coffee → points.earned (Stars 350 + Stamp 1) + tier.changed (→yesil)", async () =>
+        await RunTest("OB01 — 1000TL mobile/coffee → points.earned (Stars 350) + tier.changed (→yesil)", async () =>
         {
             await SendOrderAsync(channel, e1, "ob_user1", 1000m, "mobile", "coffee");
             await WaitAsync(2500);
@@ -72,18 +73,16 @@ public static class OutboundTest
             Assert("data.contact_key", data.GetProperty("contact_key").GetString(), "ob_user1");
 
             var accounts = data.GetProperty("accounts").EnumerateArray().ToList();
-            Assert("accounts length (Stars + Stamp)", accounts.Count, 2);
+            // Stamps were retired by CR 2026-10-05 — Stars is the only wallet this order hits.
+            Assert("accounts length (Stars)", accounts.Count, 1);
 
             var stars = accounts.FirstOrDefault(a => a.GetProperty("code").GetString() == "Stars");
             Assert("Stars.account_type", stars.GetProperty("account_type").GetString(), "POINTS");
             Assert("Stars.delta = 350.00 (Kış 300 + İlk 50)", stars.GetProperty("delta").GetString(), "350.00");
             Assert("Stars.balance = 350.00", stars.GetProperty("balance").GetString(), "350.00");
 
-            var stamp = accounts.FirstOrDefault(a => a.GetProperty("code").GetString() == "Kahve Damgası");
-            Assert("Stamp.account_type", stamp.GetProperty("account_type").GetString(), "STAMP");
-            Assert("Stamp.delta = 1.00", stamp.GetProperty("delta").GetString(), "1.00");
-
-            Assert("applied_rules length", data.GetProperty("applied_rules").GetArrayLength(), 3);
+            // Kış + İlk Alışveriş (the Kahve Damgası stamp rule was removed with stamps).
+            Assert("applied_rules length", data.GetProperty("applied_rules").GetArrayLength(), 2);
 
             var tierCount = await ScalarIntAsync("""
                 SELECT COUNT(*) FROM outbox_events
@@ -139,7 +138,7 @@ public static class OutboundTest
                 .FirstOrDefault(a => a.GetProperty("code").GetString() == "Stars");
             Assert("Stars.delta = 750.00 (Kış, İlk Alışveriş already used up)", stars.GetProperty("delta").GetString(), "750.00");
             Assert("Stars.balance = 1100.00", stars.GetProperty("balance").GetString(), "1100.00");
-            Assert("applied_rules length (Kış + stamp)", data.GetProperty("applied_rules").GetArrayLength(), 2);
+            Assert("applied_rules length (Kış)", data.GetProperty("applied_rules").GetArrayLength(), 1);
 
             var tierCount = await ScalarIntAsync("""
                 SELECT COUNT(*) FROM outbox_events
@@ -154,7 +153,7 @@ public static class OutboundTest
         });
 
         // ── OB04: refund → points.reversed ─────────────────────────────────
-        await RunTest("OB04 — 50% refund → points.reversed (Stars −375.00/725.00), stamp unaffected by floor", async () =>
+        await RunTest("OB04 — 50% refund → points.reversed (Stars −375.00/725.00)", async () =>
         {
             PublishRaw(channel, "order.refunded", Guid.NewGuid().ToString(), new
             {
@@ -166,8 +165,6 @@ public static class OutboundTest
 
             var stars = await GetBalanceAsync("ob_user1", "Stars");
             Assert("Stars 1100 − 375 = 725", stars, 725m);
-            var stamp = await GetBalanceAsync("ob_user1", "Kahve Damgası");
-            Assert("stamp unchanged (floor(0.5)=0)", stamp, 2m);
 
             var payload = await ScalarStringAsync($"""
                 SELECT payload::text FROM outbox_events
@@ -180,7 +177,7 @@ public static class OutboundTest
             var data = doc.RootElement.GetProperty("data");
             Assert("refund_ratio = 0.5", data.GetProperty("refund_ratio").GetString(), "0.5");
             var accounts = data.GetProperty("accounts").EnumerateArray().ToList();
-            Assert("accounts is Stars only (stamp 0 → omitted)", accounts.Count, 1);
+            Assert("accounts is Stars only", accounts.Count, 1);
             Assert("Stars.delta = -375.00", accounts[0].GetProperty("delta").GetString(), "-375.00");
             Assert("Stars.balance = 725.00", accounts[0].GetProperty("balance").GetString(), "725.00");
 

@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { PageHeader } from '../../shared/ui/page-header';
-import { StatusPill } from '../../shared/ui/status-pill';
 import { SearchableSelect, SelectOption } from '../../shared/ui/searchable-select';
 import { ProgramsService } from '../programs/programs.service';
 import { DashboardService } from './dashboard.service';
@@ -18,7 +17,7 @@ interface StatTile {
 @Component({
   selector: 'app-dashboard-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, RouterLink, PageHeader, StatusPill, SearchableSelect],
+  imports: [FormsModule, RouterLink, PageHeader, SearchableSelect],
   template: `
     <app-page-header heading="Dashboard" subtitle="Tenant-wide overview across every program." />
 
@@ -59,14 +58,6 @@ interface StatTile {
             </div>
           }
         </div>
-        <div class="card mt-4" aria-hidden="true">
-          <div class="h-3 w-24 animate-pulse rounded bg-gray-200"></div>
-          <div class="mt-3 flex flex-wrap gap-3">
-            <div class="h-6 w-24 animate-pulse rounded-full bg-gray-200"></div>
-            <div class="h-6 w-28 animate-pulse rounded-full bg-gray-200"></div>
-            <div class="h-6 w-24 animate-pulse rounded-full bg-gray-200"></div>
-          </div>
-        </div>
       } @else if (summary(); as s) {
         <!-- Stat tiles -->
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -87,19 +78,6 @@ interface StatTile {
               </div>
             }
           }
-        </div>
-
-        <!-- Complaints breakdown -->
-        <div class="card mt-4">
-          <div class="section-header">
-            <h2 class="section-heading">Complaints</h2>
-          </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <app-status-pill tone="danger" [dot]="true">{{ s.complaints.open }} open</app-status-pill>
-            <app-status-pill tone="warning" [dot]="true">{{ s.complaints.inProgress }} in progress</app-status-pill>
-            <app-status-pill tone="success" [dot]="true">{{ s.complaints.resolved }} resolved</app-status-pill>
-            <a routerLink="/complaints" class="ml-auto text-sm font-medium text-brand hover:underline">View all ›</a>
-          </div>
         </div>
       }
     </div>

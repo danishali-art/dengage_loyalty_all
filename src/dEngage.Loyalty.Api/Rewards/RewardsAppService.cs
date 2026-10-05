@@ -67,7 +67,6 @@ public sealed class RewardsAppService(
             DisplayName = request.DisplayName,
             Acquisition = request.Acquisition,
             RewardType = request.RewardType,
-            StampAccountTypeId = request.StampAccountTypeId,
             PointsPrice = request.PointsPrice,
             PointsAccountTypeId = request.PointsAccountTypeId,
             TypeConfig = Serialize(request.TypeConfig),
@@ -89,9 +88,6 @@ public sealed class RewardsAppService(
     {
         var entity = await Find(tenantId, programId, rewardId, ct);
         RequireNotRetired(entity);
-
-        if (request.StampAccountTypeId is not null)
-            throw new ValidationApiException("StampAccountTypeId must only be set for stamp_completion rewards, which are retired.");
 
         if (request.Name is not null && request.Name != entity.Name)
         {
@@ -305,7 +301,7 @@ public sealed class RewardsAppService(
             : null;
 
     private static RewardResponse ToResponse(RewardEntity r) => new(
-        r.Id, r.Name, r.DisplayName, r.Acquisition, r.RewardType, r.StampAccountTypeId, r.PointsPrice,
+        r.Id, r.Name, r.DisplayName, r.Acquisition, r.RewardType, r.PointsPrice,
         r.PointsAccountTypeId, JsonDocument.Parse(r.TypeConfig).RootElement, r.IsActive, r.CreatedAt,
         r.Status, r.CreatedBy, r.ApprovedBy);
 

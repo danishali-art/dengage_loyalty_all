@@ -308,7 +308,7 @@ ON CONFLICT (id) DO NOTHING;
 -- 6a. Puanla satın alma: 1000 FinPuan = 10 TL kupon (birebir kur)
 INSERT INTO reward_definitions (
     id, tenant_id, program_id, name, display_name, acquisition,
-    stamp_account_type_id, points_price, points_account_type_id,
+    points_price, points_account_type_id,
     external_coupon_type, is_active, created_at
 ) VALUES (
     '019fd005-0000-7000-8000-000000000002',
@@ -317,7 +317,6 @@ INSERT INTO reward_definitions (
     'cashback_10',
     '10 TL Cashback Kuponu',
     'points_purchase',
-    NULL,
     1000,
     '019fd002-0000-7000-8000-000000000001',
     'CASHBACK_CREDIT_10',
@@ -329,7 +328,7 @@ ON CONFLICT (id) DO NOTHING;
 -- 6b. Puanla satın alma: 4500 FinPuan = 50 TL kupon (%10 avantajlı)
 INSERT INTO reward_definitions (
     id, tenant_id, program_id, name, display_name, acquisition,
-    stamp_account_type_id, points_price, points_account_type_id,
+    points_price, points_account_type_id,
     external_coupon_type, is_active, created_at
 ) VALUES (
     '019fd005-0000-7000-8000-000000000003',
@@ -338,7 +337,6 @@ INSERT INTO reward_definitions (
     'cashback_50',
     '50 TL Cashback Kuponu',
     'points_purchase',
-    NULL,
     4500,
     '019fd002-0000-7000-8000-000000000001',
     'CASHBACK_CREDIT_50',

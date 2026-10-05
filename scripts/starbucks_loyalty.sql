@@ -70,21 +70,7 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 2c. STAMP — Kahve Damgası (10 damga = bedava içecek)
-INSERT INTO account_types (id, tenant_id, program_id, type, name, config, created_at)
-VALUES (
-    '018fcd02-0000-7000-8000-000000000003',
-    'starbucks',
-    '018fcd01-0000-7000-8000-000000000001',
-    'STAMP',
-    'Kahve Damgası',
-    '{
-        "stamp_target": 10,
-        "reward_type": "free_drink"
-    }',
-    NOW()
-)
-ON CONFLICT (id) DO NOTHING;
+-- 2c. (STAMP "Kahve Damgası" cüzdanı CR 2026-10-05 ile kaldırıldı — STAMP kullanımdan kalktı.)
 
 -- --------------------------------------------------------
 -- 3. Tier Tanımları
@@ -283,31 +269,7 @@ INSERT INTO rules (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Rule 6: Kahve Damgası — kahve kategorisi her alışverişte 1 damga
---   stackable: true
-INSERT INTO rules (
-    id, tenant_id, program_id, name, type, trigger,
-    conditions, calculation, target_account_type_id,
-    limits, priority, stackable, active_from, active_to, status,
-    created_at, updated_at
-) VALUES (
-    '018fcd03-0000-7000-8000-000000000006',
-    'starbucks',
-    '018fcd01-0000-7000-8000-000000000001',
-    'Kahve Damgası',
-    'StampRule',
-    'order.created',
-    '[{"field": "items.category", "op": "in", "value": ["coffee"]}]',
-    '{"type": "stamp", "amount": 1}',
-    '018fcd02-0000-7000-8000-000000000003',
-    NULL,
-    10,
-    true,
-    NULL, NULL,
-    'active',
-    NOW(), NOW()
-)
-ON CONFLICT (id) DO NOTHING;
+-- (Rule 6 "Kahve Damgası" StampRule CR 2026-10-05 ile kaldırıldı.)
 
 COMMIT;
 

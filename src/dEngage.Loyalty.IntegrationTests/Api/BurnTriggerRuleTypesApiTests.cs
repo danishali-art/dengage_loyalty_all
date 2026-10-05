@@ -101,8 +101,9 @@ public sealed class BurnTriggerRuleTypesApiTests : IClassFixture<CustomWebApplic
         var types = await _client.GetFromJsonAsync<EventTypesResponse>(
             $"/api/v1/tenants/{TenantSlug}/events/types", JsonConventions.Options);
 
-        // builtIn stays complete: the rule and streak builders still use scheduled triggers.
-        types!.BuiltIn.Should().Contain([EventTypes.BirthdayBonus, EventTypes.PointsExpired]);
+        // builtIn keeps the scheduled birthdaybonus trigger: the rule and streak builders use it.
+        // points.expired was retired as a trigger by CR 2026-10-05 (D15).
+        types!.BuiltIn.Should().Contain(EventTypes.BirthdayBonus).And.NotContain(EventTypes.PointsExpired);
         types.Publishable.Should().NotContain([EventTypes.BirthdayBonus, EventTypes.PointsExpired]);
         types.Publishable.Should().Contain([EventTypes.OrderCreated, EventTypes.PointsRedeem, EventTypes.RewardPurchase]);
     }

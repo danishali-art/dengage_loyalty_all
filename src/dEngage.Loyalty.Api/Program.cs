@@ -3,7 +3,6 @@ using dEngage.Loyalty.Api;
 using dEngage.Loyalty.Api.AccountTypes;
 using dEngage.Loyalty.Api.Auth;
 using dEngage.Loyalty.Api.CardBuckets;
-using dEngage.Loyalty.Api.Complaints;
 using dEngage.Loyalty.Api.ConfigVersions;
 using dEngage.Loyalty.Api.Customers;
 using dEngage.Loyalty.Api.Dashboard;
@@ -52,14 +51,12 @@ builder.Services.AddScoped<ICustomersAppService, CustomersAppService>();
 builder.Services.AddScoped<IEventsAppService, EventsAppService>();
 builder.Services.AddScoped<IConfigVersionsAppService, ConfigVersionsAppService>();
 builder.Services.AddSingleton<IConfigVersionService, ConfigVersionService>();
-builder.Services.AddScoped<IComplaintsAppService, ComplaintsAppService>();
 builder.Services.AddScoped<IDashboardAppService, DashboardAppService>();
 builder.Services.AddScoped<IRuleCacheService, RuleCacheService>();
 builder.Services.AddScoped<ICampaignConfigCacheService, CampaignConfigCacheService>();
 
 builder.Services.AddSingleton<IAccountTypeConfigValidator, PointsAccountTypeConfigValidator>();
 builder.Services.AddSingleton<IAccountTypeConfigValidator, CashAccountTypeConfigValidator>();
-builder.Services.AddSingleton<IAccountTypeConfigValidator, StampAccountTypeConfigValidator>();
 builder.Services.AddSingleton<AccountTypeConfigValidatorSelector>();
 
 builder.Services.AddNancyModule<PingModule>();
@@ -75,7 +72,6 @@ builder.Services.AddNancyModule<CardBucketsModule>();
 builder.Services.AddNancyModule<CustomersModule>();
 builder.Services.AddNancyModule<EventsModule>();
 builder.Services.AddNancyModule<ConfigVersionsModule>();
-builder.Services.AddNancyModule<ComplaintsModule>();
 builder.Services.AddNancyModule<DashboardModule>();
 
 // Environment isolation (plan §5): strict CORS outside Development, generic error bodies enforced
