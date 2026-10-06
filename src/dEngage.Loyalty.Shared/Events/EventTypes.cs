@@ -36,12 +36,10 @@ public static class EventTypes
 
     // CR-01 additions. Signup/KycCompleted/CardTransaction/Remittance close gaps A2 lists
     // alongside points.expired/points.adjusted that Part B's change-log text under-counted
-    // (see docs/scope-changes changelog for this branch). BirthdayBonus is Scheduled source —
-    // never accepted from external POST /events (enforced in EventsAppService), only
-    // synthesized internally. (PointsExpired was retired by CR 2026-10-05, see below.)
+    // (see docs/scope-changes changelog for this branch). (PointsExpired and BirthdayBonus were
+    // retired by CR 2026-10-05 and its addendum A, see below.)
     public const string Signup = "signup";
     public const string KycCompleted = "kyc.completed";
-    public const string BirthdayBonus = "birthdaybonus";
     public const string CardTransaction = "card.transaction";
     public const string Remittance = "remittance";
     public const string PointsAdjusted = "points.adjusted";
@@ -53,13 +51,21 @@ public static class EventTypes
     // tenant generic type and would be accepted.
     public const string PointsExpired = "points.expired";
 
+    // CR 2026-10-05 addendum A (A-D4): the birthday bonus was removed end to end (job, worker,
+    // birthday endpoint, customer_birthdays table). Retired the same way as PointsExpired — kept
+    // only so rules and streak campaigns can reject it by name.
+    public const string BirthdayBonus = "birthdaybonus";
+
     public static readonly string[] All =
     {
         OrderCreated, OrderRefunded, CashAdded, CashSpent,
         PointsRedeem, PointsTransfer, RewardPurchase,
-        Signup, KycCompleted, BirthdayBonus, CardTransaction, Remittance,
+        Signup, KycCompleted, CardTransaction, Remittance,
         PointsAdjusted
     };
+
+    /// <summary>Triggers retired by CR 2026-10-05 — rules and streak campaigns refuse them.</summary>
+    public static bool IsRetiredTrigger(string eventType) => eventType is PointsExpired or BirthdayBonus;
 
     public static bool IsBuiltIn(string eventType) => Array.IndexOf(All, eventType) >= 0;
 
@@ -82,9 +88,6 @@ public static class EventTypes
 
             [KycCompleted] = new(KycCompleted, EventCategory.Earn, EventSource.Behavioural, EventCardinality.OncePerCustomer, null,
                 new[] { new EventFieldSchema("segment", EventFieldKind.String) }),
-
-            [BirthdayBonus] = new(BirthdayBonus, EventCategory.Earn, EventSource.Scheduled, EventCardinality.OncePerPeriod, EventPeriod.Yearly,
-                Array.Empty<EventFieldSchema>()),
 
             // Confirmed contract: CardBucketConditionMapper/CardBucketConditionTests.
             [CardTransaction] = new(CardTransaction, EventCategory.Earn, EventSource.Behavioural, EventCardinality.Unlimited, null,
@@ -162,7 +165,7 @@ public static class EventTypes
         Catalog.TryGetValue(eventType, out var def) ? def : null;
 
     // Only Behavioural/Operator events are acceptable from external POST /events — Scheduled
-    // events are synthesized internally (birthdaybonus) and must never be
+    // events are synthesized internally and must never be
     // spoofable by a caller (A2/A10 guarantee #10: deterministic, engine-owned scheduling).
     public static bool IsExternallyPublishable(string eventType) =>
         Describe(eventType) is not { Source: EventSource.Scheduled };

@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace dEngage.Loyalty.RuleEngine.Processing;
 
 // The one definition of a "live" program (1.3.CL item 8): status Active AND publication Published.
-// Rule evaluation picks live programs the same way (CampaignEvaluationService, BirthdayBonusJob,
-// RuleSyncService); CR 2026-10-05 item 5 makes the per-event handlers that post directly
+// Rule evaluation picks live programs the same way (CampaignEvaluationService, RuleSyncService); CR 2026-10-05 item 5 makes the per-event handlers that post directly
 // (redeem, transfer, reward purchase, cash.added / cash.spent) refuse non-live programs with it.
 public static class ProgramLiveness
 {

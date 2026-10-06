@@ -2,7 +2,7 @@
 
 Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları ve kolonları açıklar.
 
-- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261005180559_DisableLegacyBurnRulesCr1005` — yalnızca veri adımı, şema değişikliği yok). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
+- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261006082544_RemoveBirthdayBonusCr1006`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
 - **Kurulum:** boş bir PostgreSQL veritabanına `psql -d loyalty_dev -f loyalty_schema.sql`. Ardından **her tenant için** [`provision_tenant.sql`](provision_tenant.sql) (partition oluşturur) ve tenant'ın seed script'i (örn. [`starbucks_loyalty.sql`](starbucks_loyalty.sql)) çalıştırılır.
 - Tüm parasal/puan kolonları `numeric(20,4)`'tür; tüm zaman kolonları `timestamptz` (UTC) tutulur.
 - Event/mesaj davranışlarının detayı için: `docsv2/01_inbound_events.md`, `docsv2/02_outbound_events.md`.
@@ -18,7 +18,6 @@ Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları
 | [`rule_versions`](#rule_versions) | Kuralın önceki (superseded) versiyonları — CR-09 versiyonlama |
 | [`rule_limit_counters`](#rule_limit_counters) | Kural bütçesi/kardinalite için kalıcı sayaç — CR-07/CR-09 (Redis önünde cache olarak durur) |
 | [`held_postings`](#held_postings) | Gecikmeli (Delayed) postalama için bekleyen kayıtlar — CR-08, gece job'u ile ledger'a taşınır |
-| [`customer_birthdays`](#customer_birthdays) | Müşteri doğum günü (MM-DD) — CR-10, doğum günü bonus job'unun girdisi |
 | [`tier_definitions`](#tier_definitions) | Tier basamakları (eşik, pencere, grace) |
 | [`tier_upgrade_log`](#tier_upgrade_log) | Tier değişim geçmişi (audit) |
 | [`reward_definitions`](#reward_definitions) | Ödül kataloğu (damga doluşu / puanla satın alma) |
@@ -318,30 +317,10 @@ self-scheduling + idempotent SQL yaklaşımı) süresi dolanları `ledger_entrie
 
 ---
 
-## customer_birthdays
-
-CR-10: doğum günü bonus kuralının/job'unun girdisi. Customers modülünün salt-okunur kapsamına
-bilinçli tek istisna: `POST customers/{ref}/birthday` (yalnızca MM-DD) bu tabloya yazar, başka
-hiçbir müşteri alanı admin API'den yazılamaz.
-
-| Kolon | Tip | Null | Varsayılan | Açıklama |
-|-------|-----|------|------------|----------|
-| `id` | uuid | ✗ |  | PK |
-| `tenant_id` | uuid | ✗ |  | Tenant (iç kimlik, slug değil) |
-| `contact_key` | varchar(255) | ✗ |  | Müşteri |
-| `month_day` | varchar(5) | ✗ |  | `MM-DD` formatında (yıl tutulmaz) |
-| `created_at` | timestamptz | ✗ |  | — |
-| `updated_at` | timestamptz | ✗ |  | — |
-
-**29 Şubat politikası:** artık olmayan bir yılda doğum günü bonusu 28 Şubat'ta ödenir
-(`BirthdayBonusJob`, deterministik `eventId` ile yıl başına idempotent).
-
-**PK:** `PK_customer_birthdays (id)`.
-
-**Index:**
-
-- `idx_customer_birthdays_month_day (tenant_id, month_day)` — job'un günlük taraması bu üzerinden çalışır
-- `ux_customer_birthdays_tenant_contact (tenant_id, contact_key)` UNIQUE
+> **Not:** `customer_birthdays` tablosu (CR-10, doğum günü bonusunun girdisi) ve `POST customers/{ref}/birthday`
+> uç noktası CR 2026-10-05 Ek A ile kaldırıldı (`RemoveBirthdayBonusCr1006` migration'ı; kayıtlar dışa aktarılmadan silindi).
+> Job'un daha önce yazdığı `birthday:{contactKey}:{yıl}` ledger kayıtları geçmiş olarak kalır.
+> Etki analizi: `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md` (Ek A).
 
 ---
 

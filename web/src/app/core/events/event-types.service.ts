@@ -7,9 +7,8 @@ import { ApiClient } from '../http/api-client';
 export interface EventTypesCatalog {
   builtIn: readonly string[];
   generic: readonly string[];
-  /** What a caller may actually send: built-ins minus the internally scheduled ones
-   * (`birthdaybonus`), plus the generic types. Rule/streak builders keep using
-   * `builtIn`, since scheduled types are still valid rule triggers. */
+  /** What a caller may actually send: built-ins minus any internally scheduled ones (none
+   * since CR 2026-10-05 addendum A), plus the generic types. Rule/streak builders use `builtIn`. */
   publishable: readonly string[];
 }
 

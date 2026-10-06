@@ -15,7 +15,6 @@ public class LoyaltyDbContext(DbContextOptions<LoyaltyDbContext> options) : DbCo
     public DbSet<HeldPosting> HeldPostings => Set<HeldPosting>();
     public DbSet<RuleVersion> RuleVersions => Set<RuleVersion>();
     public DbSet<RuleLimitCounter> RuleLimitCounters => Set<RuleLimitCounter>();
-    public DbSet<CustomerBirthday> CustomerBirthdays => Set<CustomerBirthday>();
     public DbSet<EventInbox> EventInbox => Set<EventInbox>();
     public DbSet<EventLog> EventLog => Set<EventLog>();
     public DbSet<RewardLog> RewardLogs => Set<RewardLog>();

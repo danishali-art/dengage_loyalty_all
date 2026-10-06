@@ -2704,3 +2704,87 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005180559_DisableLegacyBurnRulesCr1005') THEN
+    UPDATE programs
+    SET has_unpublished_changes = true
+    WHERE publication_status = 'published'
+      AND id IN (SELECT program_id FROM rules WHERE status IN ('active', 'pending_approval')
+    AND type IN ('RedemptionRule', 'TransferRule'));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005180559_DisableLegacyBurnRulesCr1005') THEN
+    UPDATE rules
+    SET status     = 'disabled',
+        updated_at = now()
+    WHERE status IN ('active', 'pending_approval')
+    AND type IN ('RedemptionRule', 'TransferRule');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005180559_DisableLegacyBurnRulesCr1005') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261005180559_DisableLegacyBurnRulesCr1005', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261006082544_RemoveBirthdayBonusCr1006') THEN
+    UPDATE programs
+    SET has_unpublished_changes = true
+    WHERE publication_status = 'published'
+      AND (id IN (SELECT program_id FROM rules WHERE status IN ('active', 'pending_approval') AND trigger = 'birthdaybonus')
+        OR id IN (SELECT program_id FROM streak_campaigns WHERE status = 'active' AND trigger = 'birthdaybonus'));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261006082544_RemoveBirthdayBonusCr1006') THEN
+    UPDATE rules
+    SET status     = 'disabled',
+        updated_at = now()
+    WHERE status IN ('active', 'pending_approval') AND trigger = 'birthdaybonus';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261006082544_RemoveBirthdayBonusCr1006') THEN
+    UPDATE streak_campaigns
+    SET status     = 'disabled',
+        updated_at = now()
+    WHERE status = 'active' AND trigger = 'birthdaybonus';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261006082544_RemoveBirthdayBonusCr1006') THEN
+    DROP TABLE customer_birthdays;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261006082544_RemoveBirthdayBonusCr1006') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261006082544_RemoveBirthdayBonusCr1006', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+

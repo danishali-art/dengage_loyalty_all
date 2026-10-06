@@ -68,10 +68,10 @@ Everything below is scoped to one tenant and, within it, to one program.
 
 ### 2.3 Event ingestion & processing
 
-- **Ingestion API**: accepts 13 built-in event types — the original 7 (`order.created`,
+- **Ingestion API**: accepts 12 built-in event types — the original 7 (`order.created`,
   `order.refunded`, `cash.added`, `cash.spent`, `points.redeem`, `points.transfer`,
-  `reward.purchase`) plus `signup`, `kyc.completed`, `card.transaction`, `remittance`,
-  `points.adjusted`, and `birthdaybonus` (a scheduled synthetic trigger, not caller-published) — plus
+  `reward.purchase`) plus `signup`, `kyc.completed`, `card.transaction`, `remittance` and
+  `points.adjusted` (`birthdaybonus` was removed by CR 2026-10-05 addendum A) — plus
   tenant-approved generic event types. Each built-in carries a category (Earn/Burn/Reverse/Adjust),
   source (Behavioural/Scheduled/Operator), cardinality, and field schema, served read-only via
   `GET rules/metadata` for both server-side rule validation and the admin rule builder. Operator
@@ -84,13 +84,13 @@ Everything below is scoped to one tenant and, within it, to one program.
   per triggering event. Budget-capped rules reserve their spend inside that same transaction.
 - **Batch/maintenance jobs**: nightly tier downgrade & re-qualification, points FIFO expiration
   (+ advance "expiring soon" warnings, configured per POINTS wallet), streak maintenance (recompute, break-detection, data
-  retention), delayed-posting promotion, birthday-bonus evaluation (idempotent per customer per
-  year), transactional outbox publishing with retry/backoff, event-log retention.
+  retention), delayed-posting promotion, transactional outbox publishing with retry/backoff,
+  event-log retention. (The birthday-bonus job was removed by CR 2026-10-05 addendum A.)
 - **Event Simulator** (admin portal): lets support/ops staff publish a synthetic event and watch
   it move through the pipeline (pending → processed/failed) without a real integration —
   useful for validating a program configuration end-to-end. **Built (CR 2026-09-30, P1):** the
-  simulator no longer offers the internally scheduled type (`birthdaybonus`; `points.expired` was removed as an event type by CR 2026-10-05),
-  which the API always rejects. For each event type it shows which fields are required, and which
+  simulator offers only the types a caller may publish (`birthdaybonus` and `points.expired`
+  were removed as event types by CR 2026-10-05 and its addendum A). For each event type it shows which fields are required, and which
   values must be sent as strings.
 
 ### 2.4 Customer & ledger management
@@ -112,9 +112,8 @@ Everything below is scoped to one tenant and, within it, to one program.
   **Built (CR 2026-10-02, P3):** each card bucket with the customer's usage against its caps and
   its postings; the messages the platform sent about the customer (type, status, attempts, times —
   never the content; published messages are kept 30 days).
-- One deliberate exception to that read-only scope: `POST customers/{ref}/birthday` (MM-DD only)
-  registers a customer's birthday so the birthday-bonus rule/job can fire — no other customer
-  field is writable from the admin API.
+- No customer field is writable from the admin API. (The one former exception,
+  `POST customers/{ref}/birthday`, was removed with the birthday bonus by CR 2026-10-05 addendum A.)
 - Append-only ledger as the system of record, partitioned per tenant, with a fixed reason-code
   dictionary (earn, stamp_earn, stamp_reset — historical only since CR 2026-10-05 —, cash_load/spend, redemption, refund, expiry,
   transfer, etc.) and idempotency guarantees against duplicate processing.
@@ -200,8 +199,8 @@ decision: accept as out-of-scope, or raise as a Scope Change Request.
   limits outside a budget still read a cache rather than a counter inside the posting
   transaction. Both are flagged, not silently accepted — revisit before this rule engine carries
   adversarial-scale traffic.
-- **Program status is only partly enforced** — the consumer evaluates earn rules, campaigns and
-  the birthday bonus only for programs that are **published and active** (1.3.CL; the earlier
+- **Program status is only partly enforced** — the consumer evaluates earn rules and campaigns
+  only for programs that are **published and active** (1.3.CL; the earlier
   note that `programs.status` was not enforced at all was inaccurate). Since CR 2026-10-05 the
   per-event handlers that post directly — redeem, transfer, reward purchase (every reward type),
   `cash.added` and `cash.spent` — also refuse a program that isn't published and active
@@ -244,10 +243,10 @@ decision: accept as out-of-scope, or raise as a Scope Change Request.
 - **Data/infra**: PostgreSQL (tenant-partitioned ledger/event tables; `rule_limit_counters` is
   the durable source of truth for budget/cardinality counters, Redis caches in front of it),
   Redis (rule/campaign cache, rate limiting), RabbitMQ (event transport + dead-lettering).
-- **Scheduler additions (CR-08/CR-09/CR-10)**: delayed-posting promotion and birthday-bonus
-  evaluation follow the same self-scheduling `BackgroundService` + idempotent-SQL pattern as the
-  pre-existing points-expiration and streak-maintenance jobs — no new scheduling mechanism was
-  introduced.
+- **Scheduler additions (CR-08/CR-09)**: delayed-posting promotion follows the same
+  self-scheduling `BackgroundService` + idempotent-SQL pattern as the pre-existing
+  points-expiration and streak-maintenance jobs — no new scheduling mechanism was introduced.
+  (The CR-10 birthday-bonus job was removed by CR 2026-10-05 addendum A.)
 - **Frontend**: Angular 22, standalone/zoneless/signals, feature-based module boundaries,
   Tailwind v4 design system, decimal-string money handling.
 
@@ -291,3 +290,4 @@ revision history below.
 | 1.4 (draft) | 2026-10-01 | CR 2026-09-30 addendum A: §2.2 Account Types (points-transfer daily limit); §3 CASH transfer/redeem kept out of scope by design. | Claude Code, at the request of Moiz |
 | 1.6 (draft) | 2026-10-05 | Scope change 2026-10-05 (approved by PO + Architect) built: §2.2 Account Types (STAMP retired), Rules (Stamp/Expiry rule types and the `points.expired` trigger removed), Rewards (stamp wallet link removed); §2.3 event list and pipeline; §2.5 Complaints removed; §2.6 dashboard; §3 notes. See `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md`. | Claude Code, at the request of Moiz |
 | 1.7 (draft) | 2026-10-05 | Scope change 2026-10-05 (burn rules, approved by PO + Architect) built: §2.2 Account Types (redemption/transfer settings are defaults for new rules), Rules (redeem/transfer always rule-driven, redeem cash wallet + approval); §2.4 redemption outcome; §3 program-status gating extended to redeem, transfer, reward purchase and cash events, burn-rule and money-control limitations updated, overview tiles. See `docs/scope-changes/2026-10-05-burn-rules-dynamic-reward-purchase.md`. | Claude Code, at the request of Moiz |
+| 1.6 (draft) | 2026-10-06 | CR 2026-10-05 **addendum A** (approved by all stakeholders) built: birthday bonus removed — §2.3 event list, batch jobs and simulator; §2.4 the birthday endpoint exception; §3 program-status note; §4 scheduler note. See `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md` Addendum A. | Claude Code, at the request of Moiz |

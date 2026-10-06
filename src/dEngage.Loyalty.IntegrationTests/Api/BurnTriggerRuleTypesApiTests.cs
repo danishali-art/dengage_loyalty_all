@@ -101,14 +101,13 @@ public sealed class BurnTriggerRuleTypesApiTests : IClassFixture<CustomWebApplic
     }
 
     [Fact]
-    public async Task Event_types_keep_scheduled_built_ins_but_leave_them_out_of_publishable()
+    public async Task Event_types_no_longer_list_the_retired_scheduled_triggers()
     {
         var types = await _client.GetFromJsonAsync<EventTypesResponse>(
             $"/api/v1/tenants/{TenantSlug}/events/types", JsonConventions.Options);
 
-        // builtIn keeps the scheduled birthdaybonus trigger: the rule and streak builders use it.
-        // points.expired was retired as a trigger by CR 2026-10-05 (D15).
-        types!.BuiltIn.Should().Contain(EventTypes.BirthdayBonus).And.NotContain(EventTypes.PointsExpired);
+        // points.expired (D15) and birthdaybonus (addendum A-D4) were retired by CR 2026-10-05.
+        types!.BuiltIn.Should().NotContain([EventTypes.BirthdayBonus, EventTypes.PointsExpired]);
         types.Publishable.Should().NotContain([EventTypes.BirthdayBonus, EventTypes.PointsExpired]);
         types.Publishable.Should().Contain([EventTypes.OrderCreated, EventTypes.PointsRedeem, EventTypes.RewardPurchase]);
     }

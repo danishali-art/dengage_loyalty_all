@@ -13,9 +13,10 @@ public sealed class CreateStreakCampaignRequestValidator : AbstractValidator<Cre
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Trigger).NotEmpty().MaximumLength(100);
-        // CR 2026-10-05 (D15): rejected by name — an unknown trigger is otherwise accepted as a
-        // tenant generic type (same as RulesValidators).
-        RuleFor(x => x.Trigger).NotEqual(EventTypes.PointsExpired).WithMessage("trigger_retired: 'points.expired' is no longer a trigger. Points expiry is configured on the POINTS account type.");
+        // CR 2026-10-05 (D15, addendum A-D4): retired triggers are rejected by name — an unknown
+        // trigger is otherwise accepted as a tenant generic type (same as RulesValidators).
+        RuleFor(x => x.Trigger).Must(t => t is null || !EventTypes.IsRetiredTrigger(t))
+            .WithMessage(x => $"trigger_retired: '{x.Trigger}' is no longer a trigger (retired by CR 2026-10-05).");
         RuleFor(x => x.Config).NotNull();
     }
 }
@@ -26,7 +27,8 @@ public sealed class UpdateStreakCampaignRequestValidator : AbstractValidator<Upd
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(255).When(x => x.Name is not null);
         RuleFor(x => x.Trigger).NotEmpty().MaximumLength(100).When(x => x.Trigger is not null);
-        RuleFor(x => x.Trigger).NotEqual(EventTypes.PointsExpired).WithMessage("trigger_retired: 'points.expired' is no longer a trigger. Points expiry is configured on the POINTS account type.");
+        RuleFor(x => x.Trigger).Must(t => t is null || !EventTypes.IsRetiredTrigger(t))
+            .WithMessage(x => $"trigger_retired: '{x.Trigger}' is no longer a trigger (retired by CR 2026-10-05).");
     }
 }
 

@@ -139,13 +139,14 @@ public sealed class StreakCampaignsAppService(
         return ToResponse(entity);
     }
 
-    // CR 2026-10-05 (D15): campaigns on the retired points.expired trigger never progressed and
-    // were disabled by migration. They stay readable but can't be edited or re-activated.
+    // CR 2026-10-05 (D15, addendum A-D4): campaigns on a retired trigger (points.expired,
+    // birthdaybonus) were disabled by migration. They stay readable but can't be edited or
+    // re-activated.
     private static void RequireNotRetired(CampaignEntity entity)
     {
-        if (entity.Trigger == EventTypes.PointsExpired)
+        if (EventTypes.IsRetiredTrigger(entity.Trigger))
             throw new ConflictApiException("trigger_retired",
-                $"Streak campaign '{entity.Id}' uses the retired 'points.expired' trigger — it is kept for history and can't be edited or re-activated.");
+                $"Streak campaign '{entity.Id}' uses the retired '{entity.Trigger}' trigger — it is kept for history and can't be edited or re-activated.");
     }
 
     // Soft-delete, same audit-preserving convention as RulesAppService.DeleteAsync — this table

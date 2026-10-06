@@ -90,7 +90,6 @@ builder.Services.AddScoped<IReversalRuleProcessor, ReversalRuleProcessor>();
 // CR 2026-10-05: redeem / transfer rules are picked by their event handlers, never by the engine.
 builder.Services.AddScoped<IBurnRuleResolver, BurnRuleResolver>();
 builder.Services.AddScoped<DelayedPostingPromotionJob>();
-builder.Services.AddScoped<BirthdayBonusJob>();
 builder.Services.AddScoped<ILimitCounterSync, LimitCounterSync>();
 builder.Services.AddScoped<IRuleEngine, RuleEngineService>();
 builder.Services.AddScoped<ITierEvaluationService, TierEvaluationService>();
@@ -131,7 +130,6 @@ builder.Services.AddHostedService<TierDowngradeWorker>();
 builder.Services.AddHostedService<StreakMaintenanceWorker>();
 builder.Services.AddHostedService<PointsExpirationWorker>();
 builder.Services.AddHostedService<DelayedPostingPromotionWorker>();
-builder.Services.AddHostedService<BirthdayBonusWorker>();
 builder.Services.AddHostedService<PointsExpiringDetectorWorker>();
 builder.Services.AddHostedService<EventLogRetentionWorker>();
 builder.Services.AddHostedService<OutboxPublisherWorker>();

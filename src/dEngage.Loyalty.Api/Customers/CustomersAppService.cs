@@ -33,13 +33,9 @@ public interface ICustomersAppService
     // CR 2026-10-02 (Customer 360) P3: card buckets, messages sent.
     Task<IReadOnlyList<CustomerCardBucketResponse>> GetCardBucketsAsync(string tenantId, string contactKey, CancellationToken ct);
     Task<CursorPage<SentMessageResponse>> GetMessagesAsync(string tenantId, string contactKey, MessageFilter filter, string? cursor, int limit, CancellationToken ct);
-
-    // CR-10 (A11): the one deliberate exception to this module's read-only scope — see
-    // CustomerBirthday remarks.
-    Task<BirthdayResponse> RegisterBirthdayAsync(string tenantId, string contactKey, string monthDay, CancellationToken ct);
 }
 
-// Read-only throughout except RegisterBirthdayAsync — never calls the mutating
+// Read-only throughout (RegisterBirthdayAsync was removed by CR 2026-10-05 addendum A) — never calls the mutating
 // TierEvaluationService/LedgerService, only replicates their read-side "what tier is next"
 // logic (plan §7, CustomersModule note).
 public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver tenantSlugResolver) : ICustomersAppService
@@ -493,34 +489,6 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
                 r.CompletionCount, r.CreatedAt, r.DeliveredAt)).ToList(),
             tierChanges,
             messages);
-    }
-
-    public async Task<BirthdayResponse> RegisterBirthdayAsync(string tenantId, string contactKey, string monthDay, CancellationToken ct)
-    {
-        var tenantGuid = await tenantSlugResolver.ResolveAsync(tenantId, ct);
-        var existing = await db.CustomerBirthdays
-            .FirstOrDefaultAsync(x => x.TenantId == tenantGuid && x.ContactKey == contactKey, ct);
-
-        if (existing is null)
-        {
-            db.CustomerBirthdays.Add(new CustomerBirthday
-            {
-                Id = Guid.NewGuid(),
-                TenantId = tenantGuid,
-                ContactKey = contactKey,
-                MonthDay = monthDay,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
-        }
-        else
-        {
-            existing.MonthDay = monthDay;
-            existing.UpdatedAt = DateTime.UtcNow;
-        }
-
-        await db.SaveChangesAsync(ct);
-        return new BirthdayResponse(contactKey, monthDay);
     }
 
     public async Task<IReadOnlyList<TierHistoryEntryResponse>> GetTierHistoryAsync(string tenantId, string contactKey, CancellationToken ct)

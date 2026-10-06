@@ -329,14 +329,14 @@ public sealed class RulesAppService(
 
     private static void ValidateDsl(ConditionTree? conditions) => GroupedConditionDsl.Validate(conditions);
 
-    // CR 2026-10-05 (D1, D15): StampRule/ExpiryRule, the points.expired trigger and STAMP
-    // targets are retired. Those rules were disabled by migration and stay readable as history,
+    // CR 2026-10-05 (D1, D15, addendum A-D4): StampRule/ExpiryRule, the points.expired and
+    // birthdaybonus triggers and STAMP targets are retired. Those rules were disabled by migration and stay readable as history,
     // but can't be edited, approved or re-activated — same shape as RewardsAppService's
     // reward_type_retired.
     private async Task RequireNotRetiredAsync(string tenantId, RuleEntity entity, CancellationToken ct)
     {
         var retired = RuleTypes.IsRetired(entity.Type)
-            || entity.Trigger == EventTypes.PointsExpired
+            || EventTypes.IsRetiredTrigger(entity.Trigger)
             || (entity.TargetAccountTypeId is { } targetId
                 && await (await accountTypeRepository.Query(tenantId, ct))
                     .AnyAsync(a => a.Id == targetId && a.Type == nameof(AccountType.STAMP), ct));

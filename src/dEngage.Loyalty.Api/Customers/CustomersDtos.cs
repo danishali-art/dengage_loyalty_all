@@ -108,10 +108,6 @@ public sealed record TierHistoryEntryResponse(
 public sealed record CustomerSummaryResponse(
     string ContactKey, int AccountCount, DateTime LastActivityAt);
 
-// CR-10 (A11): MonthDay only — "MM-DD", never a full date (see CustomerBirthday remarks).
-public sealed record RegisterBirthdayRequest(string MonthDay);
-public sealed record BirthdayResponse(string ContactKey, string MonthDay);
-
 // ── CR 2026-10-02 (Customer 360) P2: header, per-program overview, rules & caps, streaks, rewards ──
 
 // FirstSeenAt: the customer's earliest posting (absent when there is none). FailedEventsLast7Days

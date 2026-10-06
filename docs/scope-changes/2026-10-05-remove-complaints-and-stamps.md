@@ -1,7 +1,7 @@
 # Scope Change Impact Analysis: Remove Complaints, Stamps and the `points.expired` rule trigger
 
 **Date:** 2026-10-05 (revision 4)
-**Status:** **Approved** by Product Owner + Architect (confirmed by the developer, 2026-10-05). **P1–P4 implemented** on branch `1.6-remove-complaints-stamps-expiryrule` — see §15 for the implementation record, deviations and verification.
+**Status:** **Approved** by Product Owner + Architect (confirmed by the developer, 2026-10-05). **P1–P4 implemented** on branch `1.6-remove-complaints-stamps-expiryrule` — see §15 for the implementation record, deviations and verification. **Addendum A (birthday bonus removal): approved by all stakeholders 2026-10-06 and implemented — see A.13.**
 **Type:** Scope change (removes capabilities). Jira Scope Change Request: _to be raised_.
 **Basis:** code read on 2026-10-05 across Api, Api.Framework, RuleEngine, Ledger, Consumer, Schema, Shared, tests, TestCli, portal (`web/`), seeds and docs. Nothing was built or run.
 
@@ -365,6 +365,8 @@ All open questions are resolved. The Architect and PO review this draft. After t
 | 2026-10-05 | 4 | Removal of the `birthdaybonus`, `signup` and `points.expired` triggers analysed (Q9–Q12). Signup, birthdaybonus and kyc.completed are kept (D13, D14). Signup is the only way to pay a signup bonus and feeds "within N hours of signup" conditions. The non-working `points.expired` trigger and `ExpiryRule` type are removed from rules while wallet expiry stays unchanged (D15): new §4.3, §5.3, phase P4, and updates to impact, risks, verification and scope. Rule types 8 → 6, built-in events 14 → 13. Title updated. |
 | 2026-10-05 | 4.1 | Restored D3 and the "How D1 and D3 fit together" note to their revision 3 wording. Revision 4 had extended these already-agreed items to cover ExpiryRule / `points.expired`; that coverage now sits in D15. Q1–Q8 were not changed in revision 4. |
 | 2026-10-05 | 5 | Approved; P1–P4 implemented. Status line updated and §15 (implementation record) added. Decisions D1–D15 unchanged; implementation deviations are listed in §15.2. |
+| 2026-10-06 | 6 | Addendum A drafted: remove the birthday bonus end to end (decisions A-D1–A-D6; supersedes D14 for `birthdaybonus` only). Analysis only. |
+| 2026-10-06 | 7 | Addendum A approved by all stakeholders and implemented; A.13 implementation record added. A-D1–A-D6 unchanged. |
 
 ## 14. Document record (guardrails §6)
 
@@ -452,3 +454,196 @@ Implemented on branch `1.6-remove-complaints-stamps-expiryrule` (created from `1
 - `scripts/starbucks_loyalty.sql`, `scripts/fintech_loyalty.sql`, `scripts/loyalty_schema.sql` (regenerated), `scripts/loyalty_schema_reference.md`.
 - `LoyaltySaaSApi.md`, `docs/SCOPE_BASELINE.md`, `docs/SOW.md`, `CLAUDE.md`, `.claude/rules/01-workflow-and-debugging.md`, `.claude/rules/backend-api.md`.
 - Superseded/cross-reference notes: `docs/scope-changes/2026-09-17-reward-type-taxonomy.md`, `2026-09-22-rules-engine-taxonomy.md`, `2026-09-28-program-account-type-changes.md`, `2026-09-30-reward-acquisition-fulfilment.md`, `2026-10-02-customer-360.md`, `2026-10-05-rule-config-limits-by-trigger.md`.
+
+---
+
+## Addendum A — Remove the birthday bonus end to end (2026-10-06)
+
+**Status:** **Approved** by all stakeholders (confirmed by the developer, 2026-10-06). **Implemented** — see A.13.
+**Type:** Scope change. It **supersedes D14 for `birthdaybonus` only**; `signup` and `kyc.completed` stay as D13/D14 decided. D14's text above is left as it was approved.
+**Basis:** code read on 2026-10-06 of the branch `1.6-remove-complaints-stamps-expiryrule` (including the in-flight 2026-10-05 burn-rules work in the working tree) and the local `loyalty_dev` database. Nothing was built or run for this addendum.
+
+### A.1 Summary
+
+The birthday bonus is removed: the `birthdaybonus` rule trigger, the nightly `BirthdayBonusJob` / `BirthdayBonusWorker` (02:00 UTC), the `POST customers/{contactKey}/birthday` endpoint and the `customer_birthdays` table. Afterwards the platform keeps no customer birth dates and can no longer pay a birthday bonus.
+
+Ledger postings already made by the job (source event id `birthday:{contactKey}:{year}`) stay as history, because the ledger is append-only (guardrail §2). On 2026-10-06, `loyalty_dev` has 0 birthday rules, 0 registered birthdays and 0 birthday postings.
+
+### A.2 Decisions agreed with the developer (2026-10-06)
+
+| # | Decision |
+|---|---|
+| A-D1 | **Remove the birthday bonus end to end.** Supersedes D14 for `birthdaybonus`; `signup` and `kyc.completed` are unaffected. |
+| A-D2 | **Drop `customer_birthdays` by migration.** Entity, configuration and `DbSet` removed; registered birthdays are lost (0 rows locally — check other environments before deploy). The table holds customer data the platform no longer needs. |
+| A-D3 | **`POST customers/{contactKey}/birthday` is removed outright (404).** The developer confirmed no system calls it (the portal never had a birthday screen). Documented as a breaking change. |
+| A-D4 | **Same retirement pattern as `points.expired` (D15).** `birthdaybonus` leaves `EventTypes.All` and the catalog but stays as a retired constant. Rules and streak campaigns then reject it by name (`trigger_retired`) instead of accepting it as an unknown generic type. Existing rules and streak campaigns on it are disabled by migration, never deleted, and can't be edited or re-activated. |
+| A-D5 | **Ledger history stays.** Past birthday postings are not touched; Customer 360 keeps showing them (they have no inbound event, like other job postings). |
+| A-D6 | **The analysis lives in this document as Addendum A** (same pattern as the CR 2026-09-30 addendum A). |
+
+### A.3 Baseline and SOW rows touched
+
+| Where | Change |
+|---|---|
+| `SCOPE_BASELINE.md` Customers (l.21) | Remove the `POST customers/{ref}/birthday` exception; the module becomes fully read-only |
+| `SCOPE_BASELINE.md` scheduled triggers (l.46) | "Deterministic scheduled/synthetic triggers: birthday bonus" → Removed |
+| `SCOPE_BASELINE.md` program gating note (l.32), Consumer (l.55), events (l.74) | Drop the birthday-bonus mentions; the simulator no longer has any scheduled type to hide |
+| `SCOPE_BASELINE.md` event count | 13 → 12 built-in event types |
+| `SOW.md` | §2.3 event list (l.74), batch jobs (l.87), simulator note (l.92); §2.4 birthday endpoint exception (l.115–116); §3 program-status note (l.204); §4 scheduler additions (l.247) |
+
+### A.4 Current state (as-built, verified by code read)
+
+| Layer | Where |
+|---|---|
+| Shared | `EventTypes.BirthdayBonus` in `All` and `Catalog` (Earn / Scheduled / OncePerPeriod / Yearly) — [EventTypes.cs](../../src/dEngage.Loyalty.Shared/Events/EventTypes.cs) l.44, l.60, l.86, comments l.39, l.165 |
+| RuleEngine | [BirthdayBonusJob.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/BirthdayBonusJob.cs) reads `customer_birthdays` and calls `IRuleEngine.ProcessEventAsync` per live program with event id `birthday:{contactKey}:{year}`. There is also a comment in [ProgramLiveness.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/ProgramLiveness.cs) l.8, a file that belongs to the in-flight 2026-10-05 burn-rules work. |
+| Consumer | [BirthdayBonusWorker.cs](../../src/dEngage.Loyalty.Consumer/BirthdayBonusWorker.cs) (02:00 UTC); DI in [Program.cs](../../src/dEngage.Loyalty.Consumer/Program.cs) l.93 (job), l.134 (hosted service) |
+| Api | [CustomersModule.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersModule.cs) l.11–15, l.131–136 (route, validator injection); [CustomersAppService.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersAppService.cs) l.38–42, l.498–523 (`RegisterBirthdayAsync`); [CustomersDtos.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersDtos.cs) l.111–113; [CustomersValidators.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersValidators.cs) (`RegisterBirthdayRequestValidator`); comments in [EventsAppService.cs](../../src/dEngage.Loyalty.Api/Events/EventsAppService.cs) l.40 and [EventsDtos.cs](../../src/dEngage.Loyalty.Api/Events/EventsDtos.cs) l.30 |
+| Schema | [CustomerBirthday.cs](../../src/dEngage.Loyalty.Schema/Entities/CustomerBirthday.cs), [CustomerBirthdayConfiguration.cs](../../src/dEngage.Loyalty.Schema/Configurations/CustomerBirthdayConfiguration.cs), `DbSet` in [LoyaltyDbContext.cs](../../src/dEngage.Loyalty.Schema/LoyaltyDbContext.cs) l.18. The table and its 2 indexes come from `20260921161222_CustomerBirthdayCr10`, which stays (applied migrations are never edited). |
+| Portal | No screen. `SCHEDULED_EVENT_TYPES = ['birthdaybonus']` in [event-simulator.page.ts](../../web/src/app/features/events/event-simulator.page.ts) l.26; comments in [event-types.service.ts](../../web/src/app/core/events/event-types.service.ts) l.11 and [customer-profile-panel.ts](../../web/src/app/features/customers/customer-profile-panel.ts) l.11. The rule and streak trigger pickers read `events/types`, so the trigger disappears from them automatically. |
+| Tests | [BirthdayBonusJobTests.cs](../../src/dEngage.Loyalty.IntegrationTests/Engine/BirthdayBonusJobTests.cs) (2 tests); `BirthdayBonus` assertions in [BurnTriggerRuleTypesApiTests.cs](../../src/dEngage.Loyalty.IntegrationTests/Api/BurnTriggerRuleTypesApiTests.cs) l.109–112 and [RetiredStampsAndExpiryRuleApiTests.cs](../../src/dEngage.Loyalty.IntegrationTests/Api/RetiredStampsAndExpiryRuleApiTests.cs) l.183. Two references are unrelated and stay unchanged: `StackingResolutionWorkedExampleTests` has a rule *named* "Birthday Bonus" on `card.transaction`, and `AccountTypeChangesCl13E2ETests` uses `CustomerBirthdayCr10` only as a migration-ordering anchor. |
+| TestCli, seeds | No birthday scenario, birthday rule or registered birthday. |
+| Docs | `LoyaltySaaSApi.md` l.168, l.184; `scripts/loyalty_schema_reference.md` l.21, l.321–344; `.claude/rules/backend-consumer.md` l.44 (`BirthdayBonusWorker` is the reference example for workers) and l.50 (nightly order), `.claude/rules/backend-api.md` l.74; `docs/SOW.md` and `docs/SCOPE_BASELINE.md` as in A.3. |
+
+### A.5 Proposed change
+
+**Migration `RemoveBirthdayBonusCr1006`.** Generated with `dotnet ef migrations add`, with SQL steps added first, in the same shape as `RetireStampsAndExpiryRuleCr1005`:
+1. Mark published programs with an affected rule or streak campaign as `has_unpublished_changes = true`.
+2. Set `rules.status = 'disabled'` where `status IN ('active','pending_approval') AND trigger = 'birthdaybonus'`.
+3. Set `streak_campaigns.status = 'disabled'` where `status = 'active' AND trigger = 'birthdaybonus'`.
+4. `DropTable("customer_birthdays")` (A-D2). `Down` recreates the empty table and indexes; disabled rows and dropped birthdays are not restored.
+
+**Shared:**
+- Remove `BirthdayBonus` from `EventTypes.All` and `Catalog`, and keep the constant marked retired (A-D4).
+- `EventCardinality.OncePerPeriod` and `EventPeriod.Yearly` are no longer used by any built-in but stay. They are part of the `rules/metadata` contract and the portal's `EventMetadata` type, and removing enum values is a separate decision.
+
+**RuleEngine / Consumer:**
+- Delete `BirthdayBonusJob` and `BirthdayBonusWorker` and their two DI registrations.
+- Update the `ProgramLiveness` comment, coordinating with the burn-rules work, which owns that file.
+
+**Api:**
+- Remove the `/{contactKey}/birthday` route, the validator injection in `CustomersModule`, `RegisterBirthdayAsync` (interface and implementation), `RegisterBirthdayRequest` / `BirthdayResponse`, and `RegisterBirthdayRequestValidator`. Customers becomes fully read-only; update the module and app-service comments.
+- Rules and streak campaigns: reject `birthdaybonus` by name with `trigger_retired` (create/update → 400), and treat an existing rule or campaign on it as retired (edit/approve/activate → 409), extending the D15 guards.
+- Update the comments in `EventsAppService` and `EventsDtos`. `EventTypes.IsExternallyPublishable` stays: with no Scheduled built-in left it has no effect, but it is the guard for any future scheduled type.
+
+**Portal:**
+- `SCHEDULED_EVENT_TYPES` becomes empty, or the constant and its filter are removed because `publishable` already covers it. Either way the behaviour is the same; decide at implementation.
+- Update the comments in `event-types.service.ts` and `customer-profile-panel.ts`.
+- Nothing else changes: the trigger pickers follow `events/types`.
+
+**Schema docs and scripts:** regenerate `scripts/loyalty_schema.sql`, and remove `customer_birthdays` from `scripts/loyalty_schema_reference.md` with a removal note. No seed creates birthdays or birthday rules (checked).
+
+**Tests:**
+- Delete `BirthdayBonusJobTests`, because the behaviour is removed (same reasoning as §6 "Tests for removed features").
+- `BurnTriggerRuleTypesApiTests`: assert `birthdaybonus` is absent from `builtIn`.
+- `RetiredStampsAndExpiryRuleApiTests`: move `BirthdayBonus` from the "still offered" list to the retired assertions, and add three checks:
+  - a rule or streak campaign on `birthdaybonus` → 400 `trigger_retired`;
+  - an existing disabled birthday rule can't be re-activated (409);
+  - `POST customers/{ref}/birthday` → 404.
+
+### A.6 End-to-end impact
+
+| Area | Impact |
+|---|---|
+| DB | 1 migration: disable rules/streaks (SQL) + **drop `customer_birthdays`** (destructive; A-D2) |
+| API contract (breaking) | `POST customers/{contactKey}/birthday` removed (404); `birthdaybonus` rejected as a trigger; `events/types.builtIn` and `rules/metadata.events` no longer list it |
+| Engine / Consumer | Job and nightly worker removed; no other job's schedule depends on it (tier 00:00 and expiry 03:00 are independent) |
+| Ledger | None — past `birthday:*` postings stay |
+| Outbound events | None of its own (birthday postings produced the normal `loyalty.points.earned`; that event type stays) |
+| Redis caches | Rule-cache resync after the migration, as for CR 2026-10-05 |
+| Portal | One constant and comments |
+| Client app | No caller of the endpoint (A-D3); if the client app showed "birthday bonus" earnings, those simply stop |
+
+### A.7 Contracts check
+
+- **No change:** tenancy, money, CASH approval, time.
+- **Ledger:** preserved; no update or delete.
+- **Rule versioning:** rules are disabled through `status`, versions are untouched, and programs are flagged as having unpublished changes.
+- **Events:** no shape change.
+- **DSL parity:** driven by `events/types` and `rules/metadata`, so the portal follows automatically.
+
+### A.8 Risks
+
+| Risk | Mitigation |
+|---|---|
+| A customer whose birthday falls on deploy night is paid by an old Consumer and not by the new one | Accepted — the feature is being removed. Deploy migration → Api → Consumer as for CR 2026-10-05. |
+| An old Consumer still running after the migration: `BirthdayBonusJob` fails at 02:00 because the table is gone | The failure is caught and logged ("will retry tomorrow"), with no data harm. Restart the Consumer from the new build in the same window. |
+| Another environment holds registered birthdays | Count `customer_birthdays` per tenant before deploy and record it on the Jira ticket (A-D2 accepts the loss). |
+| Merge with the in-flight burn-rules work (`ProgramLiveness.cs`, rule validators, Consumer `Program.cs`) | Small deletions; agree the merge order with the Architect. |
+
+### A.9 Phasing and verification
+
+A single phase (P5). Verification follows §9:
+- backend build, Engine.Tests, and IntegrationTests including `Category=E2E` (which applies the new migration to Postgres);
+- portal lint, test and build;
+- then the local migration and a smoke test: the rule form no longer offers `birthdaybonus`, and `POST .../birthday` → 404.
+
+### A.10 Open questions
+
+None. A-D1 to A-D6 were agreed with the developer on 2026-10-06. Implementation waits for PO + Architect approval.
+
+### A.11 Explicitly out of scope
+
+- Any replacement for the birthday bonus (for example a generic "date-based" campaign).
+- Removing `EventCardinality.OncePerPeriod` / `EventPeriod.Yearly`.
+- `signup` and `kyc.completed` (kept, D13/D14).
+- Touching past birthday ledger postings.
+
+### A.12 Document record
+
+| File | Change |
+|---|---|
+| `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md` | Addendum A added (analysis only); status sentence and revision row 6 added. No code, schema or other doc changed. |
+
+### A.13 Implementation record (2026-10-06)
+
+Implemented on branch `1.6-remove-complaints-stamps-expiryrule`, nothing committed. Other in-flight work in the same working tree was left as it was. That includes the 2026-10-05 burn-rules change and its migration `20261005180559_DisableLegacyBurnRulesCr1005`; only the comment in `ProgramLiveness.cs` was touched there.
+
+**What was built.** Everything in A.5, with these choices made at implementation:
+- `EventTypes.IsRetiredTrigger(eventType)` (points.expired or birthdaybonus) is now the single check behind the rule and streak guards. It replaces the `points.expired`-only comparisons added for D15, so both triggers get the same 400 / 409 `trigger_retired` / `rule_type_retired` behaviour.
+- Portal: the event simulator's `SCHEDULED_EVENT_TYPES` fallback list and its filter were removed (A.5 left this open). `publishable` from the API already excludes scheduled types, and none are left.
+- `CustomersValidators.cs` held only `RegisterBirthdayRequestValidator`, so the file was deleted. Three usings in `CustomersModule.cs` that only the birthday route needed were removed.
+- `.claude/rules/backend-consumer.md` now names `PointsExpirationWorker` as the reference worker, since `BirthdayBonusWorker` was the example.
+
+**Verification**
+
+| Check | Result |
+|---|---|
+| `dotnet build dEngage.Loyalty.sln` (scratch output; the running Api/Consumer lock their `bin`) | 0 errors, 1 pre-existing warning (CS1998, untouched file) |
+| Engine.Tests | **95 passed**, 0 failed |
+| IntegrationTests | **251 passed**, 0 failed |
+| IntegrationTests `Category=E2E` (Postgres; applies every migration incl. `RemoveBirthdayBonusCr1006`) | **44 passed**, 0 failed |
+| Portal `npm test` / `ng build --configuration development` | **145 passed** / succeeds |
+| Portal `ng lint` | the same 3 pre-existing errors as §15.3, nothing new |
+| **Not run** | the migration against `loyalty_dev`; a manual smoke test on the running stack |
+
+Test counts are higher than in §15.3 because the in-flight burn-rules work added tests.
+
+**Before deploy:**
+- Count `customer_birthdays` rows per tenant and record the counts on the Jira ticket.
+- Deploy migration → Api + portal → Consumer, then resync the rule cache.
+- `dotnet ef database update` now also applies the burn-rules migration `DisableLegacyBurnRulesCr1005`, which sits before this one. That migration needs its own approval and deploy record.
+- `scripts/loyalty_schema.sql` was regenerated as a pure append (84 lines), and that append includes the burn-rules migration as well as this one.
+
+**Files**
+
+*Created*
+- `src/dEngage.Loyalty.Schema/Migrations/20261006082544_RemoveBirthdayBonusCr1006.cs` + `.Designer.cs` — disables birthday rules/streaks and drops `customer_birthdays`.
+
+*Deleted*
+- `src/dEngage.Loyalty.RuleEngine/Processing/BirthdayBonusJob.cs`, `src/dEngage.Loyalty.Consumer/BirthdayBonusWorker.cs` — job and nightly worker.
+- `src/dEngage.Loyalty.Api/Customers/CustomersValidators.cs` — only held the birthday validator.
+- `src/dEngage.Loyalty.Schema/Entities/CustomerBirthday.cs`, `Configurations/CustomerBirthdayConfiguration.cs` — table mapping.
+- `src/dEngage.Loyalty.IntegrationTests/Engine/BirthdayBonusJobTests.cs` — tested the removed job; replaced by the retirement guards below.
+
+*Changed*
+- `src/dEngage.Loyalty.Shared/Events/EventTypes.cs` — `birthdaybonus` retired, `IsRetiredTrigger` added.
+- `src/dEngage.Loyalty.Api/Customers/CustomersModule.cs`, `CustomersAppService.cs`, `CustomersDtos.cs` — birthday route, method and DTOs removed.
+- `src/dEngage.Loyalty.Api/Rules/RulesValidators.cs`, `RulesAppService.cs`, `src/dEngage.Loyalty.Api/StreakCampaigns/StreakCampaignsValidators.cs`, `StreakCampaignsAppService.cs` — retired-trigger guards cover both triggers.
+- `src/dEngage.Loyalty.Api/Events/EventsAppService.cs`, `EventsDtos.cs`, `src/dEngage.Loyalty.RuleEngine/Processing/ProgramLiveness.cs` — comments only.
+- `src/dEngage.Loyalty.Consumer/Program.cs` — job and worker registrations removed.
+- `src/dEngage.Loyalty.Schema/LoyaltyDbContext.cs`, `Migrations/LoyaltyDbContextModelSnapshot.cs` (generated) — `DbSet` removed.
+- `src/dEngage.Loyalty.IntegrationTests/Api/BurnTriggerRuleTypesApiTests.cs`, `RetiredStampsAndExpiryRuleApiTests.cs` — `birthdaybonus` asserted absent and refused; existing birthday rule can't be re-activated; birthday route → 404.
+- `web/src/app/features/events/event-simulator.page.ts`, `web/src/app/core/events/event-types.service.ts` — scheduled-type fallback removed; comment.
+- `scripts/loyalty_schema.sql` (regenerated), `scripts/loyalty_schema_reference.md` — `customer_birthdays` removed with a note.
+- `LoyaltySaaSApi.md`, `docs/SCOPE_BASELINE.md`, `docs/SOW.md`, `.claude/rules/backend-consumer.md`, `.claude/rules/backend-api.md` — docs in step.
+- `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md` — this record.

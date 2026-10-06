@@ -165,7 +165,7 @@ A card bucket is stored as a `FixedBonusRule` (template `card_bucket`) authored 
 
 ## Customers — `/api/v1/tenants/{tenantId}/customers`
 
-Read-only except the birthday route. A "customer" is a contact key with at least one account in the tenant.
+Read-only (the birthday route was removed by CR 2026-10-05 addendum A). A "customer" is a contact key with at least one account in the tenant.
 
 | Method | Route | Body / query → Response |
 |---|---|---|
@@ -181,7 +181,6 @@ Read-only except the birthday route. A "customer" is a contact key with at least
 | GET | `/{contactKey}/messages` | query `eventType`, `status`, `from`, `to`, `cursor`, `limit` → cursor page of `SentMessageResponse`, newest first |
 | GET | `/{contactKey}/events` | query `eventType`, `status`, `from`, `to`, `cursor`, `limit` → cursor page of `CustomerEventResponse`, newest first |
 | GET | `/{contactKey}/events/{eventId}` | → `CustomerEventDetailResponse` (404 unless the event is linked to the customer) |
-| POST | `/{contactKey}/birthday` | `RegisterBirthdayRequest { monthDay }` (`MM-DD`) → 201 `BirthdayResponse { contactKey, monthDay }` |
 
 - `CustomerProfileResponse { contactKey, balances: [AccountBalanceResponse], tierProgress?, summary?, programs? }`
   - `summary` (CR 2026-10-02 P2): `{ firstSeenAt?, lastActivityAt, failedEventsLast7Days, activeStreakCount }` — `firstSeenAt` is the earliest posting; failed events count only events received after the CR; active streaks are progress rows still `active` with at least one period met.
@@ -261,3 +260,4 @@ A program publish writes `entityType` `ProgramPublication` with snapshot `{ prog
 | 2026-10-02 | CR 2026-10-02 (Customer 360) P3: `card-buckets`, `messages`, ledger `ruleId` filter. | Claude Code, at the request of Moiz |
 | 2026-10-03 | Customer cursor lists (`ledger`, `events`, `rule-fires`, `messages`) return an additive `total`. | Claude Code, at the request of Moiz |
 | 2026-10-05 | CR 2026-10-05 (breaking): Complaints endpoints and `DashboardSummaryResponse.complaints` removed; STAMP account types retired and hidden from the list; `stampAccountTypeId` removed from rewards; `StampRule`, `ExpiryRule` and the `points.expired` trigger retired (`events/types` no longer lists `points.expired`). See `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md`. | Claude Code, at the request of Moiz |
+| 2026-10-06 | CR 2026-10-05 addendum A (breaking): `POST customers/{contactKey}/birthday` removed; `birthdaybonus` is no longer a built-in event type and is refused as a rule or streak trigger (`trigger_retired`). | Claude Code, at the request of Moiz |

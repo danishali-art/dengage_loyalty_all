@@ -41,14 +41,14 @@ Every path must be idempotent and safe to retry.**
   swallow the exception and ack.
 
 ## Background workers
-- Shape (see `BirthdayBonusWorker`): `BackgroundService` → a loop computing `NextRunAt(UtcNow)` →
+- Shape (see `PointsExpirationWorker`): `BackgroundService` → a loop computing `NextRunAt(UtcNow)` →
   `Task.Delay` → **a new DI scope per run** → resolve the `*Job` → `RunAsync(ct)`. Catch
   `Exception when not OperationCanceledException`, log it, and wait for the next run.
 - **Workers only schedule.** Job logic lives in the owning domain project (`Ledger/*Job`,
   `RuleEngine/*Job`, `Campaigns/Streak/StreakMaintenanceJob`) so it can be tested without the host.
 - Keep `NextRunAt` a pure `internal static` function so it can be tested.
-- Nightly order is deliberate (UTC): tier downgrade 00:00 → birthday bonus 02:00 → points
-  expiration 03:00. Check the dependencies before moving a schedule.
+- Nightly order is deliberate (UTC): tier downgrade 00:00 → points expiration 03:00 (the
+  02:00 birthday-bonus run was removed by CR 2026-10-05 addendum A). Check the dependencies before moving a schedule.
 - Register with `AddHostedService<...>()` in `Program.cs`. Jobs are `AddScoped`.
 - Jobs must be idempotent. A crash mid-run followed by a rerun must not grant or expire twice.
 

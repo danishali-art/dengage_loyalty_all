@@ -1,18 +1,15 @@
 using System.Globalization;
-using FluentValidation;
 using dEngage.Loyalty.Api.Framework.ErrorHandling;
 using dEngage.Loyalty.Api.Framework.Json;
 using dEngage.Loyalty.Api.Framework.Modules;
-using dEngage.Loyalty.Api.Framework.Validation;
-using HttpStatusCode = System.Net.HttpStatusCode;
 
 namespace dEngage.Loyalty.Api.Customers;
 
-// /api/v1/tenants/{tenantId}/customers[/{contactKey}[/ledger|/tier-history|/events[/{eventId}]|/rule-fires|/cap-usage|/streaks|/rewards|/card-buckets|/messages|/birthday]] —
-// read-only except POST .../birthday (CR-10 A11's one deliberate exception).
+// /api/v1/tenants/{tenantId}/customers[/{contactKey}[/ledger|/tier-history|/events[/{eventId}]|/rule-fires|/cap-usage|/streaks|/rewards|/card-buckets|/messages]] —
+// read-only. (POST .../birthday, CR-10's one write, was removed by CR 2026-10-05 addendum A.)
 public sealed class CustomersModule : TenantScopedModule
 {
-    public CustomersModule(ICustomersAppService appService, IValidator<RegisterBirthdayRequest> birthdayValidator)
+    public CustomersModule(ICustomersAppService appService)
         : base("/api/v1/tenants/{tenantId}/customers")
     {
         MapGet("", async (parameters, ct) =>
@@ -126,14 +123,6 @@ public sealed class CustomersModule : TenantScopedModule
             var filter = new MessageFilter(QueryString("eventType"), QueryString("status"), QueryUtc("from"), QueryUtc("to"));
             return JsonResponses.Ok(await appService.GetMessagesAsync(
                 tenantId, contactKey, filter, (string?)Request.Query["cursor"], ReadLimit(), ct));
-        });
-
-        MapPost("/{contactKey}/birthday", async (parameters, ct) =>
-        {
-            var tenantId = RequireTenantScope(RouteParam(parameters, "tenantId"));
-            var contactKey = RouteParam(parameters, "contactKey");
-            var request = await Request.ReadValidatedJsonBodyAsync(birthdayValidator, ct);
-            return JsonResponses.Ok(await appService.RegisterBirthdayAsync(tenantId, contactKey, request.MonthDay, ct), HttpStatusCode.Created);
         });
     }
 
