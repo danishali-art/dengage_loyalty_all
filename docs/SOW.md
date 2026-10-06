@@ -58,9 +58,9 @@ Everything below is scoped to one tenant and, within it, to one program.
 | Area | What can be configured |
 |---|---|
 | **Programs** | Create/edit a program (name, description); every new program starts as an inactive **Draft** and must be **Published** before it can be switched Active (Active/Inactive is a toggle that needs no publish). Any later change to the program or its account types, tiers, rewards, rules, card buckets or streak campaigns marks it as having unpublished changes; each Publish records one version snapshot of the whole program. Edits apply live — Publish is a version stamp, not a staging gate. Full change-history/versioning; delete only while inactive. (1.3.CL) **Built (CR 2026-09-30, P2–P4):** each program gets a **slug** (lowercase letters, digits and hyphens, no underscores; unique within the tenant), editable while the program is a Draft and locked once it is first published. It prefixes the program's reward names. Existing programs get a slug generated from their name, reviewed before deploy. |
-| **Account Types (wallets)** | POINTS (decimal precision 0–4 — Spend rules round earned points down to it; optional FIFO expiration with an optional "expiring soon" warning N days before; optional redemption-to-another-wallet; optional points transfer between customers with a daily limit per sender, set on the account type (CR 2026-09-30 addendum A); optionally **the tier-qualifying wallet** — at most one per program, locked while the program is active), CASH (currency from a fixed list — SAR default, AED, KWD, QAR, BHD, OMR, USD, EUR, GBP, TRY — locked after creation; precision; **cash never expires**). Type is immutable after creation. (1.3.CL) **Built (CR 2026-10-05):** the STAMP wallet is retired — it can't be created or edited and is hidden from the account-type screens; customers' existing stamp wallets and balances remain visible as history in Customer 360. |
+| **Account Types (wallets)** | POINTS (decimal precision 0–4 — Spend rules round earned points down to it; optional FIFO expiration with an optional "expiring soon" warning N days before; optional redemption-to-another-wallet; optional points transfer between customers with a daily limit per sender, set on the account type (CR 2026-09-30 addendum A) — **since CR 2026-10-05 both are only defaults that pre-fill a new redeem / transfer rule; the rule decides**; optionally **the tier-qualifying wallet** — at most one per program, locked while the program is active), CASH (currency from a fixed list — SAR default, AED, KWD, QAR, BHD, OMR, USD, EUR, GBP, TRY — locked after creation; precision; **cash never expires**). Type is immutable after creation. (1.3.CL) **Built (CR 2026-10-05):** the STAMP wallet is retired — it can't be created or edited and is hidden from the account-type screens; customers' existing stamp wallets and balances remain visible as history in Customer 360. |
 | **Tiers** | Point-threshold ladder with lifetime or rolling-window ("periodic") qualification, grace-period demotion, manual ordering. Qualifying model locks once customers are assigned; deletion blocked with assigned customers or an active program. |
-| **Rules** | 6 rule types: Spend (rate × amount), FixedBonus, Redemption (points→wallet debit), Transfer (peer-to-peer, dual-entry under one rule), Reversal (reads the original posting, target inherited not configured), ManualAdjustment (operator-driven, reason-coded) — each targeting POINTS/CASH per a single compatibility catalog the engine and the admin UI both read (no hardcoded option lists). CASH-targeted rules require a second admin's approval before they can fire (creator cannot self-approve). Conditions are a grouped AND/OR tree (money/number/string/list-typed values, typed per the trigger event's own field schema). Non-stackable (exclusive) rules compete per target wallet (priority-desc, then rule id); stackable rules add on top, resolved independently per wallet — named exclusivity groups and multiplier stacking were retired by 1.3.CL. Limits: per-customer total/daily/per-period, max/min per event, cooldown, max distinct customers, and a rule budget (total or per-period) reserved transactionally at posting time, each breach clamping to the remainder or skipping the rule entirely. Per-rule configuration: rounding, immediate or delayed (held-then-promoted) posting, an optional expiry override, reversibility, a test mode that audits without posting, and an on-award notification. Edits are versioned (a new version per edit, not an in-place mutation) so a posting or reversal always resolves against the rule as it stood at fire time. **Built (CR 2026-09-30, P1):** each burn trigger accepts only its own rule type: `points.transfer` → Transfer, `points.redeem` → Redemption, and `reward.purchase` → none (rewards are configured under Rewards, not rules). Existing rules that break this are disabled, not deleted. Redemption and Transfer rules stay configurable but are **not yet applied** by the engine (see §3). **Built (CR 2026-10-05):** the Stamp and Expiry rule types, the `points.expired` trigger and STAMP targets are removed; existing rules of those kinds are disabled, not deleted, and can't be re-activated. Points expiry is configured only on the POINTS account type. |
+| **Rules** | 6 rule types: Spend (rate × amount), FixedBonus, Redemption (points→wallet debit), Transfer (peer-to-peer, dual-entry under one rule), Reversal (reads the original posting, target inherited not configured), ManualAdjustment (operator-driven, reason-coded) — each targeting POINTS/CASH per a single compatibility catalog the engine and the admin UI both read (no hardcoded option lists). CASH-targeted rules require a second admin's approval before they can fire (creator cannot self-approve). Conditions are a grouped AND/OR tree (money/number/string/list-typed values, typed per the trigger event's own field schema). Non-stackable (exclusive) rules compete per target wallet (priority-desc, then rule id); stackable rules add on top, resolved independently per wallet — named exclusivity groups and multiplier stacking were retired by 1.3.CL. Limits: per-customer total/daily/per-period, max/min per event, cooldown, max distinct customers, and a rule budget (total or per-period) reserved transactionally at posting time, each breach clamping to the remainder or skipping the rule entirely. Per-rule configuration: rounding, immediate or delayed (held-then-promoted) posting, an optional expiry override, reversibility, a test mode that audits without posting, and an on-award notification. Edits are versioned (a new version per edit, not an in-place mutation) so a posting or reversal always resolves against the rule as it stood at fire time. **Built (CR 2026-09-30, P1):** each burn trigger accepts only its own rule type: `points.transfer` → Transfer, `points.redeem` → Redemption, and `reward.purchase` → none (rewards are configured under Rewards, not rules). Existing rules that break this are disabled, not deleted. **Built (CR 2026-10-05, burn rules):** redeem and transfer always run on a rule — the highest-priority active Redemption / Transfer rule for the debited POINTS wallet whose conditions and limits pass (exactly one per event; no usable rule → the event fails with `no_rule` or `rule_limit_reached`; a lower-priority rule is never tried after the winner's own minimum or daily limit fails). A Redemption rule sets the cash per point, an optional minimum and the CASH wallet paid into, and always needs a second admin's approval (again after its rate or wallet changes); a Transfer rule sets the daily transfer limit. The wallet's own redemption/transfer settings only pre-fill new rules. Existing redeem/transfer rules were disabled at deploy and must be completed before they can be switched on. **Built (CR 2026-10-05):** the Stamp and Expiry rule types, the `points.expired` trigger and STAMP targets are removed; existing rules of those kinds are disabled, not deleted, and can't be re-activated. Points expiry is configured only on the POINTS account type. |
 | **Card Buckets** | A structured authoring UI for MCC-code / amount-range / country / capture-status / time-window targeted bonus rules (implemented as a specialized fixed-bonus rule under the hood), always stackable, with per-customer daily/lifetime caps. |
 | **Streak Campaigns** | "N consecutive qualifying periods" campaigns (day/week/month cadence, timezone-aware, sum-or-count aggregate threshold per period), paying a fixed bonus or linked reward on completion, with restart-or-stop behavior. **Built (CR 2026-09-30, P2–P4):** a linked reward must be an active, approved Streak-completion reward of the same program (checked when the campaign is saved), and a reward in use by an active campaign can't be deactivated or deleted. When the linked reward is Cashback or Tier upgrade, completing the streak now pays it out (see Rewards). |
 | **Rewards** | Catalog of redeemable rewards, classified on two independent axes: how a reward is acquired (points purchase / stamp-card completion / streak completion) and what the reward actually is (a registry-validated `RewardType` — points bonus, discount, cashback, free product, gift card, or tier upgrade — each with its own type-specific fields). No longer mapped to an external coupon-system type code (removed 2026-09-17; see `docs/scope-changes/2026-09-17-reward-type-taxonomy.md`). Until CR 2026-09-30, a reward's type-specific details were stored but not acted on (earning or buying a reward only sent a `loyalty.reward.earned` notification); they are now paid out as below.<br>**Built (CR 2026-09-30, P2–P4):**<br>- **How it's acquired:** Purchase with points, or Streak completion. Stamp-card completion is retired.<br>- **What it is:** Cashback, or Tier upgrade. Points bonus, discount, free product and gift card are retired. Tier upgrade can only be earned through Streak completion.<br>- **Retired rewards:** existing rewards that use a retired value are deactivated (kept for history). Stamp cards keep earning stamps, but completions no longer resolve to a reward definition. (Superseded by CR 2026-10-05: stamps are retired altogether, and a reward no longer carries a stamp wallet link.)<br>- **Cashback:** a currency from the same fixed list as CASH wallets, plus a CASH wallet in that currency. It needs a **second admin's approval** (the creator can't approve their own). On earning or purchase, the engine **credits the CASH wallet** through the ledger, and only for a published and active program (a purchase from a draft or paused program is refused before any points are taken).<br>- **Tier upgrade:** the engine **moves the customer up to the target tier** (never down), optionally protected from the nightly downgrade for a set number of days. The target tier must belong to the same program.<br>- **Reward names** start with the program slug (for example `fintech_cashback_50`), and an active reward name is unique within the tenant. Existing names are kept until renamed.<br>- **The Add Reward form** asks for the acquisition first and then offers only the reward types allowed with it. |
@@ -68,10 +68,10 @@ Everything below is scoped to one tenant and, within it, to one program.
 
 ### 2.3 Event ingestion & processing
 
-- **Ingestion API**: accepts 13 built-in event types — the original 7 (`order.created`,
+- **Ingestion API**: accepts 12 built-in event types — the original 7 (`order.created`,
   `order.refunded`, `cash.added`, `cash.spent`, `points.redeem`, `points.transfer`,
-  `reward.purchase`) plus `signup`, `kyc.completed`, `card.transaction`, `remittance`,
-  `points.adjusted`, and `birthdaybonus` (a scheduled synthetic trigger, not caller-published) — plus
+  `reward.purchase`) plus `signup`, `kyc.completed`, `card.transaction`, `remittance` and
+  `points.adjusted` (`birthdaybonus` was removed by CR 2026-10-05 addendum A) — plus
   tenant-approved generic event types. Each built-in carries a category (Earn/Burn/Reverse/Adjust),
   source (Behavioural/Scheduled/Operator), cardinality, and field schema, served read-only via
   `GET rules/metadata` for both server-side rule validation and the admin rule builder. Operator
@@ -84,13 +84,13 @@ Everything below is scoped to one tenant and, within it, to one program.
   per triggering event. Budget-capped rules reserve their spend inside that same transaction.
 - **Batch/maintenance jobs**: nightly tier downgrade & re-qualification, points FIFO expiration
   (+ advance "expiring soon" warnings, configured per POINTS wallet), streak maintenance (recompute, break-detection, data
-  retention), delayed-posting promotion, birthday-bonus evaluation (idempotent per customer per
-  year), transactional outbox publishing with retry/backoff, event-log retention.
+  retention), delayed-posting promotion, transactional outbox publishing with retry/backoff,
+  event-log retention. (The birthday-bonus job was removed by CR 2026-10-05 addendum A.)
 - **Event Simulator** (admin portal): lets support/ops staff publish a synthetic event and watch
   it move through the pipeline (pending → processed/failed) without a real integration —
   useful for validating a program configuration end-to-end. **Built (CR 2026-09-30, P1):** the
-  simulator no longer offers the internally scheduled type (`birthdaybonus`; `points.expired` was removed as an event type by CR 2026-10-05),
-  which the API always rejects. For each event type it shows which fields are required, and which
+  simulator offers only the types a caller may publish (`birthdaybonus` and `points.expired`
+  were removed as event types by CR 2026-10-05 and its addendum A). For each event type it shows which fields are required, and which
   values must be sent as strings.
 
 ### 2.4 Customer & ledger management
@@ -112,9 +112,8 @@ Everything below is scoped to one tenant and, within it, to one program.
   **Built (CR 2026-10-02, P3):** each card bucket with the customer's usage against its caps and
   its postings; the messages the platform sent about the customer (type, status, attempts, times —
   never the content; published messages are kept 30 days).
-- One deliberate exception to that read-only scope: `POST customers/{ref}/birthday` (MM-DD only)
-  registers a customer's birthday so the birthday-bonus rule/job can fire — no other customer
-  field is writable from the admin API.
+- No customer field is writable from the admin API. (The one former exception,
+  `POST customers/{ref}/birthday`, was removed with the birthday bonus by CR 2026-10-05 addendum A.)
 - Append-only ledger as the system of record, partitioned per tenant, with a fixed reason-code
   dictionary (earn, stamp_earn, stamp_reset — historical only since CR 2026-10-05 —, cash_load/spend, redemption, refund, expiry,
   transfer, etc.) and idempotency guarantees against duplicate processing.
@@ -123,7 +122,9 @@ Everything below is scoped to one tenant and, within it, to one program.
   redemption, like transfer, reports business outcomes as events — `loyalty.points.redeem_failed`
   for below-minimum or insufficient points (the event is processed, not dead-lettered) and
   `loyalty.points.redeemed` on success. Before this, a failed redemption was dead-lettered with no
-  failure event.
+  failure event. **Built (CR 2026-10-05):** the parameters come from the applied rule (see §2.2
+  Rules), the outcome events carry `rule_id`, and the cash is rounded down to the cash wallet's
+  decimals (it was always 2 places).
 - **Built (CR 2026-09-30, P2–P4):** a `reward.purchase` event may identify the reward by `reward_id`
   as well as by `reward_name`.
 - Refunds: proportional reversal of a prior order's earn entries, capped so cumulative refunds
@@ -198,23 +199,26 @@ decision: accept as out-of-scope, or raise as a Scope Change Request.
   limits outside a budget still read a cache rather than a counter inside the posting
   transaction. Both are flagged, not silently accepted — revisit before this rule engine carries
   adversarial-scale traffic.
-- **Program status is only partly enforced** — the consumer evaluates earn rules, campaigns and
-  the birthday bonus only for programs that are **published and active** (1.3.CL; the earlier
-  note that `programs.status` was not enforced at all was inaccurate). The per-event redeem,
-  transfer and reward-purchase handlers and the ledger jobs (expiry, expiring-soon warnings) still
-  do not check program status, so pausing a program does not stop those. One exception since
-  CR 2026-09-30: a cashback reward is only sold and paid for a published and active program.
-- **Redemption and Transfer rules are not applied (as-built, unchanged by CR 2026-09-30).** They
-  can be created, but the engine never fires them: redeem and transfer are driven by the POINTS
-  account type's settings. Making them effective (rule-driven parameters, a cash leg for
-  Redemption, one posting path per event) is specified in the 2026-09-30 scope change (phase P5)
-  but **deferred** to a separate decision.
+- **Program status is only partly enforced** — the consumer evaluates earn rules and campaigns
+  only for programs that are **published and active** (1.3.CL; the earlier
+  note that `programs.status` was not enforced at all was inaccurate). Since CR 2026-10-05 the
+  per-event handlers that post directly — redeem, transfer, reward purchase (every reward type),
+  `cash.added` and `cash.spent` — also refuse a program that isn't published and active
+  (`program_not_live`; the cash events report it with `loyalty.cash.add_failed` /
+  `loyalty.cash.spend_failed`). Still not gated: refund reversals (on purpose — a refund always
+  takes back what the order earned) and the ledger and tier jobs (points expiry, expiring-soon
+  warnings, tier downgrade, streak maintenance, delayed-posting promotion), so pausing a program
+  does not stop those (CR 2026-10-05 O14, skipped).
+- **Redemption and Transfer rules are applied since CR 2026-10-05** (the 2026-09-30 phase P5,
+  adopted with changes — see §2.2 Rules). Not built: a transfer fee or conversion ratio (needs a
+  fee-engine scope change) and automatic conversion of legacy `ratio` values.
 - **Burn-side money controls not covered by CR 2026-09-30 (as-built gaps, awaiting a decision):**
   - a streak fixed bonus can pay into a CASH wallet without second-admin approval;
-  - points-to-cash redemption isn't gated on program status;
-  - one admin can set or raise the redemption rate with no approval;
-  - the redemption target wallet and a streak's target wallet aren't checked to be the right type
-    or to belong to the same program.
+  - ~~points-to-cash redemption isn't gated on program status~~ — closed by CR 2026-10-05;
+  - ~~one admin can set or raise the redemption rate with no approval~~ — closed by CR 2026-10-05:
+    the rate lives on a redeem rule, which needs a second admin again after any rate change;
+  - a streak's target wallet isn't checked to be the right type or to belong to the same program
+    (a redeem rule's cash wallet is, since CR 2026-10-05).
 - **CASH balances can't be transferred between customers or redeemed (by design, CR 2026-09-30
   addendum A).** Cash is the end of the value chain: it is spent (`cash.spent`) or paid out by
   the tenant's own payment system. Customer-to-customer cash is money transmission (licensing,
@@ -226,9 +230,8 @@ decision: accept as out-of-scope, or raise as a Scope Change Request.
 - **Global search (topbar)** is a visual placeholder, not functional.
 - **Partial i18n**: only navigation, auth, and error/interstitial strings are translated
   (en/tr); the majority of admin-portal screens have hard-coded English copy.
-- **Card Buckets and Streak Campaigns** are reachable via routing/sidebar but are not surfaced
-  as summary cards on the Program Overview page (only Account Types, Tiers, Rules, Rewards,
-  History are).
+- ~~**Card Buckets and Streak Campaigns** are not surfaced as summary cards on the Program
+  Overview page~~ — added by CR 2026-10-05.
 
 ## 4. Technical architecture (for reference, not a deliverable in itself)
 
@@ -240,10 +243,10 @@ decision: accept as out-of-scope, or raise as a Scope Change Request.
 - **Data/infra**: PostgreSQL (tenant-partitioned ledger/event tables; `rule_limit_counters` is
   the durable source of truth for budget/cardinality counters, Redis caches in front of it),
   Redis (rule/campaign cache, rate limiting), RabbitMQ (event transport + dead-lettering).
-- **Scheduler additions (CR-08/CR-09/CR-10)**: delayed-posting promotion and birthday-bonus
-  evaluation follow the same self-scheduling `BackgroundService` + idempotent-SQL pattern as the
-  pre-existing points-expiration and streak-maintenance jobs — no new scheduling mechanism was
-  introduced.
+- **Scheduler additions (CR-08/CR-09)**: delayed-posting promotion follows the same
+  self-scheduling `BackgroundService` + idempotent-SQL pattern as the pre-existing
+  points-expiration and streak-maintenance jobs — no new scheduling mechanism was introduced.
+  (The CR-10 birthday-bonus job was removed by CR 2026-10-05 addendum A.)
 - **Frontend**: Angular 22, standalone/zoneless/signals, feature-based module boundaries,
   Tailwind v4 design system, decimal-string money handling.
 
@@ -286,3 +289,5 @@ revision history below.
 | 1.5 (draft) | 2026-10-02 | CR 2026-10-02 (Customer 360) phase P2 built: §2.4 header, per-program overview, rules & caps, streaks, rewards, tiers. | Claude Code, at the request of Moiz |
 | 1.4 (draft) | 2026-10-01 | CR 2026-09-30 addendum A: §2.2 Account Types (points-transfer daily limit); §3 CASH transfer/redeem kept out of scope by design. | Claude Code, at the request of Moiz |
 | 1.6 (draft) | 2026-10-05 | Scope change 2026-10-05 (approved by PO + Architect) built: §2.2 Account Types (STAMP retired), Rules (Stamp/Expiry rule types and the `points.expired` trigger removed), Rewards (stamp wallet link removed); §2.3 event list and pipeline; §2.5 Complaints removed; §2.6 dashboard; §3 notes. See `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md`. | Claude Code, at the request of Moiz |
+| 1.7 (draft) | 2026-10-05 | Scope change 2026-10-05 (burn rules, approved by PO + Architect) built: §2.2 Account Types (redemption/transfer settings are defaults for new rules), Rules (redeem/transfer always rule-driven, redeem cash wallet + approval); §2.4 redemption outcome; §3 program-status gating extended to redeem, transfer, reward purchase and cash events, burn-rule and money-control limitations updated, overview tiles. See `docs/scope-changes/2026-10-05-burn-rules-dynamic-reward-purchase.md`. | Claude Code, at the request of Moiz |
+| 1.6 (draft) | 2026-10-06 | CR 2026-10-05 **addendum A** (approved by all stakeholders) built: birthday bonus removed — §2.3 event list, batch jobs and simulator; §2.4 the birthday endpoint exception; §3 program-status note; §4 scheduler note. See `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md` Addendum A. | Claude Code, at the request of Moiz |

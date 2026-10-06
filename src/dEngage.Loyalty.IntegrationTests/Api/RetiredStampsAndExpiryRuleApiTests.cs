@@ -20,8 +20,8 @@ using RuleEntity = dEngage.Loyalty.Schema.Entities.Rule;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
-// CR 2026-10-05 (D1, D8, D15): STAMP wallets, StampRule, ExpiryRule and the points.expired
-// trigger are retired. Nothing new can use them; existing rows stay readable as history but
+// CR 2026-10-05 (D1, D8, D15, addendum A): STAMP wallets, StampRule, ExpiryRule and the
+// points.expired and birthdaybonus triggers are retired, and the birthday endpoint is gone. Nothing new can use them; existing rows stay readable as history but
 // can't be edited or switched back on. Guards against any of these paths coming back.
 public sealed class RetiredStampsAndExpiryRuleApiTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
@@ -35,6 +35,7 @@ public sealed class RetiredStampsAndExpiryRuleApiTests : IClassFixture<CustomWeb
     private Guid _stampRuleId;
     private Guid _stampTargetedRuleId;
     private Guid _expiryTriggerRuleId;
+    private Guid _birthdayTriggerRuleId;
 
     public RetiredStampsAndExpiryRuleApiTests(CustomWebApplicationFactory factory)
     {
@@ -67,10 +68,13 @@ public sealed class RetiredStampsAndExpiryRuleApiTests : IClassFixture<CustomWeb
             _stampRuleId = Guid.NewGuid();
             _stampTargetedRuleId = Guid.NewGuid();
             _expiryTriggerRuleId = Guid.NewGuid();
+            _birthdayTriggerRuleId = Guid.NewGuid();
             db.Rules.AddRange(
                 DisabledRule(_stampRuleId, tenant.Id, RuleTypes.StampRule, EventTypes.OrderCreated, _stampId),
                 DisabledRule(_stampTargetedRuleId, tenant.Id, RuleTypes.ManualAdjustmentRule, EventTypes.PointsAdjusted, _stampId),
-                DisabledRule(_expiryTriggerRuleId, tenant.Id, RuleTypes.FixedBonusRule, EventTypes.PointsExpired, _pointsId));
+                DisabledRule(_expiryTriggerRuleId, tenant.Id, RuleTypes.FixedBonusRule, EventTypes.PointsExpired, _pointsId),
+                // As RemoveBirthdayBonusCr1006 leaves a birthday rule: disabled.
+                DisabledRule(_birthdayTriggerRuleId, tenant.Id, RuleTypes.FixedBonusRule, EventTypes.BirthdayBonus, _pointsId));
             await db.SaveChangesAsync();
         }
 
@@ -134,10 +138,12 @@ public sealed class RetiredStampsAndExpiryRuleApiTests : IClassFixture<CustomWeb
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
     }
 
-    [Fact]
-    public async Task A_new_rule_on_the_points_expired_trigger_is_rejected()
+    [Theory]
+    [InlineData(EventTypes.PointsExpired)]
+    [InlineData(EventTypes.BirthdayBonus)]
+    public async Task A_new_rule_on_a_retired_trigger_is_rejected(string trigger)
     {
-        var response = await _client.PostAsync(RulesUrl, Json(Rule(RuleTypes.FixedBonusRule, EventTypes.PointsExpired, new RuleCalculation { FixedValue = 5m })));
+        var response = await _client.PostAsync(RulesUrl, Json(Rule(RuleTypes.FixedBonusRule, trigger, new RuleCalculation { FixedValue = 5m })));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("trigger_retired");
@@ -154,7 +160,7 @@ public sealed class RetiredStampsAndExpiryRuleApiTests : IClassFixture<CustomWeb
     [Fact]
     public async Task Retired_rules_cannot_be_switched_back_on()
     {
-        foreach (var ruleId in new[] { _stampRuleId, _stampTargetedRuleId, _expiryTriggerRuleId })
+        foreach (var ruleId in new[] { _stampRuleId, _stampTargetedRuleId, _expiryTriggerRuleId, _birthdayTriggerRuleId })
         {
             var response = await _client.PatchAsync($"{RulesUrl}/{ruleId}/status", Json(new SetRuleStatusRequest(RuleStatus.Active)));
 
@@ -179,22 +185,33 @@ public sealed class RetiredStampsAndExpiryRuleApiTests : IClassFixture<CustomWeb
 
         metadata!.RuleTypes.Select(t => t.RuleType).Should().NotContain([RuleTypes.StampRule, RuleTypes.ExpiryRule]);
         metadata.RuleTypes.SelectMany(t => t.ValidTargetAccountKinds).Should().NotContain("STAMP");
-        metadata.Events.Select(e => e.EventType).Should().NotContain(EventTypes.PointsExpired)
-            .And.Contain([EventTypes.Signup, EventTypes.BirthdayBonus, EventTypes.KycCompleted]);
+        metadata.Events.Select(e => e.EventType).Should().NotContain([EventTypes.PointsExpired, EventTypes.BirthdayBonus])
+            .And.Contain([EventTypes.Signup, EventTypes.KycCompleted]);
     }
 
-    [Fact]
-    public async Task A_streak_campaign_on_the_points_expired_trigger_is_rejected()
+    [Theory]
+    [InlineData(EventTypes.PointsExpired)]
+    [InlineData(EventTypes.BirthdayBonus)]
+    public async Task A_streak_campaign_on_a_retired_trigger_is_rejected(string trigger)
     {
         var response = await _client.PostAsync($"/api/v1/tenants/{TenantSlug}/programs/{_programId}/streak-campaigns", Json(new
         {
-            name = "expiry streak",
-            trigger = EventTypes.PointsExpired,
+            name = "retired-trigger streak",
+            trigger,
             targetAccountTypeId = _pointsId,
             config = new { }
         }));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("trigger_retired");
+    }
+
+    // Addendum A-D3: the birthday registration route was removed outright.
+    [Fact]
+    public async Task The_birthday_registration_route_is_gone()
+    {
+        var response = await _client.PostAsync($"/api/v1/tenants/{TenantSlug}/customers/cust-1/birthday", Json(new { monthDay = "05-17" }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

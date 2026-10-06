@@ -20,11 +20,6 @@ import { EventTypesCatalog } from '../../core/events/event-types.service';
 import { EventsService } from './events.service';
 import { EventStatus } from './event.model';
 
-// The API already leaves these out of `publishable` (EventTypes.IsExternallyPublishable — they're
-// produced by the nightly jobs and always rejected on publish). Filtering here too is the O9
-// fallback for an API that predates the `publishable` list.
-const SCHEDULED_EVENT_TYPES: readonly string[] = ['birthdaybonus'];
-
 /** Field guidance per event type, checked against the Consumer handlers that read each payload. */
 interface EventHelp {
   required: readonly string[];
@@ -61,8 +56,9 @@ const EVENT_HELP: Readonly<Record<string, EventHelp>> = {
     note: 'events.simulator.help.pointsTransfer',
   },
   'reward.purchase': {
+    // reward_id identifies the reward exactly (CR 2026-09-30); reward_name is the alternative.
     required: ['contact_key', 'reward_name'],
-    optional: ['channel'],
+    optional: ['reward_id', 'channel'],
     note: 'events.simulator.help.rewardPurchase',
   },
   'points.adjusted': {
@@ -245,7 +241,9 @@ export class EventSimulatorPage implements OnInit {
   private readonly publishableTypes = computed<readonly string[]>(() => {
     const t = this.types();
     if (!t) return [];
-    return t.publishable.filter((type) => !SCHEDULED_EVENT_TYPES.includes(type));
+    // The API leaves internally scheduled types out of `publishable`. The portal-side fallback
+    // list went away with the last scheduled built-in (birthdaybonus, CR 2026-10-05 addendum A).
+    return t.publishable;
   });
 
   protected readonly publishableBuiltIns = computed(() => {

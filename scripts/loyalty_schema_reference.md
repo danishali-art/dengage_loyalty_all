@@ -2,7 +2,7 @@
 
 Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları ve kolonları açıklar.
 
-- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261005141326_RetireStampsAndExpiryRuleCr1005`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
+- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261006082544_RemoveBirthdayBonusCr1006`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
 - **Kurulum:** boş bir PostgreSQL veritabanına `psql -d loyalty_dev -f loyalty_schema.sql`. Ardından **her tenant için** [`provision_tenant.sql`](provision_tenant.sql) (partition oluşturur) ve tenant'ın seed script'i (örn. [`starbucks_loyalty.sql`](starbucks_loyalty.sql)) çalıştırılır.
 - Tüm parasal/puan kolonları `numeric(20,4)`'tür; tüm zaman kolonları `timestamptz` (UTC) tutulur.
 - Event/mesaj davranışlarının detayı için: `docsv2/01_inbound_events.md`, `docsv2/02_outbound_events.md`.
@@ -18,7 +18,6 @@ Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları
 | [`rule_versions`](#rule_versions) | Kuralın önceki (superseded) versiyonları — CR-09 versiyonlama |
 | [`rule_limit_counters`](#rule_limit_counters) | Kural bütçesi/kardinalite için kalıcı sayaç — CR-07/CR-09 (Redis önünde cache olarak durur) |
 | [`held_postings`](#held_postings) | Gecikmeli (Delayed) postalama için bekleyen kayıtlar — CR-08, gece job'u ile ledger'a taşınır |
-| [`customer_birthdays`](#customer_birthdays) | Müşteri doğum günü (MM-DD) — CR-10, doğum günü bonus job'unun girdisi |
 | [`tier_definitions`](#tier_definitions) | Tier basamakları (eşik, pencere, grace) |
 | [`tier_upgrade_log`](#tier_upgrade_log) | Tier değişim geçmişi (audit) |
 | [`reward_definitions`](#reward_definitions) | Ödül kataloğu (damga doluşu / puanla satın alma) |
@@ -111,7 +110,7 @@ Cüzdan (hesap tipi) tanımları. Bir programda birden fazla cüzdan olur; müş
 | `STAMP` (kullanımdan kaldırıldı, sadece geçmiş satırlar) | `stamp_target` (kart kaç damgada dolar), `reward_type` (doluşta verilecek ödül/kupon tipi) | `{"stamp_target": 10, "reward_type": "free_drink"}` |
 | `CASH` | `currency`, `decimal_places` | `{"currency": "USD", "decimal_places": 2}` |
 
-`redemption` bloğu `points.redeem` akışının sözleşmesidir: `rate` (1 puanın para karşılığı), `min_points` (tek seferde bozdurulabilecek asgari puan), `target_account_type_id` (tutarın yazılacağı CASH cüzdan). Blok yoksa redeem `redemption_not_configured` ile reddedilir.
+`redemption` bloğu (`rate` — 1 puanın para karşılığı, `min_points` — asgari puan, `target_account_type_id` — CASH cüzdan) ve `transfer.daily_limit`, CR 2026-10-05'ten beri **yalnızca varsayılan değerlerdir**: portal yeni bir puan kullanım / transfer kuralı oluştururken bu değerleri kuralın `calculation` alanına bir kez kopyalar. `points.redeem` / `points.transfer` olayları bu değerleri hiç okumaz; her zaman cüzdanı hedefleyen en yüksek öncelikli aktif kural uygulanır (kural yoksa `no_rule`).
 
 **PK:** `PK_account_types (id)`.
 
@@ -171,7 +170,7 @@ yalnızca `active` satırlar — `pending_approval` eşleşmeye girmez).
 | `tenant_id` | uuid | ✗ |  | Tenant (iç kimlik, slug değil — `20260903200505_TenantIdGuidForeignKeys` ile bu branch'ten önce `varchar`'dan dönüştürüldü) |
 | `program_id` | uuid | ✗ |  | FK → `programs` (CASCADE) |
 | `name` | varchar(255) | ✗ |  | Kural adı — outbound `applied_rules[].name` olarak dışarı gider |
-| `type` | varchar(50) | ✗ |  | `SpendRule` / `FixedBonusRule` / `RedemptionRule` / `TransferRule` / `ReversalRule` / `ManualAdjustmentRule` (CR-02) — oluşturulduktan sonra değiştirilemez. `StampRule` ve `ExpiryRule` CR 2026-10-05 ile kaldırıldı; bu tipteki (ve `points.expired` tetikleyicili ya da STAMP hedefli) eski kurallar migration ile `disabled` yapıldı |
+| `type` | varchar(50) | ✗ |  | `SpendRule` / `FixedBonusRule` / `RedemptionRule` / `TransferRule` / `ReversalRule` / `ManualAdjustmentRule` (CR-02) — oluşturulduktan sonra değiştirilemez. `StampRule` ve `ExpiryRule` CR 2026-10-05 ile kaldırıldı; bu tipteki (ve `points.expired` tetikleyicili ya da STAMP hedefli) eski kurallar migration ile `disabled` yapıldı. CR 2026-10-05 (burn kuralları): o tarihten önce kaydedilmiş tüm `RedemptionRule` / `TransferRule` satırları (`active` / `pending_approval`) `DisableLegacyBurnRulesCr1005` migration'ı ile `disabled` yapıldı — yeni alanlar doldurulmadan tekrar açılamaz |
 | `trigger` | varchar(50) | ✗ |  | Tetikleyici event tipi — built-in event kataloğundaki 14 tipten biri ya da tenant onaylı generic tip |
 | `conditions` | jsonb | ✓ |  | Gruplu AND/OR koşul ağacı (CR-05); null = koşulsuz (aşağıda) |
 | `calculation` | jsonb | ✗ |  | Tipe özgü kazanım/hesap parametreleri (aşağıda) |
@@ -196,7 +195,7 @@ yalnızca `active` satırlar — `pending_approval` eşleşmeye girmez).
 
 | Kolon | Şema | Örnekler |
 |-------|------|----------|
-| `calculation` | Tipe göre alt küme — `rate` (Spend), `amount` (FixedBonus, ManualAdjustment'ta opsiyonel fallback), `ratio`+`minRedeem` (Redemption), `ratio`+`fee`+`maxPerDay` (Transfer), `mode`("proportional"\|"full")+`allowNegative`("allow negative"\|"clamp to zero") (Reversal), `reason`("goodwill"\|"correction"\|"dispute"\|"migration") (ManualAdjustment) — kaldırılan StampRule/ExpiryRule kurallarının eski satırlarında boş obje ya da `ageDays`/`order` kalmış olabilir | `{"rate": 0.10}` |
+| `calculation` | Tipe göre alt küme — `rate` (Spend), `amount` (FixedBonus, ManualAdjustment'ta opsiyonel fallback), `rate` (puan başına nakit) + `cashAccountTypeId` (aktarılacak CASH cüzdanı, zorunlu) + `minRedeem` (opsiyonel) (Redemption, CR 2026-10-05 — `ratio` artık reddedilir), `maxPerDay` (günlük transfer limiti, zorunlu) (Transfer, CR 2026-10-05 — `ratio`/`fee` kullanılmaz; eski satırlarda kalmış olabilir), `mode`("proportional"\|"full")+`allowNegative`("allow negative"\|"clamp to zero") (Reversal), `reason`("goodwill"\|"correction"\|"dispute"\|"migration") (ManualAdjustment) — kaldırılan StampRule/ExpiryRule kurallarının eski satırlarında boş obje ya da `ageDays`/`order` kalmış olabilir | `{"rate": 0.10}` |
 | `conditions` | Gruplu AND/OR ağacı: `{"op":"AND\|OR","groups":[{"op":"AND\|OR","conditions":[{"field","operator","value":{"type","data","currency?","inferred?"}}]}]}`. `operator` ∈ `gte,lte,between,eq,neq,in,not_in,starts_with,exists,is_null`. Alan bulunamazsa: pozitif operatörler `false`, `not_in`/`neq`/`is_null` `true` döner. | `{"op":"AND","groups":[{"op":"AND","conditions":[{"field":"amount","operator":"gte","value":{"type":"money","data":100}}]}]}` |
 | `limits` | `per_customer_total`, `per_customer_per_day`, `max_per_event`, `min_event_amount`, `cooldown_hours`, `max_customers`, `rule_budget_total`, `rule_budget_per_period`, `per_customer_per_period`, `period`("Day\|Week\|Month\|Year"), `reset_window`("Calendar\|Rolling"), `on_breach`("Clamp\|Skip", varsayılan Clamp) — bütçe alanları `rule_limit_counters`'a karşı postalama transaction'ı içinde rezerve edilir (CR-07/CR-09) | `{"rule_budget_per_period": 10000, "period": "Month", "on_breach": "Skip"}` |
 | `configuration` | `rounding`("down\|nearest\|up", null=programdan miras), `posting`("Immediate\|Delayed" — "Pending" henüz desteklenmiyor), `holdDays` (Delayed iken zorunlu), `expiryOverrideDays`, `reversible`(varsayılan true), `testMode`(varsayılan false — postalamadan sadece audit), `notifyOnAward`(varsayılan false) | `{"posting": "Delayed", "holdDays": 3}` |
@@ -318,30 +317,10 @@ self-scheduling + idempotent SQL yaklaşımı) süresi dolanları `ledger_entrie
 
 ---
 
-## customer_birthdays
-
-CR-10: doğum günü bonus kuralının/job'unun girdisi. Customers modülünün salt-okunur kapsamına
-bilinçli tek istisna: `POST customers/{ref}/birthday` (yalnızca MM-DD) bu tabloya yazar, başka
-hiçbir müşteri alanı admin API'den yazılamaz.
-
-| Kolon | Tip | Null | Varsayılan | Açıklama |
-|-------|-----|------|------------|----------|
-| `id` | uuid | ✗ |  | PK |
-| `tenant_id` | uuid | ✗ |  | Tenant (iç kimlik, slug değil) |
-| `contact_key` | varchar(255) | ✗ |  | Müşteri |
-| `month_day` | varchar(5) | ✗ |  | `MM-DD` formatında (yıl tutulmaz) |
-| `created_at` | timestamptz | ✗ |  | — |
-| `updated_at` | timestamptz | ✗ |  | — |
-
-**29 Şubat politikası:** artık olmayan bir yılda doğum günü bonusu 28 Şubat'ta ödenir
-(`BirthdayBonusJob`, deterministik `eventId` ile yıl başına idempotent).
-
-**PK:** `PK_customer_birthdays (id)`.
-
-**Index:**
-
-- `idx_customer_birthdays_month_day (tenant_id, month_day)` — job'un günlük taraması bu üzerinden çalışır
-- `ux_customer_birthdays_tenant_contact (tenant_id, contact_key)` UNIQUE
+> **Not:** `customer_birthdays` tablosu (CR-10, doğum günü bonusunun girdisi) ve `POST customers/{ref}/birthday`
+> uç noktası CR 2026-10-05 Ek A ile kaldırıldı (`RemoveBirthdayBonusCr1006` migration'ı; kayıtlar dışa aktarılmadan silindi).
+> Job'un daha önce yazdığı `birthday:{contactKey}:{yıl}` ledger kayıtları geçmiş olarak kalır.
+> Etki analizi: `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md` (Ek A).
 
 ---
 

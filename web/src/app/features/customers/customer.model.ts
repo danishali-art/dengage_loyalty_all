@@ -295,12 +295,14 @@ export interface TierChange {
   createdAt: string;
 }
 
-/** D5: no payload. */
+/** D5: no payload — except, since Addendum C (2026-10-06), the failure `reason`. */
 export interface SentMessage {
   eventId: string;
   eventType: string;
   status: string;
   attempts: number;
+  /** Why a *_failed message was sent (e.g. `no_rule`); absent for other messages. */
+  reason?: string | null;
   dedupKey: string | null;
   createdAt: string;
   publishedAt: string | null;

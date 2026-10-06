@@ -27,6 +27,6 @@ public sealed record EventAcceptedResponse(string EventId, string Status);
 public sealed record EventStatusResponse(string EventId, string EventType, string Status, DateTime ReceivedAt, DateTime? ProcessedAt, string? Error);
 // Publishable (CR 2026-09-30, O9): the subset a caller may actually send — built-ins minus the
 // Scheduled-source ones, plus the generic types. Additive: BuiltIn stays complete because the rule
-// and streak builders still need scheduled types (birthdaybonus) as triggers. points.expired was
-// retired as a trigger by CR 2026-10-05 and is no longer a built-in.
+// and streak builders would still need any scheduled type as a trigger. points.expired and
+// birthdaybonus were retired by CR 2026-10-05 (and its addendum A) and are no longer built-ins.
 public sealed record EventTypesResponse(IReadOnlyList<string> BuiltIn, IReadOnlyList<string> Generic, IReadOnlyList<string> Publishable);

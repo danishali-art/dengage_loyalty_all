@@ -83,7 +83,7 @@ public sealed class CustomerViewCr1002P3ApiTests : IClassFixture<CustomWebApplic
             db.OutboxEvents.AddRange(
                 Outbox(tenant.Id, _publishedId, OutboundEventTypes.PointsEarned, _ck, OutboxStatus.Published, _today.AddDays(-2)),
                 Outbox(tenant.Id, _failedId, OutboundEventTypes.TierChanged, _ck, OutboxStatus.Failed, _today.AddDays(-1)),
-                Outbox(tenant.Id, _pendingId, OutboundEventTypes.PointsEarned, _ck, OutboxStatus.Pending, _today),
+                Outbox(tenant.Id, _pendingId, OutboundEventTypes.PointsTransferFailed, _ck, OutboxStatus.Pending, _today, reason: "no_rule"),
                 Outbox(tenant.Id, Guid.NewGuid(), OutboundEventTypes.PointsEarned, "someone_else", OutboxStatus.Published, _today));
 
             await db.SaveChangesAsync();
@@ -131,6 +131,27 @@ public sealed class CustomerViewCr1002P3ApiTests : IClassFixture<CustomWebApplic
         data.GetArrayLength().Should().Be(3, "another customer's message is not listed");
         foreach (var message in data.EnumerateArray())
             message.TryGetProperty("payload", out _).Should().BeFalse();
+    }
+
+    // Addendum C (D5 amended): a *_failed message shows its reason — and still nothing else from
+    // the payload.
+    [Fact]
+    public async Task Messages_show_a_failure_reason_but_no_other_payload_field()
+    {
+        var raw = await _admin.GetStringAsync($"{CustomerUrl}/messages");
+        using var doc = JsonDocument.Parse(raw);
+
+        var byId = doc.RootElement.GetProperty("data").EnumerateArray()
+            .ToDictionary(m => m.GetProperty("eventId").GetGuid());
+        byId[_pendingId].GetProperty("reason").GetString().Should().Be("no_rule");
+        // Null fields are omitted on the wire (JsonConventions), so no reason means no key.
+        (!byId[_publishedId].TryGetProperty("reason", out var none) || none.ValueKind == JsonValueKind.Null)
+            .Should().BeTrue();
+        foreach (var message in byId.Values)
+        {
+            message.TryGetProperty("balance", out _).Should().BeFalse();
+            message.TryGetProperty("phone", out _).Should().BeFalse();
+        }
     }
 
     [Fact]
@@ -213,10 +234,12 @@ public sealed class CustomerViewCr1002P3ApiTests : IClassFixture<CustomWebApplic
     }
 
     private static OutboxEvent Outbox(Guid tenantId, Guid eventId, string eventType, string contactKey, string status,
-        DateTime createdAt) => new()
+        DateTime createdAt, string? reason = null) => new()
     {
         EventId = eventId, TenantId = tenantId, EventType = eventType, ContactKey = contactKey,
-        Payload = JsonSerializer.Serialize(new { eventId, data = new { contact_key = contactKey, phone = "+966" } }),
+        Payload = reason is null
+            ? JsonSerializer.Serialize(new { eventId, data = new { contact_key = contactKey, phone = "+966" } })
+            : JsonSerializer.Serialize(new { eventId, data = new { contact_key = contactKey, phone = "+966", reason, balance = "250.00" } }),
         Status = status, Attempts = status == OutboxStatus.Failed ? 8 : 1, NextAttemptAt = createdAt,
         PublishedAt = status == OutboxStatus.Published ? createdAt : null, CreatedAt = createdAt
     };

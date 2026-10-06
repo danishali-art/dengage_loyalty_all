@@ -69,11 +69,11 @@ public class RewardPurchaseHandler(
             ?? await ledgerService.UpsertAccountAsync(envelope.Tenant, contactKey, accountTypeId, ct);
 
         // O10: a cashback reward pays real money, which never flows from a draft or paused
-        // program. Refused before the debit, so the customer keeps their points.
-        if (definition.RewardType == RewardType.Cashback
-            && !await fulfilment.IsProgramLiveAsync(tenantGuid, definition.ProgramId, ct))
+        // program. CR 2026-10-05 item 5 (P-2): the same now holds for every reward type (a tier
+        // upgrade included). Refused before the debit, so the customer keeps their points.
+        if (!await fulfilment.IsProgramLiveAsync(tenantGuid, definition.ProgramId, ct))
         {
-            await FailAsync(envelope, tenantGuid, contactKey, definition, "program_not_live", account.Balance, price, ct);
+            await FailAsync(envelope, tenantGuid, contactKey, definition, OutcomeReasons.ProgramNotLive, account.Balance, price, ct);
             await tx.CommitAsync(ct);
             return;
         }

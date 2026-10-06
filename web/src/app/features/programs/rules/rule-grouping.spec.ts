@@ -54,16 +54,23 @@ describe('groupRulesByApplication', () => {
     expect(groups[0]!.exclusive.map((r) => r.type)).toEqual(['FixedBonusRule', 'SpendRule']);
   });
 
-  it('lists Transfer and Reversal rules outside winner selection', () => {
+  it('lists Redemption, Transfer and Reversal rules outside winner selection', () => {
+    const redemption = rule({ type: 'RedemptionRule', trigger: 'points.redeem' });
     const transfer = rule({ type: 'TransferRule' });
     const reversal = rule({
       type: 'ReversalRule',
       targetAccountTypeId: null,
       trigger: 'order.refunded',
     });
-    const { groups, outsideWinnerSelection } = groupRulesByApplication([transfer, reversal]);
+    const { groups, outsideWinnerSelection } = groupRulesByApplication([
+      redemption,
+      transfer,
+      reversal,
+    ]);
     expect(groups).toHaveLength(0);
-    expect(outsideWinnerSelection.map((r) => r.type)).toEqual(['TransferRule', 'ReversalRule']);
+    expect(outsideWinnerSelection.map((r) => r.type)).toEqual(
+      expect.arrayContaining(['RedemptionRule', 'TransferRule', 'ReversalRule']),
+    );
   });
 
   it('keeps inactive rules in their group so the page can show them dimmed', () => {

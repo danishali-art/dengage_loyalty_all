@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using dEngage.Loyalty.Schema;
@@ -11,9 +12,11 @@ using dEngage.Loyalty.Schema;
 namespace dEngage.Loyalty.Schema.Migrations
 {
     [DbContext(typeof(LoyaltyDbContext))]
-    partial class LoyaltyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261005180559_DisableLegacyBurnRulesCr1005")]
+    partial class DisableLegacyBurnRulesCr1005
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -254,6 +257,49 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasDatabaseName("uq_customer_accounts_tenant_contact_accounttype");
 
                     b.ToTable("customer_accounts", (string)null);
+                });
+
+            modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.CustomerBirthday", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContactKey")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("contact_key");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("MonthDay")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("month_day");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ContactKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_customer_birthdays_tenant_contact");
+
+                    b.HasIndex("TenantId", "MonthDay")
+                        .HasDatabaseName("idx_customer_birthdays_month_day");
+
+                    b.ToTable("customer_birthdays", (string)null);
                 });
 
             modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.EventInbox", b =>

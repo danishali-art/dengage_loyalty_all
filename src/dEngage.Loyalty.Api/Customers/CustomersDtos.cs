@@ -80,10 +80,12 @@ public sealed record RewardLogResponse(
 public sealed record TierChangeResponse(
     Guid Id, string? FromTierName, string ToTierName, decimal QualifyingPoints, DateTime CreatedAt);
 
-// D5: no payload — type, status and delivery facts only.
+// D5: no payload — type, status and delivery facts only. Addendum C (2026-10-06, D5 amended):
+// plus the payload's `reason`, the one field that says why a *_failed message was sent
+// (e.g. "no_rule"); null for messages without one. Nothing else from the payload is exposed.
 public sealed record SentMessageResponse(
     Guid EventId, string EventType, string Status, int Attempts, string? DedupKey,
-    DateTime CreatedAt, DateTime? PublishedAt);
+    DateTime CreatedAt, DateTime? PublishedAt, string? Reason = null);
 
 // Event is null when the id has no inbound event (a scheduled job's postings).
 public sealed record CustomerEventDetailResponse(
@@ -105,10 +107,6 @@ public sealed record TierHistoryEntryResponse(
 
 public sealed record CustomerSummaryResponse(
     string ContactKey, int AccountCount, DateTime LastActivityAt);
-
-// CR-10 (A11): MonthDay only — "MM-DD", never a full date (see CustomerBirthday remarks).
-public sealed record RegisterBirthdayRequest(string MonthDay);
-public sealed record BirthdayResponse(string ContactKey, string MonthDay);
 
 // ── CR 2026-10-02 (Customer 360) P2: header, per-program overview, rules & caps, streaks, rewards ──
 

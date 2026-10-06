@@ -36,11 +36,13 @@ import { requiredWhen } from '../../../shared/forms/conditional-validators';
 import { localInputToUtcIso, utcIsoToLocalInput } from '../../../shared/date/utc';
 import {
   ConditionTree,
+  conditionsForSave,
   emptyTree,
   hasConditions,
   validateConditionTree,
 } from '../../../shared/forms/condition-tree-dsl';
 import { RulesService } from './rules.service';
+import { BurnRuleDefaults, burnRuleDefaults } from './burn-rule-defaults';
 import {
   LIMIT_GROUPS,
   LimitControl,
@@ -346,30 +348,34 @@ export function buildTriggerOptions(
               </div>
             }
             @case ('RedemptionRule') {
+              <!-- CR 2026-10-05: the same fields as the wallet's redemption settings; this rule's
+                   values are what a redeem uses. -->
               <div>
-                @let calcRatioError =
-                  fieldError('calcRatio', {
-                    required: 'Redemption ratio is required.',
-                    min: 'Ratio must be 0 or greater.',
+                @let cashPerPointError =
+                  fieldError('calcCashPerPoint', {
+                    required: ('rules.calc.redeem.cashPerPointRequired' | translate),
+                    min: ('rules.calc.redeem.cashPerPointRequired' | translate),
                   });
-                <label for="calcRatio" class="field-label"
-                  >Redemption ratio (points per unit)
+                <label for="calcCashPerPoint" class="field-label"
+                  >{{ 'rules.calc.redeem.cashPerPoint' | translate }}
                   <span class="text-danger-fg" aria-hidden="true">*</span></label
                 >
                 <input
-                  id="calcRatio"
+                  id="calcCashPerPoint"
                   type="number"
                   min="0"
                   step="0.0001"
-                  formControlName="calcRatio"
+                  formControlName="calcCashPerPoint"
                   class="field-input"
-                  [attr.aria-invalid]="calcRatioError ? 'true' : null"
-                  [attr.aria-describedby]="calcRatioError ? 'calcRatio-error' : null"
+                  [attr.aria-invalid]="cashPerPointError ? 'true' : null"
+                  [attr.aria-describedby]="cashPerPointError ? 'calcCashPerPoint-error' : null"
                 />
-                <app-field-hint id="calcRatio-error" [error]="calcRatioError" />
+                <app-field-hint id="calcCashPerPoint-error" [error]="cashPerPointError" />
               </div>
               <div>
-                <label for="calcMinRedeem" class="field-label">Minimum redeem (optional)</label>
+                <label for="calcMinRedeem" class="field-label">{{
+                  'rules.calc.redeem.minimum' | translate
+                }}</label>
                 <input
                   id="calcMinRedeem"
                   type="number"
@@ -377,47 +383,54 @@ export function buildTriggerOptions(
                   step="0.0001"
                   formControlName="calcMinRedeem"
                   class="field-input"
-                  placeholder="None"
+                  [placeholder]="'rules.calc.none' | translate"
                 />
               </div>
+              <div class="col-span-2">
+                @let cashWalletError =
+                  fieldError('calcCashAccountTypeId', {
+                    required: ('rules.calc.redeem.redeemIntoRequired' | translate),
+                  });
+                <span id="calcCashAccountTypeId-label" class="field-label"
+                  >{{ 'rules.calc.redeem.redeemInto' | translate }}
+                  <span class="text-danger-fg" aria-hidden="true">*</span></span
+                >
+                @if (cashWalletOptions().length > 0) {
+                  <app-searchable-select
+                    formControlName="calcCashAccountTypeId"
+                    [options]="cashWalletOptions()"
+                    [placeholder]="'rules.calc.redeem.redeemIntoPlaceholder' | translate"
+                    ariaLabelledby="calcCashAccountTypeId-label"
+                    [invalid]="!!cashWalletError"
+                  />
+                } @else {
+                  <p class="text-xs text-gray-500">
+                    {{ 'rules.calc.redeem.noCashWallets' | translate }}
+                  </p>
+                }
+                <app-field-hint
+                  [error]="cashWalletError"
+                  [hint]="'rules.calc.redeem.approvalHint' | translate"
+                />
+              </div>
+              @if (!isEdit()) {
+                <p class="col-span-2 text-xs text-gray-500">
+                  {{ 'rules.calc.prefillHint' | translate }}
+                </p>
+              }
             }
             @case ('TransferRule') {
+              <!-- CR 2026-10-05 (R-O2): the daily transfer limit only — ratio and fee wait for a
+                   fee-engine CR. -->
               <div>
-                @let transferRatioError =
-                  fieldError('calcRatio', {
-                    required: 'Transfer ratio is required.',
-                    min: 'Ratio must be 0 or greater.',
+                @let dailyLimitError =
+                  fieldError('calcMaxPerDay', {
+                    required: ('rules.calc.transfer.dailyLimitRequired' | translate),
+                    min: ('rules.calc.transfer.dailyLimitRequired' | translate),
                   });
-                <label for="calcRatio" class="field-label"
-                  >Transfer ratio <span class="text-danger-fg" aria-hidden="true">*</span></label
-                >
-                <input
-                  id="calcRatio"
-                  type="number"
-                  min="0"
-                  step="0.0001"
-                  formControlName="calcRatio"
-                  class="field-input"
-                  [attr.aria-invalid]="transferRatioError ? 'true' : null"
-                  [attr.aria-describedby]="transferRatioError ? 'calcRatio-error' : null"
-                />
-                <app-field-hint id="calcRatio-error" [error]="transferRatioError" />
-              </div>
-              <div>
-                <label for="calcFee" class="field-label">Fee (optional)</label>
-                <input
-                  id="calcFee"
-                  type="number"
-                  min="0"
-                  step="0.0001"
-                  formControlName="calcFee"
-                  class="field-input"
-                  placeholder="None"
-                />
-              </div>
-              <div>
                 <label for="calcMaxPerDay" class="field-label"
-                  >Max transfer per day (optional)</label
+                  >{{ 'rules.calc.transfer.dailyLimit' | translate }}
+                  <span class="text-danger-fg" aria-hidden="true">*</span></label
                 >
                 <input
                   id="calcMaxPerDay"
@@ -426,9 +439,16 @@ export function buildTriggerOptions(
                   step="0.0001"
                   formControlName="calcMaxPerDay"
                   class="field-input"
-                  placeholder="None"
+                  [attr.aria-invalid]="dailyLimitError ? 'true' : null"
+                  [attr.aria-describedby]="dailyLimitError ? 'calcMaxPerDay-error' : null"
                 />
+                <app-field-hint id="calcMaxPerDay-error" [error]="dailyLimitError" />
               </div>
+              @if (!isEdit()) {
+                <p class="col-span-2 text-xs text-gray-500">
+                  {{ 'rules.calc.prefillHint' | translate }}
+                </p>
+              }
             }
             @case ('ReversalRule') {
               <div>
@@ -749,17 +769,20 @@ export class RuleFormPage implements OnInit {
       calcAmount: this.fb.control<number | null>(10, [
         requiredWhen((root) => root.get('type')?.value === 'FixedBonusRule'),
       ]),
-      calcRatio: this.fb.control<number | null>(1, [
-        requiredWhen(
-          (root) =>
-            root.get('type')?.value === 'RedemptionRule' ||
-            root.get('type')?.value === 'TransferRule',
-        ),
-        Validators.min(0),
+      // CR 2026-10-05: a redeem rule's cash per point (saved as `rate`) and Redeem into wallet,
+      // and a transfer rule's daily limit — all required by the API, > 0 where numeric.
+      calcCashPerPoint: this.fb.control<number | null>(null, [
+        requiredWhen((root) => root.get('type')?.value === 'RedemptionRule'),
+        Validators.min(0.0001),
       ]),
-      calcMinRedeem: this.fb.control<number | null>(null),
-      calcFee: this.fb.control<number | null>(null),
-      calcMaxPerDay: this.fb.control<number | null>(null),
+      calcCashAccountTypeId: this.fb.control('', [
+        requiredWhen((root) => root.get('type')?.value === 'RedemptionRule'),
+      ]),
+      calcMinRedeem: this.fb.control<number | null>(null, [Validators.min(0)]),
+      calcMaxPerDay: this.fb.control<number | null>(null, [
+        requiredWhen((root) => root.get('type')?.value === 'TransferRule'),
+        Validators.min(0.0001),
+      ]),
       calcMode: this.fb.control<'proportional' | 'full'>('proportional'),
       calcAllowNegative: this.fb.control<'allow negative' | 'clamp to zero'>('clamp to zero'),
       calcReason: this.fb.control<'goodwill' | 'correction' | 'dispute' | 'migration'>(
@@ -882,6 +905,13 @@ export class RuleFormPage implements OnInit {
     return pool.map((at) => ({ value: at.id, label: `${at.name} (${at.type})` }));
   });
 
+  /** Redeem into: the program's CASH wallets. */
+  protected readonly cashWalletOptions = computed<SelectOption<string>[]>(() =>
+    this.accountTypes()
+      .filter((a) => a.type === 'CASH')
+      .map((at) => ({ value: at.id, label: at.name })),
+  );
+
   protected readonly knownFields = computed<KnownField[]>(() => {
     const evt = this.eventMetaForTrigger();
     if (!evt) return [];
@@ -939,13 +969,21 @@ export class RuleFormPage implements OnInit {
 
     // requiredWhen validators read a sibling control's value but only Angular's own value
     // changes trigger revalidation — without this, e.g. switching off RedemptionRule while
-    // calcRatio is empty leaves it permanently (and invisibly, since @switch hides the field)
-    // marked invalid, and the form can never be saved again.
+    // a required calc field is empty leaves it permanently (and invisibly, since @switch hides
+    // the field) marked invalid, and the form can never be saved again.
     this.form.controls.type.valueChanges.subscribe(() => {
-      for (const key of ['calcRate', 'calcAmount', 'calcRatio'] as const) {
+      for (const key of [
+        'calcRate',
+        'calcAmount',
+        'calcCashPerPoint',
+        'calcCashAccountTypeId',
+        'calcMaxPerDay',
+      ] as const) {
         this.form.controls[key].updateValueAndValidity({ emitEvent: false });
       }
+      this.applyWalletDefaults();
     });
+    this.form.controls.targetAccountTypeId.valueChanges.subscribe(() => this.applyWalletDefaults());
     this.form.controls.cfgPosting.valueChanges.subscribe(() => {
       this.form.controls.cfgHoldDays.updateValueAndValidity({ emitEvent: false });
     });
@@ -975,6 +1013,27 @@ export class RuleFormPage implements OnInit {
       if (firstAccountType) this.form.patchValue({ targetAccountTypeId: firstAccountType.id });
     }
     this.loading = false;
+    this.applyWalletDefaults();
+  }
+
+  /**
+   * CR 2026-10-05 (S4): on a new redeem / transfer rule, copy the chosen POINTS wallet's settings
+   * into the calculation — once, and never over a field the admin has typed in. Editing a rule
+   * never pre-fills: the rule owns its values.
+   */
+  private applyWalletDefaults(): void {
+    if (this.loading || this.isEdit()) return;
+    const { type, targetAccountTypeId } = this.form.getRawValue();
+    const defaults = burnRuleDefaults(
+      type,
+      this.accountTypes().find((a) => a.id === targetAccountTypeId),
+    );
+    const untouched = Object.fromEntries(
+      Object.entries(defaults).filter(
+        ([key]) => !this.form.controls[key as keyof BurnRuleDefaults].dirty,
+      ),
+    ) as BurnRuleDefaults;
+    this.form.patchValue(untouched, { emitEvent: false });
   }
 
   private applyRule(rule: Rule): void {
@@ -995,9 +1054,11 @@ export class RuleFormPage implements OnInit {
 
       calcRate: numberOrNull(calc?.rate) ?? 1,
       calcAmount: numberOrNull(calc?.amount) ?? 10,
-      calcRatio: numberOrNull(calc?.ratio) ?? 1,
+      // A rule saved before CR 2026-10-05 has only the retired `ratio`: the fields stay empty and
+      // must be filled in before it can be saved (or switched on) again.
+      calcCashPerPoint: rule.type === 'RedemptionRule' ? numberOrNull(calc?.rate) : null,
+      calcCashAccountTypeId: calc?.cashAccountTypeId ?? '',
       calcMinRedeem: numberOrNull(calc?.minRedeem),
-      calcFee: numberOrNull(calc?.fee),
       calcMaxPerDay: numberOrNull(calc?.maxPerDay),
       calcMode: calc?.mode ?? 'proportional',
       calcAllowNegative: calc?.allowNegative ?? 'clamp to zero',
@@ -1034,19 +1095,16 @@ export class RuleFormPage implements OnInit {
       case 'FixedBonusRule':
         return { amount: decimalString(v.calcAmount ?? 0) };
       case 'RedemptionRule': {
-        const calc: RuleCalculation = { ratio: decimalString(v.calcRatio ?? 0) };
+        const calc: RuleCalculation = {
+          rate: decimalString(v.calcCashPerPoint ?? 0),
+          cashAccountTypeId: v.calcCashAccountTypeId || null,
+        };
         const minRedeem = toDecimalStringOrNull(v.calcMinRedeem);
         if (minRedeem) calc.minRedeem = minRedeem;
         return calc;
       }
-      case 'TransferRule': {
-        const calc: RuleCalculation = { ratio: decimalString(v.calcRatio ?? 0) };
-        const fee = toDecimalStringOrNull(v.calcFee);
-        if (fee) calc.fee = fee;
-        const maxPerDay = toDecimalStringOrNull(v.calcMaxPerDay);
-        if (maxPerDay) calc.maxPerDay = maxPerDay;
-        return calc;
-      }
+      case 'TransferRule':
+        return { maxPerDay: decimalString(v.calcMaxPerDay ?? 0) };
       case 'ReversalRule':
         return { mode: v.calcMode, allowNegative: v.calcAllowNegative };
       case 'ManualAdjustmentRule': {
@@ -1104,7 +1162,10 @@ export class RuleFormPage implements OnInit {
     this.formErrors.set([]);
     this.submitted.set(true);
 
-    const conditionErrors = validateConditionTree(this.conditions());
+    // CR 2026-10-05 item 4: the form starts with one blank condition, which means "no
+    // conditions", not an invalid one.
+    const conditions = conditionsForSave(this.conditions());
+    const conditionErrors = validateConditionTree(conditions);
     if (this.form.invalid || conditionErrors.length > 0) {
       markAllDirtyAndTouched(this.form);
       this.formErrors.set(
@@ -1124,7 +1185,7 @@ export class RuleFormPage implements OnInit {
         targetAccountTypeId: v.type === 'ReversalRule' ? null : v.targetAccountTypeId || null,
         type: v.type,
         calculation: this.buildCalculation(v),
-        conditions: this.conditions(),
+        conditions,
         limits: this.buildLimits(v),
         priority: Number(v.priority),
         stackable: v.stackable,

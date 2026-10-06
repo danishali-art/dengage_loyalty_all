@@ -33,13 +33,9 @@ public interface ICustomersAppService
     // CR 2026-10-02 (Customer 360) P3: card buckets, messages sent.
     Task<IReadOnlyList<CustomerCardBucketResponse>> GetCardBucketsAsync(string tenantId, string contactKey, CancellationToken ct);
     Task<CursorPage<SentMessageResponse>> GetMessagesAsync(string tenantId, string contactKey, MessageFilter filter, string? cursor, int limit, CancellationToken ct);
-
-    // CR-10 (A11): the one deliberate exception to this module's read-only scope — see
-    // CustomerBirthday remarks.
-    Task<BirthdayResponse> RegisterBirthdayAsync(string tenantId, string contactKey, string monthDay, CancellationToken ct);
 }
 
-// Read-only throughout except RegisterBirthdayAsync — never calls the mutating
+// Read-only throughout (RegisterBirthdayAsync was removed by CR 2026-10-05 addendum A) — never calls the mutating
 // TierEvaluationService/LedgerService, only replicates their read-side "what tier is next"
 // logic (plan §7, CustomersModule note).
 public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver tenantSlugResolver) : ICustomersAppService
@@ -495,34 +491,6 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
             messages);
     }
 
-    public async Task<BirthdayResponse> RegisterBirthdayAsync(string tenantId, string contactKey, string monthDay, CancellationToken ct)
-    {
-        var tenantGuid = await tenantSlugResolver.ResolveAsync(tenantId, ct);
-        var existing = await db.CustomerBirthdays
-            .FirstOrDefaultAsync(x => x.TenantId == tenantGuid && x.ContactKey == contactKey, ct);
-
-        if (existing is null)
-        {
-            db.CustomerBirthdays.Add(new CustomerBirthday
-            {
-                Id = Guid.NewGuid(),
-                TenantId = tenantGuid,
-                ContactKey = contactKey,
-                MonthDay = monthDay,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
-        }
-        else
-        {
-            existing.MonthDay = monthDay;
-            existing.UpdatedAt = DateTime.UtcNow;
-        }
-
-        await db.SaveChangesAsync(ct);
-        return new BirthdayResponse(contactKey, monthDay);
-    }
-
     public async Task<IReadOnlyList<TierHistoryEntryResponse>> GetTierHistoryAsync(string tenantId, string contactKey, CancellationToken ct)
     {
         var tenantGuid = await tenantSlugResolver.ResolveAsync(tenantId, ct);
@@ -829,7 +797,7 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         var rows = await query
             .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
             .Take(limit + 1)
-            .Select(o => new { o.Id, o.EventId, o.EventType, o.Status, o.Attempts, o.DedupKey, o.CreatedAt, o.PublishedAt })
+            .Select(o => new { o.Id, o.EventId, o.EventType, o.Status, o.Attempts, o.DedupKey, o.CreatedAt, o.PublishedAt, o.Payload })
             .ToListAsync(ct);
         var hasMore = rows.Count > limit;
         var page = rows.Take(limit).ToList();
@@ -837,7 +805,7 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         return new CursorPage<SentMessageResponse>
         {
             Data = page.Select(o => new SentMessageResponse(o.EventId, o.EventType, o.Status, o.Attempts, o.DedupKey,
-                o.CreatedAt, o.PublishedAt)).ToList(),
+                o.CreatedAt, o.PublishedAt, ReadReason(o.Payload))).ToList(),
             NextCursor = hasMore ? MessageCursor.Format(page[^1].CreatedAt, page[^1].Id) : null,
             Total = total
         };
@@ -903,7 +871,7 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
                 || (o.DedupKey is { } key && (key.StartsWith(pointsTierPrefix, StringComparison.Ordinal)
                     || streakTierDedupKeys.Contains(key))))
             .Select(o => new SentMessageResponse(o.EventId, o.EventType, o.Status, o.Attempts, o.DedupKey,
-                o.CreatedAt, o.PublishedAt))
+                o.CreatedAt, o.PublishedAt, ReadReason(o.Payload)))
             .ToList();
     }
 
@@ -1021,6 +989,14 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         ReadEnvelope(payload).Data is { ValueKind: JsonValueKind.Object } data
         && data.TryGetProperty("source_event_id", out var id) && id.ValueKind == JsonValueKind.String
             ? id.GetString()
+            : null;
+
+    // Addendum C (D5 amended): only data.reason leaves the payload — the outcome code of a
+    // *_failed message (redeem_failed, transfer_failed, purchase_failed, cash.*_failed).
+    private static string? ReadReason(string payload) =>
+        ReadEnvelope(payload).Data is { ValueKind: JsonValueKind.Object } data
+        && data.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String
+            ? reason.GetString()
             : null;
 
     // v1 shows the configured expiration_days rather than a precise per-account FIFO figure —

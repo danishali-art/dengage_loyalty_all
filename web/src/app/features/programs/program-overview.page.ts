@@ -16,8 +16,8 @@ import { AccountTypesService } from './account-types/account-types.service';
 import { AccountType } from './account-types/account-type.model';
 
 interface SummaryCard {
-  label: string;
-  description: string;
+  /** i18n key segment: programs.overview.cards.<key>.label / .description */
+  key: string;
   icon: string;
   link: string;
 }
@@ -203,12 +203,18 @@ interface SummaryCard {
                       {{ card.icon }}
                     </div>
                     <div>
-                      <div class="text-sm font-medium text-gray-800">{{ card.label }}</div>
-                      <div class="mt-0.5 text-xs text-gray-400">{{ card.description }}</div>
+                      <div class="text-sm font-medium text-gray-800">
+                        {{ 'programs.overview.cards.' + card.key + '.label' | translate }}
+                      </div>
+                      <div class="mt-0.5 text-xs text-gray-400">
+                        {{ 'programs.overview.cards.' + card.key + '.description' | translate }}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div class="text-brand mt-3 text-right text-sm font-medium">Manage ›</div>
+                <div class="text-brand mt-3 text-right text-sm font-medium">
+                  {{ 'programs.overview.manage' | translate }}
+                </div>
               </a>
             }
           </div>
@@ -243,16 +249,13 @@ export class ProgramOverviewPage implements OnInit {
   };
 
   protected readonly cards: SummaryCard[] = [
-    {
-      label: 'Account Types',
-      description: 'Wallets a customer can hold',
-      icon: '⭐',
-      link: 'account-types',
-    },
-    { label: 'Tiers', description: 'Automatic status levels', icon: '🏅', link: 'tiers' },
-    { label: 'Rules', description: 'What earns and how much', icon: '⚙', link: 'rules' },
-    { label: 'Rewards', description: 'What customers redeem', icon: '🎁', link: 'rewards' },
-    { label: 'History', description: 'What changed and when', icon: '🕓', link: 'history' },
+    { key: 'accountTypes', icon: '⭐', link: 'account-types' },
+    { key: 'tiers', icon: '🏅', link: 'tiers' },
+    { key: 'rules', icon: '⚙', link: 'rules' },
+    { key: 'rewards', icon: '🎁', link: 'rewards' },
+    { key: 'streakCampaigns', icon: '🔥', link: 'streak-campaigns' },
+    { key: 'cardBuckets', icon: '💳', link: 'card-buckets' },
+    { key: 'history', icon: '🕓', link: 'history' },
   ];
 
   protected readonly infoForm = this.fb.group({

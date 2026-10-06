@@ -1,11 +1,13 @@
 import { Rule, RuleType } from './rule.model';
 
 /**
- * Rule types that never enter winner selection — the engine posts them through their own
- * processors (TransferRuleProcessor dual-entry, ReversalRuleProcessor inherited target), see
- * WinnerSelector.cs. They don't compete with or stack on anything.
+ * Rule types that never enter winner selection (mirrors RuleTypes.UsesWinnerSelectorPipeline):
+ * ReversalRule posts through its own processor (inherited target), and since CR 2026-10-05
+ * redeem / transfer rules are applied only by their event handlers — one rule per event, picked
+ * by wallet and priority. They don't compete with or stack on anything.
  */
 const OUTSIDE_WINNER_SELECTION: ReadonlySet<RuleType> = new Set<RuleType>([
+  'RedemptionRule',
   'TransferRule',
   'ReversalRule',
 ]);

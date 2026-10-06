@@ -16,10 +16,11 @@ internal static class RetiredStackingMessages
 
 internal static class RetiredRuleMessages
 {
-    // CR 2026-10-05 (D15): points.expired is no longer a trigger. It must be rejected by name —
-    // an unknown trigger is otherwise treated as a tenant generic type and accepted.
-    public const string PointsExpiredTrigger =
-        "trigger_retired: 'points.expired' is no longer a rule trigger. Points expiry is configured on the POINTS account type.";
+    // CR 2026-10-05 (D15, addendum A-D4): points.expired and birthdaybonus are no longer
+    // triggers. They must be rejected by name — an unknown trigger is otherwise treated as a
+    // tenant generic type and accepted.
+    public static string RetiredTrigger(string? trigger) =>
+        $"trigger_retired: '{trigger}' is no longer a rule trigger (retired by CR 2026-10-05).";
 }
 
 // Structural/required-field checks only — the condition DSL itself is validated by
@@ -36,7 +37,8 @@ public sealed class CreateRuleRequestValidator : AbstractValidator<CreateRuleReq
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Trigger).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Trigger).NotEqual(EventTypes.PointsExpired).WithMessage(RetiredRuleMessages.PointsExpiredTrigger);
+        RuleFor(x => x.Trigger).Must(t => t is null || !EventTypes.IsRetiredTrigger(t))
+            .WithMessage(x => RetiredRuleMessages.RetiredTrigger(x.Trigger));
         // CR 2026-10-05: StampRule and ExpiryRule are retired, so they are no longer in RuleTypes.All.
         RuleFor(x => x.Type).Must(t => RuleTypes.All.Contains(t))
             .WithMessage($"Type must be one of: {string.Join(", ", RuleTypes.All)}. " +
@@ -76,13 +78,13 @@ public sealed class CreateRuleRequestValidator : AbstractValidator<CreateRuleReq
             .When(x => x.Type == RuleTypes.FixedBonusRule && x.Calculation is not null)
             .WithMessage("Calculation.amount is required and must be positive for FixedBonusRule.");
 
-        RuleFor(x => x.Calculation!.Ratio).NotNull().GreaterThan(0)
-            .When(x => x.Type == RuleTypes.RedemptionRule && x.Calculation is not null)
-            .WithMessage("Calculation.ratio is required and must be positive for RedemptionRule.");
-
-        RuleFor(x => x.Calculation!.Ratio).NotNull().GreaterThan(0)
-            .When(x => x.Type == RuleTypes.TransferRule && x.Calculation is not null)
-            .WithMessage("Calculation.ratio is required and must be positive for TransferRule.");
+        // CR 2026-10-05: redeem / transfer rules carry the wallet's fields (cash per point,
+        // minimum, Redeem into / daily transfer limit). Shared with RulesAppService's edit path.
+        RuleFor(x => x).Custom((x, context) =>
+        {
+            foreach (var error in BurnRuleCalculationRules.Errors(x.Type, x.Calculation))
+                context.AddFailure("Calculation", error);
+        }).When(x => x.Calculation is not null);
 
         RuleFor(x => x.Calculation!.Mode).Must(m => m is "proportional" or "full")
             .When(x => x.Type == RuleTypes.ReversalRule && x.Calculation is not null)
@@ -190,7 +192,8 @@ public sealed class UpdateRuleRequestValidator : AbstractValidator<UpdateRuleReq
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(255).When(x => x.Name is not null);
         RuleFor(x => x.Trigger).NotEmpty().MaximumLength(100).When(x => x.Trigger is not null);
-        RuleFor(x => x.Trigger).NotEqual(EventTypes.PointsExpired).WithMessage(RetiredRuleMessages.PointsExpiredTrigger);
+        RuleFor(x => x.Trigger).Must(t => t is null || !EventTypes.IsRetiredTrigger(t))
+            .WithMessage(x => RetiredRuleMessages.RetiredTrigger(x.Trigger));
         RuleFor(x => x.Priority).GreaterThanOrEqualTo(0).When(x => x.Priority is not null);
         RuleFor(x => x.Limits!).SetValidator(new RuleLimitsValidator()).When(x => x.Limits is not null);
         // 1.3.CL item 5 — see CreateRuleRequestValidator.

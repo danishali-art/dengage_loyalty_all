@@ -30,6 +30,11 @@ public class RuleCalculation
     [JsonPropertyName("maxPerDay")]
     public decimal? MaxPerDay { get; set; }
 
+    // CR 2026-10-05: RedemptionRule's "Redeem into" — the CASH wallet credited with
+    // points × rate. Its presence makes the rule need second-admin approval (CR-04).
+    [JsonPropertyName("cashAccountTypeId")]
+    public Guid? CashAccountTypeId { get; set; }
+
     // ReversalRule: "proportional" | "full".
     [JsonPropertyName("mode")]
     public string? Mode { get; set; }

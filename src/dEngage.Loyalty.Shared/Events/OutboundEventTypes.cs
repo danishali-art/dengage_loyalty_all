@@ -12,6 +12,10 @@ public static class OutboundEventTypes
     // CR 2026-09-30 §3.9 step 4: redeem reports its outcome the way transfer does.
     public const string PointsRedeemed = "loyalty.points.redeemed";
     public const string PointsRedeemFailed = "loyalty.points.redeem_failed";
+    // CR 2026-10-05 item 5 (P-3): a cash.added / cash.spent refused because the wallet's program
+    // isn't live (Active + Published). Nothing was posted.
+    public const string CashAddFailed = "loyalty.cash.add_failed";
+    public const string CashSpendFailed = "loyalty.cash.spend_failed";
     public const string TierChanged = "loyalty.tier.changed";
     public const string StreakCompleted = "loyalty.streak.completed";
     public const string StreakBroken = "loyalty.streak.broken";
