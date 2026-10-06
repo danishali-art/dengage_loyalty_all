@@ -95,9 +95,14 @@ public sealed class RulesAppService(
                     $"Account type '{targetAccountKind}' is not a valid target for '{request.Type}'.");
         }
 
+        // CR 2026-10-05: a redeem rule's Redeem into wallet must be a CASH wallet of this program.
+        if (request.Calculation?.CashAccountTypeId is { } cashId)
+            await RequireCashWalletAsync(tenantId, programId, cashId, ct);
+
         // CR-04: a CASH target requires a distinct admin's approval before the rule can match —
         // RuleCacheService only loads Active rows, so PendingApproval is inert until approved.
-        var isCash = targetAccountKind == "CASH";
+        // CR 2026-10-05 (D2): so does a redeem rule that pays cash, though its target is POINTS.
+        var isCash = targetAccountKind == "CASH" || BurnRuleCalculationRules.RequiresCashApproval(request.Type, request.Calculation);
 
         var entity = new RuleEntity
         {
@@ -167,6 +172,19 @@ public sealed class RulesAppService(
         var conditions = request.Conditions ?? FlatConditionsMigrator.ParseConditions(entity.Conditions);
         ValidateDsl(conditions);
 
+        // CR 2026-10-05: the update validator can't see the rule's type, so the redeem / transfer
+        // calculation is checked here, against the same list as on create.
+        var oldCalculation = JsonSerializer.Deserialize<RuleCalculation>(entity.Calculation, DslOptions) ?? new RuleCalculation();
+        var newCalculation = request.Calculation ?? oldCalculation;
+        if (request.Calculation is not null)
+        {
+            var errors = BurnRuleCalculationRules.Errors(entity.Type, request.Calculation);
+            if (errors.Count > 0)
+                throw new ValidationApiException(string.Join(" ", errors));
+            if (request.Calculation.CashAccountTypeId is { } cashId)
+                await RequireCashWalletAsync(tenantId, programId, cashId, ct);
+        }
+
         // CR-09 (A10 guarantee #7): archive the PRE-edit state as the version it's currently at,
         // then bump — must happen before any field below is mutated.
         await versioning.ArchiveAndBumpAsync(entity.TenantId, entity, ct);
@@ -189,7 +207,8 @@ public sealed class RulesAppService(
             // CR-04: recheck the CASH approval gate — retargeting an Active rule onto a CASH
             // account must not skip approval, and retargeting a PendingApproval rule away from
             // CASH must not leave it stuck waiting on an approval it no longer needs.
-            var isCash = newTargetAccount.Type == "CASH";
+            var isCash = newTargetAccount.Type == "CASH"
+                         || BurnRuleCalculationRules.RequiresCashApproval(entity.Type, newCalculation);
             if (isCash && entity.Status == RuleStatus.Active)
             {
                 entity.Status = RuleStatus.PendingApproval;
@@ -201,6 +220,16 @@ public sealed class RulesAppService(
             }
         }
         if (request.Calculation is not null) entity.Calculation = JsonSerializer.Serialize(request.Calculation, DslOptions);
+
+        // CR 2026-10-05 (D2): changing what a redeem rule pays — cash per point or the cash
+        // wallet — needs a second admin again, whatever the rule's status (a disabled rule is
+        // re-checked when it is switched back on, see SetStatusAsync).
+        if (BurnRuleCalculationRules.RequiresCashApproval(entity.Type, newCalculation)
+            && (oldCalculation.Factor != newCalculation.Factor || oldCalculation.CashAccountTypeId != newCalculation.CashAccountTypeId))
+        {
+            entity.ApprovedBy = null;
+            if (entity.Status == RuleStatus.Active) entity.Status = RuleStatus.PendingApproval;
+        }
         if (request.Conditions is not null) entity.Conditions = JsonSerializer.Serialize(request.Conditions, DslOptions);
         if (request.Limits is not null) entity.Limits = JsonSerializer.Serialize(request.Limits, DslOptions);
         if (request.Configuration is not null) entity.Configuration = JsonSerializer.Serialize(request.Configuration, DslOptions);
@@ -234,7 +263,21 @@ public sealed class RulesAppService(
 
         // Disabling or deleting a retired rule stays allowed; only switching it back on is refused.
         if (status == RuleStatus.Active)
+        {
             await RequireNotRetiredAsync(tenantId, entity, ct);
+
+            // CR 2026-10-05 (R-O11): redeem / transfer rules disabled at deploy were saved before
+            // their fields existed — they must be completed (an edit) before they can run.
+            var calculation = JsonSerializer.Deserialize<RuleCalculation>(entity.Calculation, DslOptions);
+            var errors = BurnRuleCalculationRules.Errors(entity.Type, calculation);
+            if (errors.Count > 0)
+                throw new ValidationApiException("Complete the rule before switching it on: " + string.Join(" ", errors));
+
+            // D2: a redeem rule that pays cash and was never approved (or was edited since) goes
+            // to a second admin instead of straight to Active.
+            if (BurnRuleCalculationRules.RequiresCashApproval(entity.Type, calculation) && entity.ApprovedBy is null)
+                status = RuleStatus.PendingApproval;
+        }
 
         entity.Status = status;
         entity.UpdatedAt = DateTime.UtcNow;
@@ -308,6 +351,15 @@ public sealed class RulesAppService(
         if (entity is null || entity.ProgramId != programId)
             throw new NotFoundApiException($"Rule '{ruleId}'");
         return entity;
+    }
+
+    private async Task RequireCashWalletAsync(string tenantId, Guid programId, Guid accountTypeId, CancellationToken ct)
+    {
+        var isCashWallet = await (await accountTypeRepository.Query(tenantId, ct))
+            .AnyAsync(a => a.Id == accountTypeId && a.ProgramId == programId && a.Type == "CASH", ct);
+        if (!isCashWallet)
+            throw new ValidationApiException(
+                $"Calculation.cashAccountTypeId '{accountTypeId}' must be a CASH account type of this program.");
     }
 
     private async Task RequireProgramAsync(string tenantId, Guid programId, CancellationToken ct)

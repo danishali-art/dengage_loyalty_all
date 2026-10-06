@@ -56,8 +56,10 @@ Every path must be idempotent and safe to retry.**
 - Order: ENC(...) secret resolution → `ConsumerConfig` → `AddLoyaltyEngineFramework()` → register
   `IEventPublisherSink` (Ledger's `OutboxEventPublisherSink`) → DbContext / tenant resolver /
   Redis → Ledger → RuleEngine → campaigns → handlers → hosted services.
-- Rule type handlers are `AddSingleton<IRuleTypeHandler, ...>`. `TransferRule` / `ReversalRule`
-  deliberately bypass that registry through dedicated processors.
+- Rule type handlers are `AddSingleton<IRuleTypeHandler, ...>`. Redeem / transfer rules never
+  reach the engine: `PointsRedeemHandler` / `PointsTransferHandler` pick one through
+  `IBurnRuleResolver` and post it themselves (CR 2026-10-05). `ReversalRule` deliberately
+  bypasses that registry through a dedicated processor.
 - Every service that touches `LoyaltyDbContext` is **Scoped**. Never inject a scoped service into
   a singleton or a `BackgroundService` constructor. Use `IServiceScopeFactory`.
 

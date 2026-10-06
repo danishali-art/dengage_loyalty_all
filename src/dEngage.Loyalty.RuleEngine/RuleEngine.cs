@@ -14,7 +14,6 @@ public class RuleEngine(
     ILimitCounterSync limitCounterSync,
     ITierEvaluationService tierEval,
     ICampaignModuleRegistry campaignModules,
-    ITransferRuleProcessor transferRuleProcessor,
     IReversalRuleProcessor reversalRuleProcessor,
     ILogger<RuleEngine> logger) : IRuleEngine
 {
@@ -36,16 +35,11 @@ public class RuleEngine(
             matched.CampaignConfigs.Select(c => c.Conditions),
             ct);
 
-        // CR-02: TransferRule/ReversalRule bypass WinnerSelector entirely (dual-entry posting /
-        // inherited target account — see WinnerSelector's class remarks). Neither event type
-        // reaches here from a live built-in handler yet (points.transfer/order.refunded keep
-        // their unconditional legacy handling — see docs/scope-changes changelog), but a
-        // tenant-approved generic event type could theoretically match one, so this dispatch
-        // is real, not dead code.
-        var transferRules = matched.EarnRules.Where(r => r.Type == RuleTypes.TransferRule).ToList();
-        if (transferRules.Count > 0)
-            await transferRuleProcessor.ProcessAsync(tenantId, eventId, transferRules, evt, context.Condition, ct);
-
+        // CR-02: ReversalRule bypasses WinnerSelector entirely (inherited target account — see
+        // WinnerSelector's class remarks). A tenant-approved generic event type could match one,
+        // so this dispatch is real, not dead code. CR 2026-10-05: TransferRule and RedemptionRule
+        // are no longer dispatched here at all — their event handlers apply them through
+        // IBurnRuleResolver, and posting here as well would move the points twice.
         var reversalRules = matched.EarnRules.Where(r => r.Type == RuleTypes.ReversalRule).ToList();
         if (reversalRules.Count > 0)
             await reversalRuleProcessor.ProcessAsync(tenantId, eventId, reversalRules, evt, context.Condition, ct);

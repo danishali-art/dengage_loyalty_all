@@ -829,7 +829,7 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         var rows = await query
             .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
             .Take(limit + 1)
-            .Select(o => new { o.Id, o.EventId, o.EventType, o.Status, o.Attempts, o.DedupKey, o.CreatedAt, o.PublishedAt })
+            .Select(o => new { o.Id, o.EventId, o.EventType, o.Status, o.Attempts, o.DedupKey, o.CreatedAt, o.PublishedAt, o.Payload })
             .ToListAsync(ct);
         var hasMore = rows.Count > limit;
         var page = rows.Take(limit).ToList();
@@ -837,7 +837,7 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         return new CursorPage<SentMessageResponse>
         {
             Data = page.Select(o => new SentMessageResponse(o.EventId, o.EventType, o.Status, o.Attempts, o.DedupKey,
-                o.CreatedAt, o.PublishedAt)).ToList(),
+                o.CreatedAt, o.PublishedAt, ReadReason(o.Payload))).ToList(),
             NextCursor = hasMore ? MessageCursor.Format(page[^1].CreatedAt, page[^1].Id) : null,
             Total = total
         };
@@ -903,7 +903,7 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
                 || (o.DedupKey is { } key && (key.StartsWith(pointsTierPrefix, StringComparison.Ordinal)
                     || streakTierDedupKeys.Contains(key))))
             .Select(o => new SentMessageResponse(o.EventId, o.EventType, o.Status, o.Attempts, o.DedupKey,
-                o.CreatedAt, o.PublishedAt))
+                o.CreatedAt, o.PublishedAt, ReadReason(o.Payload)))
             .ToList();
     }
 
@@ -1021,6 +1021,14 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         ReadEnvelope(payload).Data is { ValueKind: JsonValueKind.Object } data
         && data.TryGetProperty("source_event_id", out var id) && id.ValueKind == JsonValueKind.String
             ? id.GetString()
+            : null;
+
+    // Addendum C (D5 amended): only data.reason leaves the payload — the outcome code of a
+    // *_failed message (redeem_failed, transfer_failed, purchase_failed, cash.*_failed).
+    private static string? ReadReason(string payload) =>
+        ReadEnvelope(payload).Data is { ValueKind: JsonValueKind.Object } data
+        && data.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String
+            ? reason.GetString()
             : null;
 
     // v1 shows the configured expiration_days rather than a precise per-account FIFO figure —

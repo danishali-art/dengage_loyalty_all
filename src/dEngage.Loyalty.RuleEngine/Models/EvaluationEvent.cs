@@ -18,8 +18,15 @@ public class EvaluationEvent
     {
         var data = envelope.Data;
 
+        // CR 2026-10-05: burn events carry their amount as points_amount, so conditions and
+        // min_event_amount on redeem/transfer rules see the real value. Everything else (and a
+        // burn event without points_amount) keeps reading "amount".
         var amount = 0m;
-        if (data.TryGetProperty("amount", out var am))
+        var amountField = EventTypes.Describe(envelope.EventType)?.Category == EventCategory.Burn
+                          && data.TryGetProperty("points_amount", out _)
+            ? "points_amount"
+            : "amount";
+        if (data.TryGetProperty(amountField, out var am))
         {
             if (am.ValueKind == JsonValueKind.Number) am.TryGetDecimal(out amount);
             else if (am.ValueKind == JsonValueKind.String)

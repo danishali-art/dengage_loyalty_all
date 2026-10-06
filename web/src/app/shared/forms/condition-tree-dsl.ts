@@ -96,7 +96,10 @@ export function validateConditionLeaf(leaf: ConditionLeaf): string | null {
   if ((leaf.operator === 'in' || leaf.operator === 'not_in') && !Array.isArray(leaf.value.data)) {
     return `'${leaf.operator}' requires a list`;
   }
-  if (leaf.operator === 'between' && (!Array.isArray(leaf.value.data) || leaf.value.data.length !== 2)) {
+  if (
+    leaf.operator === 'between' &&
+    (!Array.isArray(leaf.value.data) || leaf.value.data.length !== 2)
+  ) {
     return `'between' requires a [min, max] pair`;
   }
   return null;
@@ -154,4 +157,13 @@ export function emptyTree(): ConditionTree {
  * conditions" warning so it doesn't fire for a still-blank, freshly-added leaf. */
 export function hasConditions(tree: ConditionTree): boolean {
   return tree.groups.some((g) => g.conditions.some((c) => c.field.trim() !== ''));
+}
+
+/**
+ * CR 2026-10-05 item 4: what a rule form saves. A tree with only blank leaves means "no
+ * conditions" and is saved as null, the one no-conditions value GroupedConditionDsl accepts
+ * (it rejects a blank field path). Anything filled in is kept, so validation still applies.
+ */
+export function conditionsForSave(tree: ConditionTree): ConditionTree | null {
+  return hasConditions(tree) ? tree : null;
 }

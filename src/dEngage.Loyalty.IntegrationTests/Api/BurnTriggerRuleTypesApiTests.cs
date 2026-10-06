@@ -63,9 +63,14 @@ public sealed class BurnTriggerRuleTypesApiTests : IClassFixture<CustomWebApplic
     private static StringContent Json(object body) => new(
         System.Text.Json.JsonSerializer.Serialize(body, JsonConventions.Options), System.Text.Encoding.UTF8, "application/json");
 
+    // A calculation valid for the type (CR 2026-10-05 fields), so these tests only ever exercise
+    // the trigger → rule-type allowlist.
     private CreateRuleRequest Burn(string trigger, string type) => new(
         $"burn-{Guid.NewGuid():N}"[..20], trigger, _pointsId, type,
-        new RuleCalculation { Ratio = 1m }, null, null, 10, false, null, null, null, null, null);
+        type == RuleTypes.TransferRule
+            ? new RuleCalculation { MaxPerDay = 1000m }
+            : new RuleCalculation { Factor = 0.01m, CashAccountTypeId = Guid.NewGuid() },
+        null, null, 10, false, null, null, null, null, null);
 
     [Fact]
     public async Task A_redemption_rule_on_points_transfer_is_rejected()

@@ -61,8 +61,9 @@ const EVENT_HELP: Readonly<Record<string, EventHelp>> = {
     note: 'events.simulator.help.pointsTransfer',
   },
   'reward.purchase': {
+    // reward_id identifies the reward exactly (CR 2026-09-30); reward_name is the alternative.
     required: ['contact_key', 'reward_name'],
-    optional: ['channel'],
+    optional: ['reward_id', 'channel'],
     note: 'events.simulator.help.rewardPurchase',
   },
   'points.adjusted': {

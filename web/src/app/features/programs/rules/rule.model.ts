@@ -25,12 +25,15 @@ export const RETIRED_RULE_TYPES = ['StampRule', 'ExpiryRule'] as const;
 export type RuleType = (typeof RULE_TYPES)[number] | (typeof RETIRED_RULE_TYPES)[number];
 
 export interface RuleCalculation {
-  rate?: string | null; // SpendRule
+  rate?: string | null; // SpendRule; RedemptionRule (cash per point, CR 2026-10-05)
   amount?: string | null; // FixedBonusRule; ManualAdjustmentRule fallback
-  ratio?: string | null; // RedemptionRule, TransferRule
-  minRedeem?: string | null; // RedemptionRule
-  fee?: string | null; // TransferRule
-  maxPerDay?: string | null; // TransferRule
+  /** Retired for RedemptionRule (the API rejects it — use `rate`); never sent for TransferRule. */
+  ratio?: string | null;
+  minRedeem?: string | null; // RedemptionRule (optional)
+  /** Out of scope until a fee-engine CR (R-O2): not sent, ignored if an old rule has it. */
+  fee?: string | null;
+  maxPerDay?: string | null; // TransferRule (daily transfer limit, required)
+  cashAccountTypeId?: string | null; // RedemptionRule: Redeem into (CASH wallet, required)
   mode?: 'proportional' | 'full' | null; // ReversalRule
   allowNegative?: 'allow negative' | 'clamp to zero' | null; // ReversalRule
   reason?: 'goodwill' | 'correction' | 'dispute' | 'migration' | null; // ManualAdjustmentRule

@@ -10,7 +10,7 @@ RabbitMQ, no reference to Api or Consumer.** It references Schema, Shared and Le
 
 ## Pipeline (`RuleEngine.ProcessEventAsync`) — keep the stage order
 `IRuleMatcher` (cached rules + campaigns that match the trigger) → `ITierContextLoader` →
-Transfer/Reversal processors (which bypass winner selection) → `IWinnerSelector` (exclusive
+the Reversal processor (bypasses winner selection) → `IWinnerSelector` (exclusive
 rules compete per target account — named groups and multipliers retired by 1.3.CL — stackables add, limits pre-check, per wallet) → campaign modules (their own
 transaction) → `ILedgerPoster` (budget reservation + posting in **one transaction**) →
 `ILimitCounterSync` (Redis counters) → `ITierEvaluationService` (a failure never rolls back the earning).
@@ -32,7 +32,9 @@ transaction) → `ILedgerPoster` (budget reservation + posting in **one transact
    silently awards 0. A duplicate `RuleType` throws at startup.
 5. Add unit tests in Engine.Tests, and update the scope baseline (a new rule type is a scope change).
 - Rule types that don't fit the single-wallet winner model (dual-entry, inherited target) get a
-  dedicated `I<Name>RuleProcessor`, as Transfer and Reversal do. Explain the reason in the class
+  dedicated `I<Name>RuleProcessor`, as Reversal does, or are applied by their event handler through
+  a narrow seam, as Redemption and Transfer are (`IBurnRuleResolver`, CR 2026-10-05: one rule per
+  event, picked by wallet and priority, never by the engine). Explain the reason in the class
   comment.
 
 ## Money, rounding, limits

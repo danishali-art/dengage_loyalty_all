@@ -108,17 +108,22 @@ When an endpoint or DTO changes, update this file in the same change (`.claude/r
 | GET | `` | query `event`, `type`, `targetAccountTypeId`, `status`, `stackable`, paging → page of `RuleResponse` |
 | GET | `/metadata` | → `RulesMetadataResponse` (the compatibility catalog for the rule builder) |
 | GET | `/{ruleId}` | → `RuleResponse` |
-| POST | `` | `CreateRuleRequest` → 201 `RuleResponse` (CASH-target rules start `pending_approval`) |
+| POST | `` | `CreateRuleRequest` → 201 `RuleResponse` (CASH-target rules and redeem rules that pay cash start `pending_approval`) |
 | PATCH | `/{ruleId}` | `UpdateRuleRequest` → `RuleResponse` (inserts a new version) |
-| PATCH | `/{ruleId}/status` | `SetRuleStatusRequest { status }` (`active` \| `disabled`) → `RuleResponse` |
-| PATCH | `/{ruleId}/approve` | → `RuleResponse` (CASH rule approval; approver ≠ creator) |
+| PATCH | `/{ruleId}/status` | `SetRuleStatusRequest { status }` (`active` \| `disabled`) → `RuleResponse` (a redeem rule that pays cash and isn't approved goes to `pending_approval` instead of `active`; an incomplete redeem/transfer rule is 400) |
+| PATCH | `/{ruleId}/approve` | → `RuleResponse` (CASH / cash-paying redeem rule approval; approver ≠ creator) |
 | DELETE | `/{ruleId}` | → 204 |
 
 - `CreateRuleRequest { name, trigger, targetAccountTypeId?, type, calculation?, conditions?, limits?, priority, stackable, exclusivityGroup?, stackMode?, configuration?, activeFrom?, activeTo? }` — `targetAccountTypeId` is null only for `ReversalRule`; `exclusivityGroup` must be null and `stackMode` null or `Additive` (retired by 1.3.CL).
 - `UpdateRuleRequest` — the same fields, all optional, without `type`.
 - `RuleResponse { id, name, type, trigger, targetAccountTypeId?, calculation?, conditions?, limits?, priority, stackable, exclusivityGroup?, stackMode, configuration?, version, activeFrom?, activeTo?, status, createdBy?, approvedBy?, createdAt, updatedAt }` — `status` is `active` \| `disabled` \| `deleted` \| `pending_approval`.
 - `type`: `SpendRule`, `FixedBonusRule`, `RedemptionRule`, `TransferRule`, `ReversalRule`, `ManualAdjustmentRule`. **CR 2026-10-05 (breaking):** `StampRule` and `ExpiryRule` are retired, the `points.expired` trigger is refused (400 `trigger_retired`), and STAMP is no longer a valid target. Existing rules of those kinds were disabled; they can still be read and deleted, but editing, approving or setting them `active` is 409 `rule_type_retired`. Their type can still appear in `RuleResponse`.
-- `calculation` (engine `RuleCalculation`): `rate`, `amount`, `ratio`, `minRedeem`, `fee`, `maxPerDay`, `mode`, `allowNegative`, `reason` — the subset per type (`ageDays`/`order` were removed with `ExpiryRule`).
+- `calculation` (engine `RuleCalculation`): `rate`, `amount`, `ratio`, `minRedeem`, `fee`, `maxPerDay`, `cashAccountTypeId`, `mode`, `allowNegative`, `reason` — the subset per type (`ageDays`/`order` were removed with `ExpiryRule`).
+- **CR 2026-10-05 — redeem / transfer rules** (`points.redeem` / `points.transfer` always run on a rule; the POINTS wallet's own `redemption` / `transfer` config only pre-fills new rules in the portal and is never read by events):
+  - `RedemptionRule`: `rate` (cash per point, > 0, required), `cashAccountTypeId` (Redeem into: a CASH account type of the same program, required), `minRedeem` (≥ 0, optional). `ratio` is rejected (400) — it meant the inverse. A redeem rule always pays cash, so it starts `pending_approval`; changing `rate` or `cashAccountTypeId` (a new version) needs approval again.
+  - `TransferRule`: `maxPerDay` (daily transfer limit in points, > 0, required). `ratio` / `fee` are not used.
+  - Checked on create, on `PATCH` (when `calculation` is sent) and before `PATCH .../status` to `active` (400 otherwise). The rule's target is the POINTS wallet debited.
+  - **Breaking:** clients that create these rules must send the new fields. Existing redeem/transfer rules were disabled by a migration and must be completed before they can be switched on.
 - `conditions` (engine `ConditionTree`): `{ op, groups: [{ op, conditions: [{ field, operator, value: { type, data, currency?, inferred? } }] }] }`.
 - `limits` (engine `RuleLimits`, snake_case): `per_customer_total`, `per_customer_per_day`, `max_per_event`, `min_event_amount`, `cooldown_hours`, `max_customers`, `rule_budget_total`, `rule_budget_per_period`, `per_customer_per_period`, `period`, `reset_window`, `on_breach` (default `Clamp`).
 - `configuration` (engine `RuleSettings`): `rounding`, `posting` (default `Immediate`), `holdDays`, `expiryOverrideDays`, `reversible` (default true), `testMode`, `notifyOnAward`.
@@ -194,7 +199,7 @@ Read-only except the birthday route. A "customer" is a contact key with at least
 - `CustomerStreakResponse { campaignId, campaignName, programId, programName, campaignStatus, period, targetPeriods, metric, threshold, rewardKind, streakCount, lastMetPeriod?, completions, status, latestPeriodStart?, latestAggSum?, latestAggCount?, latestPeriodMet?, history: [StreakCompletion] }` — values as stored by the engine; `latest*` is the most recent recorded period, not necessarily the current one.
 - `CustomerRewardResponse { source, rewardName, rewardDefinitionId?, rewardType?, sourceEventId, cost?, costWalletName?, outcome, cashAmount?, cashWalletName?, tierName?, status?, createdAt }` — `source` `points_purchase` \| `stamp_completion` (from `reward_log`) or `streak_completion` (a streak granting a reward definition); `outcome` `cash_credited` \| `tier_upgraded` \| `none`.
 - `CustomerCardBucketResponse { ruleId, name, programId, programName, status, rewardAmount?, perCustomerPerDay?, usedToday, perCustomerTotal?, usedTotal, postings, lastPostedAt? }` (P3) — every non-deleted card bucket in the customer's programs; usage counted as for `cap-usage`; `postings` counts earn postings.
-- Messages (P3): `SentMessageResponse` as in the drawer, **without payload**; `status` filter `pending` \| `published` \| `failed` (unknown → 400); `from`/`to` on `createdAt`. Published messages are purged after 30 days, so older ones are not listed.
+- Messages (P3): `SentMessageResponse` as in the drawer, **without payload** (only `reason`, Addendum C); `status` filter `pending` \| `published` \| `failed` (unknown → 400); `from`/`to` on `createdAt`. Published messages are purged after 30 days, so older ones are not listed.
 - `CustomerEventResponse { eventId, eventType, occurredAt?, receivedAt, processedAt?, status, error?, outcome: [{ accountTypeId, accountTypeName, accountTypeType, postings, netDelta }] }`
   - Lists events whose inbox row carries this contact key — events received **after** CR 2026-10-02 only (no backfill).
   - `status` is `pending` \| `processed` \| `failed` (unknown value → 400). `from`/`to` apply to `receivedAt`, with the same validation as the ledger.
@@ -207,7 +212,7 @@ Read-only except the birthday route. A "customer" is a contact key with at least
   - `streakCompletions`: `[{ campaignId, campaignName?, completionNo, completedPeriod, periods, rewardKind, rewardRef?, createdAt }]`
   - `rewards`: `[{ id, rewardName, rewardDefinitionId?, status, completionCount, createdAt, deliveredAt? }]`
   - `tierChanges`: `[{ id, fromTierName?, toTierName, qualifyingPoints, createdAt }]`
-  - `messages`: `[{ eventId, eventType, status, attempts, dedupKey?, createdAt, publishedAt? }]` — outbound messages caused by the event, **without payload**.
+  - `messages`: `[{ eventId, eventType, status, attempts, dedupKey?, createdAt, publishedAt?, reason? }]` — outbound messages caused by the event, **without payload**; `reason` (Addendum C, 2026-10-06) is the payload's failure code on `*_failed` messages (e.g. `no_rule`), omitted otherwise — no other payload field is exposed.
   - Linked means: the inbox row carries this contact key, or the customer has a posting for the event id. Otherwise 404 `not_found`.
 
 ## Events — `/api/v1/tenants/{tenantId}/events`
@@ -218,8 +223,8 @@ Ingestion routes need **API-key** auth and return **202** `EventAcceptedResponse
 |---|---|---|---|
 | POST | `/order-created` | API key | `OrderCreatedRequest { contactKey, amount, channel?, paymentMethod?, items?: [{ sku, category, qty, total }] }` |
 | POST | `/order-refunded` | API key | `OrderRefundedRequest { contactKey?, originalEventId, refundRatio?, amount?, originalAmount? }` |
-| POST | `/cash-added` | API key | `CashAddedRequest { contactKey, amount, accountTypeId }` |
-| POST | `/cash-spent` | API key | `CashSpentRequest { contactKey, amount, accountTypeId }` |
+| POST | `/cash-added` | API key | `CashAddedRequest { contactKey, amount, accountTypeId }` — refused in a non-live program (see below) |
+| POST | `/cash-spent` | API key | `CashSpentRequest { contactKey, amount, accountTypeId }` — refused in a non-live program (see below) |
 | POST | `/points-redeem` | API key | `PointsRedeemRequest { contactKey, pointsAmount, sourceAccountTypeId }` |
 | POST | `/points-transfer` | API key | `PointsTransferRequest { contactKey, targetContactKey, amount, accountTypeId }` — published as `{ contact_key, target_contact_key, points_amount, source_account_type_id }` |
 | POST | `/reward-purchase` | API key | `RewardPurchaseRequest { contactKey, rewardName?, channel?, rewardId? }` |
@@ -227,6 +232,10 @@ Ingestion routes need **API-key** auth and return **202** `EventAcceptedResponse
 | POST | `/simulate` | JWT or API key (tenant scope) | `GenericEventRequest` — meant for the portal's Event Simulator (admin JWT); same publish path as `/generic` |
 | GET | `/types` | JWT or API key (tenant scope) | → `EventTypesResponse { builtIn, generic, publishable }` |
 | GET | `/{eventId}` | JWT or API key (tenant scope) | → `EventStatusResponse { eventId, eventType, status, receivedAt, processedAt?, error? }` |
+
+**Business outcomes (CR 2026-10-05).** Payloads are unchanged; the outcome arrives as an outbound event (snake_case), and the inbox is `processed`, not dead-lettered:
+- `points.redeem` / `points.transfer` are processed by the **highest-priority active rule** for the wallet (`source_account_type_id`): conditions, active window and limits must pass; exactly one rule applies, and a lower-priority rule is never tried after the winner's own minimum / daily limit fails. Failures → `loyalty.points.redeem_failed` / `loyalty.points.transfer_failed` with `reason` `program_not_live`, `no_rule`, `rule_limit_reached`, `below_minimum`, `daily_limit_exceeded`, `insufficient_points` / `insufficient_balance`; the failure and success payloads carry `rule_id` (null when no rule applied). The redeem's cash is rounded down to the cash wallet's `decimals`.
+- Every event below is refused while the program owning the wallet or reward is not live (status `active` and publication `published`), with nothing posted: `points.redeem`, `points.transfer`, `reward.purchase` (any reward type) → their `*_failed` event, reason `program_not_live`; `cash.added` / `cash.spent` → **new** `loyalty.cash.add_failed` / `loyalty.cash.spend_failed` `{ contact_key, amount, account_type_id, reason, source_event_id }`. `order.refunded` is not gated.
 
 ## Config versions — `/api/v1/tenants/{tenantId}/config-versions` (read-only)
 

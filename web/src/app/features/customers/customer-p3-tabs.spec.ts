@@ -88,7 +88,7 @@ describe('Customer 360 P3 tabs', () => {
     expect(el.querySelector('[role="listitem"]')?.textContent).not.toContain('bucket');
   });
 
-  it('messages list type and status, never a payload', async () => {
+  it('messages list type, status and the failure reason, never a payload', async () => {
     const message: SentMessage = {
       eventId: 'm1',
       eventType: 'loyalty.points.earned',
@@ -98,14 +98,32 @@ describe('Customer 360 P3 tabs', () => {
       createdAt: '2026-10-02T10:00:00Z',
       publishedAt: null,
     };
+    const failed: SentMessage = {
+      eventId: 'm2',
+      eventType: 'loyalty.points.transfer_failed',
+      status: 'published',
+      attempts: 1,
+      reason: 'no_rule',
+      dedupKey: 'transfer_failed:e2',
+      createdAt: '2026-10-02T11:00:00Z',
+      publishedAt: '2026-10-02T11:00:01Z',
+    };
     const { el } = await render(
       CustomerMessagesTab,
-      service({ getMessages: vi.fn().mockResolvedValue({ data: [message], nextCursor: null }) }),
+      service({
+        getMessages: vi.fn().mockResolvedValue({ data: [message, failed], nextCursor: null }),
+      }),
     );
 
     expect(el.textContent).toContain('loyalty.points.earned');
     expect(el.textContent).toContain('customers.messages.status.failed');
     expect(el.textContent).toContain('points_earned:e1');
+    // Addendum C: the Reason column replaces Attempts.
+    expect(el.textContent).toContain('customers.messages.reason');
+    expect(el.textContent).not.toContain('customers.messages.attempts');
+    const rows = el.querySelectorAll('tbody tr');
+    expect(rows[1]?.textContent).toContain('no_rule');
+    expect(rows[0]?.textContent).toContain('—');
   });
 
   it('builds the messages query with UTC times and no empty fields', () => {

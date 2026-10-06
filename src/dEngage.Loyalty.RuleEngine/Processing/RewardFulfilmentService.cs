@@ -16,9 +16,7 @@ public sealed class RewardFulfilmentService(
     ILogger<RewardFulfilmentService> logger) : IRewardFulfilmentService
 {
     public Task<bool> IsProgramLiveAsync(Guid tenantGuid, Guid programId, CancellationToken ct) =>
-        db.Programs.AnyAsync(p =>
-            p.TenantId == tenantGuid && p.Id == programId &&
-            p.Status == ProgramStatus.Active && p.PublicationStatus == ProgramPublicationStatus.Published, ct);
+        db.IsProgramLiveAsync(tenantGuid, programId, ct);
 
     public Task<RewardFulfilment> FulfilAsync(
         string tenantSlug, Guid tenantGuid, RewardDefinition reward, string contactKey,

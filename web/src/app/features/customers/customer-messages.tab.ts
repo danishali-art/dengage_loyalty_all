@@ -17,7 +17,8 @@ export function outboxStatusTone(status: string): StatusTone {
 
 /**
  * CR 2026-10-02 (Customer 360) P3 Messages sent: the outbound events for the customer — type,
- * status, attempts, times and dedup key. D5: never the payload.
+ * status, reason, times and dedup key. D5: never the payload; Addendum C (2026-10-06) shows the
+ * failure `reason` in place of the attempts count.
  */
 @Component({
   selector: 'app-customer-messages-tab',
@@ -103,8 +104,8 @@ export function outboxStatusTone(status: string): StatusTone {
                   <th class="section-label px-4 py-3 text-left">
                     {{ 'customers.col.status' | translate }}
                   </th>
-                  <th class="section-label px-4 py-3 text-right">
-                    {{ 'customers.messages.attempts' | translate }}
+                  <th class="section-label px-4 py-3 text-left">
+                    {{ 'customers.messages.reason' | translate }}
                   </th>
                   <th class="section-label px-4 py-3 text-left">
                     {{ 'customers.messages.published' | translate }}
@@ -126,7 +127,7 @@ export function outboxStatusTone(status: string): StatusTone {
                         'customers.messages.status.' + m.status | translate
                       }}</app-status-pill>
                     </td>
-                    <td class="px-4 py-3 text-right">{{ m.attempts }}</td>
+                    <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ m.reason || '—' }}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">
                       {{ m.publishedAt ? (m.publishedAt | date: 'medium') : '—' }}
                     </td>

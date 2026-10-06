@@ -145,14 +145,27 @@ export interface AccountTypeFormData {
               [hint]="'accountTypes.tierQualifying.hint' | translate"
             />
           </div>
+          <!-- CR 2026-10-05: defaults only — a new redeem rule for this wallet starts with these
+               values; redeem events use the rule, never these. -->
           <label class="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" formControlName="redemptionEnabled" class="checkbox" />
-            Allow redemption to another wallet
+            <input
+              type="checkbox"
+              formControlName="redemptionEnabled"
+              class="checkbox"
+              aria-describedby="redemption-hint"
+            />
+            {{ 'accountTypes.redemption.label' | translate }}
           </label>
+          <app-field-hint
+            id="redemption-hint"
+            [hint]="'accountTypes.redemption.hint' | translate"
+          />
           @if (form.controls.redemptionEnabled.value) {
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label for="rate" class="field-label">Cash per point</label>
+                <label for="rate" class="field-label">{{
+                  'accountTypes.redemption.cashPerPoint' | translate
+                }}</label>
                 <input
                   id="rate"
                   type="number"
@@ -163,7 +176,9 @@ export interface AccountTypeFormData {
                 />
               </div>
               <div>
-                <label for="minPoints" class="field-label">Minimum redemption</label>
+                <label for="minPoints" class="field-label">{{
+                  'accountTypes.redemption.minimum' | translate
+                }}</label>
                 <input
                   id="minPoints"
                   type="number"
@@ -174,21 +189,25 @@ export interface AccountTypeFormData {
               </div>
             </div>
             <div>
-              <label for="redemptionTarget" class="field-label">Redeem into</label>
+              <label for="redemptionTarget" class="field-label">{{
+                'accountTypes.redemption.redeemInto' | translate
+              }}</label>
               @if (redemptionTargets().length > 0) {
                 <select
                   id="redemptionTarget"
                   formControlName="redemptionTargetAccountTypeId"
                   class="field-input"
                 >
-                  <option value="" disabled>Select a wallet…</option>
+                  <option value="" disabled>
+                    {{ 'accountTypes.redemption.selectWallet' | translate }}
+                  </option>
                   @for (t of redemptionTargets(); track t.id) {
                     <option [value]="t.id">{{ t.name }}</option>
                   }
                 </select>
               } @else {
                 <p class="text-xs text-amber-600">
-                  No other account type exists yet to redeem into — create one (e.g. CASH) first.
+                  {{ 'accountTypes.redemption.noTarget' | translate }}
                 </p>
               }
             </div>

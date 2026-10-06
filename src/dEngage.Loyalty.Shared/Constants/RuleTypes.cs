@@ -34,7 +34,9 @@ public static class RuleTypes
 
     // TransferRule/ReversalRule bypass the shared WinnerSelector/LedgerPoster pipeline
     // (dual-entry posting / inherited target account respectively — see
-    // RuleEngine.Processing.TransferRuleProcessor / ReversalRuleProcessor).
+    // RuleEngine.Processing.ReversalRuleProcessor). CR 2026-10-05: RedemptionRule too — redeem
+    // and transfer rules are applied only by their event handlers (via IBurnRuleResolver), so
+    // the generic engine must never post them; doing both would debit twice.
     public static bool UsesWinnerSelectorPipeline(string ruleType) =>
-        ruleType != TransferRule && ruleType != ReversalRule;
+        ruleType != TransferRule && ruleType != ReversalRule && ruleType != RedemptionRule;
 }

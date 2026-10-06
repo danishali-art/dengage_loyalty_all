@@ -76,13 +76,13 @@ public sealed class CreateRuleRequestValidator : AbstractValidator<CreateRuleReq
             .When(x => x.Type == RuleTypes.FixedBonusRule && x.Calculation is not null)
             .WithMessage("Calculation.amount is required and must be positive for FixedBonusRule.");
 
-        RuleFor(x => x.Calculation!.Ratio).NotNull().GreaterThan(0)
-            .When(x => x.Type == RuleTypes.RedemptionRule && x.Calculation is not null)
-            .WithMessage("Calculation.ratio is required and must be positive for RedemptionRule.");
-
-        RuleFor(x => x.Calculation!.Ratio).NotNull().GreaterThan(0)
-            .When(x => x.Type == RuleTypes.TransferRule && x.Calculation is not null)
-            .WithMessage("Calculation.ratio is required and must be positive for TransferRule.");
+        // CR 2026-10-05: redeem / transfer rules carry the wallet's fields (cash per point,
+        // minimum, Redeem into / daily transfer limit). Shared with RulesAppService's edit path.
+        RuleFor(x => x).Custom((x, context) =>
+        {
+            foreach (var error in BurnRuleCalculationRules.Errors(x.Type, x.Calculation))
+                context.AddFailure("Calculation", error);
+        }).When(x => x.Calculation is not null);
 
         RuleFor(x => x.Calculation!.Mode).Must(m => m is "proportional" or "full")
             .When(x => x.Type == RuleTypes.ReversalRule && x.Calculation is not null)

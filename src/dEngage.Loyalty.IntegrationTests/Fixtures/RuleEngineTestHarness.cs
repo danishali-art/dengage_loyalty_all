@@ -27,6 +27,7 @@ public sealed class RuleEngineTestHarness : IDisposable
     private readonly SqliteConnection _connection;
     public LoyaltyDbContext Db { get; }
     public dEngage.Loyalty.RuleEngine.RuleEngine Engine { get; }
+    public BurnRuleResolver BurnRules { get; }
     public Mock<ILimitCacheService> LimitCache { get; } = new();
 
     private readonly List<CachedRule> _rules = new();
@@ -75,12 +76,15 @@ public sealed class RuleEngineTestHarness : IDisposable
         var limitSync = new LimitCounterSync(LimitCache.Object, NullLogger<LimitCounterSync>.Instance);
         var tierEval = new TierEvaluationService(Db, outbox, tenantSlugResolver, NullLogger<TierEvaluationService>.Instance);
         var campaignModules = new CampaignModuleRegistry(Array.Empty<ICampaignModule>());
-        var transferProcessor = new TransferRuleProcessor(Db, ledger, outbox, auditWriter, NullLogger<TransferRuleProcessor>.Instance);
         var reversalProcessor = new ReversalRuleProcessor(Db, ledger, outbox, auditWriter, budgetReservation, NullLogger<ReversalRuleProcessor>.Instance);
 
         Engine = new dEngage.Loyalty.RuleEngine.RuleEngine(
             matcher, tierContext, winner, ledgerPoster, limitSync, tierEval, campaignModules,
-            transferProcessor, reversalProcessor, NullLogger<dEngage.Loyalty.RuleEngine.RuleEngine>.Instance);
+            reversalProcessor, NullLogger<dEngage.Loyalty.RuleEngine.RuleEngine>.Instance);
+
+        // CR 2026-10-05: the redeem / transfer handlers' rule picker, over the same mocked cache.
+        BurnRules = new BurnRuleResolver(ruleCache.Object, tierContext, limitEvaluator, budgetReservation, auditWriter,
+            NullLogger<BurnRuleResolver>.Instance);
     }
 
     // LedgerEntry.RuleId carries a real DB-level FK to rules — the cache lookup is mocked, but a
