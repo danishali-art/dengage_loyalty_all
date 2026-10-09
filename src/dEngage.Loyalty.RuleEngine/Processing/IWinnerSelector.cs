@@ -9,5 +9,8 @@ public interface IWinnerSelector
         IReadOnlyList<CachedRule> earnRules,
         EvaluationEvent evt,
         ConditionContext context,
-        CancellationToken ct);
+        CancellationToken ct,
+        // CR 2026-10-06 Phase 4: the program's default_rounding, inherited by rules whose own
+        // Configuration.rounding is unset. Null = Down.
+        string? programDefaultRounding = null);
 }

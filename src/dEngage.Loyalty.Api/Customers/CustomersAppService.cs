@@ -9,6 +9,7 @@ using dEngage.Loyalty.RuleEngine.Processing;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
+using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace dEngage.Loyalty.Api.Customers;
@@ -140,19 +141,29 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         var accountIds = accounts.Select(a => a.Id).ToList();
         var programIds = accounts.Select(a => a.AccountType.ProgramId).Distinct().ToList();
 
+        // CR 2026-10-06 H1: a cancelled hold is no longer pending, and a partly refunded one is
+        // pending only for what's left. Summed in memory (decimal aggregates and Sqlite tests).
         var held = await db.HeldPostings
-            .Where(h => h.TenantId == tenantGuid && h.ContactKey == contactKey && h.PostedAt == null)
-            .Select(h => new { h.CustomerAccountId, h.Delta })
+            .Where(h => h.TenantId == tenantGuid && h.ContactKey == contactKey && h.PostedAt == null && h.CancelledAt == null)
+            .Select(h => new { h.Id, h.CustomerAccountId, h.Delta })
             .ToListAsync(ct);
-        var pending = held.GroupBy(h => h.CustomerAccountId).ToDictionary(g => g.Key, g => g.Sum(h => h.Delta));
+        var heldIds = held.Select(h => h.Id).ToList();
+        var refundedByHeld = (await db.HeldPostingRefunds
+                .Where(r => r.TenantId == tenantGuid && heldIds.Contains(r.HeldPostingId))
+                .Select(r => new { r.HeldPostingId, r.Delta })
+                .ToListAsync(ct))
+            .GroupBy(r => r.HeldPostingId)
+            .ToDictionary(g => g.Key, g => g.Sum(r => r.Delta));
+        var pending = held.GroupBy(h => h.CustomerAccountId)
+            .ToDictionary(g => g.Key, g => g.Sum(h => h.Delta - refundedByHeld.GetValueOrDefault(h.Id)));
 
         var expiryEntries = await db.LedgerEntries
             .Where(l => l.TenantId == tenantSlug && accountIds.Contains(l.CustomerAccountId)
                 && CustomerViewRules.ExpiryReasons.Contains(l.Reason))
-            .Select(l => new { l.CustomerAccountId, l.Id, l.Reason, l.Delta, l.CreatedAt })
+            .Select(l => new { l.CustomerAccountId, l.Id, l.Reason, l.Delta, l.CreatedAt, l.ExpiresAt })
             .ToListAsync(ct);
         var entriesByAccount = expiryEntries.ToLookup(e => e.CustomerAccountId,
-            e => new CustomerViewRules.ExpiryEntry(e.Id, e.Reason, e.Delta, e.CreatedAt));
+            e => new CustomerViewRules.ExpiryEntry(e.Id, e.Reason, e.Delta, e.CreatedAt, e.ExpiresAt));
 
         var tiers = await db.TierDefinitions.AsNoTracking()
             .Where(t => t.TenantId == tenantGuid && programIds.Contains(t.ProgramId))
@@ -404,6 +415,13 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
             .Where(h => h.TenantId == tenantGuid && h.ContactKey == contactKey && h.SourceEventId == eventId)
             .OrderBy(h => h.CreatedAt)
             .ToListAsync(ct);
+        var heldIds = held.Select(h => h.Id).ToList();
+        var refundedByHeld = (await db.HeldPostingRefunds.AsNoTracking()
+                .Where(r => r.TenantId == tenantGuid && heldIds.Contains(r.HeldPostingId))
+                .Select(r => new { r.HeldPostingId, r.Delta })
+                .ToListAsync(ct))
+            .GroupBy(r => r.HeldPostingId)
+            .ToDictionary(g => g.Key, g => g.Sum(r => r.Delta));
         var heldAccountIds = held.Select(h => h.CustomerAccountId).Distinct().ToList();
         var heldAccounts = await db.CustomerAccounts
             .Where(a => a.TenantId == tenantGuid && heldAccountIds.Contains(a.Id))
@@ -476,7 +494,8 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
             {
                 var account = heldAccounts.GetValueOrDefault(h.CustomerAccountId);
                 return new HeldPostingResponse(h.Id, h.RuleId, ruleNames.GetValueOrDefault(h.RuleId),
-                    account?.AccountTypeId ?? Guid.Empty, account?.Name ?? "", h.Reason, h.Delta, h.HoldUntil, h.PostedAt);
+                    account?.AccountTypeId ?? Guid.Empty, account?.Name ?? "", h.Reason, h.Delta, h.HoldUntil, h.PostedAt,
+                    refundedByHeld.TryGetValue(h.Id, out var refunded) ? refunded : (decimal?)null, h.CancelledAt);
             }).ToList(),
             fires.Select(f => new RuleFireResponse(f.Id, f.RuleId, ruleNames.GetValueOrDefault(f.RuleId), f.RuleVersion,
                 f.ResultingDelta, f.LedgerEntryId, f.ConditionsSnapshot, f.CalculationSnapshot, f.ResolutionSnapshot,
@@ -488,7 +507,56 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
             rewards.Select(r => new RewardLogResponse(r.Id, r.RewardName, r.RewardDefinitionId, r.Status,
                 r.CompletionCount, r.CreatedAt, r.DeliveredAt)).ToList(),
             tierChanges,
-            messages);
+            messages,
+            inbox is null ? [] : await LoadOnceOnlySkipsAsync(tenantId, tenantGuid, contactKey, inbox, ct));
+    }
+
+    // CR 2026-10-06 D12: for a once-per-customer event (signup, kyc.completed), the rules that paid
+    // nothing for it because they had already paid this customer for an earlier event — so support
+    // can answer "why didn't I get my bonus?" without a database query. An earlier award is an earn
+    // posting or a hold not cancelled by a refund, as the engine counts it (OnceOnlyAward).
+    private async Task<IReadOnlyList<OnceOnlySkipResponse>> LoadOnceOnlySkipsAsync(
+        string tenantSlug, Guid tenantGuid, string contactKey, EventInbox inbox, CancellationToken ct)
+    {
+        if (EventTypes.Describe(inbox.EventType)?.Cardinality != EventCardinality.OncePerCustomer)
+            return [];
+
+        var rules = await db.Rules.AsNoTracking()
+            .Where(r => r.TenantId == tenantGuid && r.Trigger == inbox.EventType)
+            .Select(r => new { r.Id, r.Name })
+            .ToListAsync(ct);
+        if (rules.Count == 0) return [];
+        var ruleIds = rules.Select(r => r.Id).ToList();
+
+        var paidForThisEvent = (await db.LedgerEntries
+                .Where(l => l.TenantId == tenantSlug && l.SourceEventId == inbox.EventId && l.ContactKey == contactKey && l.RuleId != null)
+                .Select(l => l.RuleId!.Value)
+                .ToListAsync(ct))
+            .Concat(await db.HeldPostings
+                .Where(h => h.TenantId == tenantGuid && h.SourceEventId == inbox.EventId && h.ContactKey == contactKey)
+                .Select(h => h.RuleId)
+                .ToListAsync(ct))
+            .ToHashSet();
+
+        var earlierPosted = await db.LedgerEntries.AsNoTracking()
+            .Where(l => l.TenantId == tenantSlug && l.ContactKey == contactKey && l.RuleId != null && ruleIds.Contains(l.RuleId.Value)
+                        && l.SourceEventId != inbox.EventId && l.CreatedAt < inbox.ReceivedAt
+                        && (l.Reason == LedgerReason.Earn || l.Reason == LedgerReason.StampEarn))
+            .Select(l => new { RuleId = l.RuleId!.Value, l.SourceEventId, l.CreatedAt })
+            .ToListAsync(ct);
+        var earlierHeld = await db.HeldPostings.AsNoTracking()
+            .Where(h => h.TenantId == tenantGuid && h.ContactKey == contactKey && ruleIds.Contains(h.RuleId)
+                        && h.SourceEventId != inbox.EventId && h.CreatedAt < inbox.ReceivedAt && h.CancelledAt == null)
+            .Select(h => new { h.RuleId, h.SourceEventId, h.CreatedAt })
+            .ToListAsync(ct);
+
+        return earlierPosted.Concat(earlierHeld)
+            .Where(e => !paidForThisEvent.Contains(e.RuleId))
+            .GroupBy(e => e.RuleId)
+            .Select(g => g.OrderBy(e => e.CreatedAt).First())
+            .Select(e => new OnceOnlySkipResponse(e.RuleId, rules.First(r => r.Id == e.RuleId).Name, e.SourceEventId, e.CreatedAt))
+            .OrderBy(e => e.EarlierAt)
+            .ToList();
     }
 
     public async Task<IReadOnlyList<TierHistoryEntryResponse>> GetTierHistoryAsync(string tenantId, string contactKey, CancellationToken ct)

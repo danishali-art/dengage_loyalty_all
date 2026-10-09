@@ -1,4 +1,5 @@
 using System.Text.Json;
+using dEngage.Loyalty.Consumer;
 using dEngage.Loyalty.Consumer.Handlers;
 using dEngage.Loyalty.Ledger;
 using dEngage.Loyalty.Schema;
@@ -7,6 +8,7 @@ using dEngage.Loyalty.Shared;
 using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
 using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
@@ -71,8 +73,13 @@ public sealed class CashEventsProgramLiveE2ETests : IAsyncLifetime
         var resolver = new TenantSlugResolver(_db, new TenantSlugCache());
         var ledger = new LedgerService(_db, resolver);
         var outbox = new OutboxService(_db, resolver);
-        return (new CashAddedHandler(ledger, outbox, _db, resolver), new CashSpentHandler(ledger, outbox, _db, resolver));
+        return (new CashAddedHandler(ledger, outbox, _db, resolver),
+            new CashSpentHandler(ledger, outbox, _db, resolver, CampaignEval.Object));
     }
+
+    // CR 2026-10-06 D23: cash.spent runs the rule engine in its handler, only for a spend that
+    // happened. The engine itself is out of scope here, so it's a mock the tests can verify.
+    private Mock<ICampaignEvaluationService> CampaignEval { get; } = new();
 
     private EventEnvelope Cash(string eventType, string eventId, string contactKey, string amount) => new()
     {
@@ -142,6 +149,42 @@ public sealed class CashEventsProgramLiveE2ETests : IAsyncLifetime
         var failed = Outbox("cash_spend_failed:c-spend-off")!;
         failed.EventType.Should().Be(OutboundEventTypes.CashSpendFailed);
         failed.Payload.Should().Contain("program_not_live");
+    }
+
+    // CR 2026-10-06 D23: a spend larger than the balance is a business outcome — reported and
+    // processed, not thrown (which dead-lettered the event and told the client nothing).
+    [Fact]
+    public async Task A_cash_spend_above_the_balance_is_refused_and_reported_without_evaluating_rules()
+    {
+        var (added, spent) = Build();
+        await added.HandleAsync(Cash(EventTypes.CashAdded, "c-seed-low", "low", "30"), CancellationToken.None);
+
+        var act = () => spent.HandleAsync(Cash(EventTypes.CashSpent, "c-spend-low", "low", "40"), CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        Balance("low").Should().Be(30m);
+        var failed = Outbox("cash_spend_failed:c-spend-low")!;
+        failed.EventType.Should().Be(OutboundEventTypes.CashSpendFailed);
+        failed.Payload.Should().Contain(OutcomeReasons.InsufficientBalance);
+        // A refused spend earns nothing: the rule engine never runs for it.
+        CampaignEval.Verify(c => c.EvaluateAsync(It.Is<EventEnvelope>(e => e.EventId == "c-spend-low"), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // CR 2026-10-06 D23: the handler, not the worker, runs the rule engine for a spend — once,
+    // and only when the spend happened. A redelivered spend is not posted twice.
+    [Fact]
+    public async Task A_cash_spend_that_happens_is_evaluated_once_per_delivery_and_posted_once()
+    {
+        var (added, spent) = Build();
+        await added.HandleAsync(Cash(EventTypes.CashAdded, "c-seed-ok", "ok", "100"), CancellationToken.None);
+        var envelope = Cash(EventTypes.CashSpent, "c-spend-ok", "ok", "40");
+
+        await spent.HandleAsync(envelope, CancellationToken.None);
+        await spent.HandleAsync(envelope, CancellationToken.None);
+
+        Balance("ok").Should().Be(60m);
+        CampaignEval.Verify(c => c.EvaluateAsync(It.Is<EventEnvelope>(e => e.EventId == "c-spend-ok"), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        Outbox("cash_spend_failed:c-spend-ok").Should().BeNull();
     }
 
     // A load posted before the program was paused, redelivered after: never a failure, never twice.

@@ -26,7 +26,6 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
                     (config->>'expiration_days')::int        AS "ExpirationDays"
                 FROM account_types
                 WHERE type = 'POINTS'
-                  AND (config->>'expiration_days') IS NOT NULL
                 """)
             .ToListAsync(ct);
 
@@ -43,12 +42,18 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
         {
             ct.ThrowIfCancellationRequested();
 
-            // Fixed cutoff: today's UTC midnight - N days.
-            // Produces the same cutoff whether the job runs at 00:00 or 00:59.
-            var cutoffDate = DateTime.UtcNow.Date.AddDays(-at.ExpirationDays);
+            // CR 2026-10-06 Phase 5: every POINTS wallet is checked, with or without expiration_days
+            // — an expiry override can date points in a wallet that has none (E2).
+            // A lot expires once its date is on or before today's UTC midnight: the same moment
+            // whether the job runs at 00:00 or 00:59, and for a lot without its own date (earn
+            // date + N days) exactly the old "earned on or before today - N" cutoff.
+            var expireBefore = DateTime.UtcNow.Date;
+            // The outbound cutoff_date keeps its meaning (today - N, the earn cutoff); today
+            // when the wallet has no expiry.
+            var cutoffDate = at.ExpirationDays is { } days ? expireBefore.AddDays(-days) : expireBefore;
 
             var (customers, expired) = await ExpireForAccountTypeAsync(
-                at.Id, at.Name, at.ExpirationDays, cutoffDate, todayStr, ct);
+                at.Id, at.Name, at.ExpirationDays, cutoffDate, expireBefore, todayStr, ct);
 
             logger.LogInformation(
                 "PointsExpiration: account_type={AccountTypeId} tenant={Tenant} expiration_days={Days} " +
@@ -71,8 +76,9 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
     private async Task<(int customers, decimal expired)> ExpireForAccountTypeAsync(
         Guid accountTypeId,
         string accountTypeName,
-        int expirationDays,
+        int? expirationDays,
         DateTime cutoffDate,
+        DateTime expireBefore,
         string todayStr,
         CancellationToken ct)
     {
@@ -85,11 +91,17 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
         // inserted in THIS run are counted. Had a separate summary query been used, a 2nd
         // run on the same day would report the first run's results as its own.
         //
-        // FIFO logic (window function):
-        //   For each earn entry, cumulative_before = SUM(delta) of prior earns
-        //   An entry's consumed part = GREATEST(0, total_consumed - cumulative_before)
-        //   Its remaining (expirable) part = GREATEST(0, delta - consumed)
-        //   Only the remainder of entries with created_at <= cutoff is an expiry candidate.
+        // Allocation (window function) — CR 2026-10-06 Phase 5 (E3), soonest-expiring first:
+        //   Each earn / transfer_in entry is a lot with an effective expiry date:
+        //     COALESCE(expires_at, created_at + expiration_days) — null when neither is set (never).
+        //   Consumption is taken from lots in order of that date (never-expiring last; ties by
+        //   created_at, id). With no expiry override every lot's date is created_at + N, so this is
+        //   exactly the old oldest-first FIFO.
+        //   For each lot, cumulative_before = SUM(delta) of the lots before it in that order;
+        //   its consumed part = GREATEST(0, total_consumed - cumulative_before);
+        //   its remaining (expirable) part = GREATEST(0, delta - consumed).
+        //   Only the remainder of lots whose date is on or before @expire_before expires.
+        //   Like the old FIFO, consumption is allocated as a total, not replayed in time order.
         //
         // total_consumed = |SUM(delta)| of consumption reasons across all dates:
         //   points_redeemed / points_redeemed_cash / refund / points_expired / reward_purchase / transfer_out.
@@ -114,6 +126,10 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
                 JOIN tenants ca_tn ON ca_tn.id = ca.tenant_id
                 WHERE ca.account_type_id = @account_type_id
                   AND ca.balance > 0
+                  -- A wallet without expiration_days only has dated lots through an override.
+                  AND (@expiration_days IS NOT NULL OR EXISTS (
+                      SELECT 1 FROM ledger_entries lx
+                      WHERE lx.customer_account_id = ca.id AND lx.expires_at IS NOT NULL))
                   AND NOT EXISTS (
                       -- ledger_entries.tenant_id is the slug (that table stays exempt from the
                       -- tenant_id -> uuid migration), so the comparison goes through ca_tn.slug.
@@ -122,19 +138,29 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
                         AND ex.idempotency_key = 'expire:' || ca.id::text || ':' || @today
                   )
             ),
-            earn_entries AS (
+            lots AS (
                 SELECT
                     le.customer_account_id AS account_id,
+                    le.id,
                     le.delta,
                     le.created_at,
-                    SUM(le.delta) OVER (
-                        PARTITION BY le.customer_account_id
-                        ORDER BY le.created_at, le.id
-                        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
-                    ) AS cumulative_before
+                    COALESCE(le.expires_at, le.created_at + make_interval(days => @expiration_days)) AS effective_expires_at
                 FROM ledger_entries le
                 WHERE le.reason IN ('earn', 'transfer_in')
                   AND le.customer_account_id IN (SELECT account_id FROM consumption)
+            ),
+            earn_entries AS (
+                SELECT
+                    l.account_id,
+                    l.delta,
+                    l.created_at,
+                    l.effective_expires_at,
+                    SUM(l.delta) OVER (
+                        PARTITION BY l.account_id
+                        ORDER BY l.effective_expires_at ASC NULLS LAST, l.created_at, l.id
+                        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+                    ) AS cumulative_before
+                FROM lots l
             ),
             expirable_per_entry AS (
                 SELECT
@@ -148,7 +174,7 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
                     ) AS remaining
                 FROM earn_entries e
                 JOIN consumption c ON c.account_id = e.account_id
-                WHERE e.created_at <= @cutoff    -- only earns before the cutoff
+                WHERE e.effective_expires_at <= @expire_before   -- only lots whose date has come
             ),
             to_expire AS (
                 -- ledger_entries.tenant_id stays the slug (that table is deliberately exempt
@@ -261,9 +287,10 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
             cmd.CommandText = sql;
             AddParam(cmd, "account_type_id",   accountTypeId);
             AddParam(cmd, "account_type_name", accountTypeName);
-            AddParam(cmd, "expiration_days",   expirationDays);
+            AddParam(cmd, "expiration_days",   (object?)expirationDays ?? DBNull.Value, System.Data.DbType.Int32);
             AddParam(cmd, "today",             todayStr);
             AddParam(cmd, "cutoff",            cutoffDate);
+            AddParam(cmd, "expire_before",     expireBefore);
 
             long customers;
             decimal expired;
@@ -284,17 +311,18 @@ public class PointsExpirationJob(LoyaltyDbContext db, ILogger<PointsExpirationJo
         }
     }
 
-    private static void AddParam(DbCommand cmd, string name, object value)
+    private static void AddParam(DbCommand cmd, string name, object value, System.Data.DbType? type = null)
     {
         var p = cmd.CreateParameter();
         p.ParameterName = name;
         p.Value = value;
+        if (type is { } t) p.DbType = t; // a null value needs its type stated (expiration_days)
         cmd.Parameters.Add(p);
     }
 }
 
 // EF Core SqlQueryRaw throws IndexOutOfRangeException during reflection for
 // file-local records — use an internal record.
-internal record AccountTypeExpiry(Guid Id, Guid TenantId, string Name, int ExpirationDays);
+internal record AccountTypeExpiry(Guid Id, Guid TenantId, string Name, int? ExpirationDays);
 
 public record ExpireRunResult(int CustomersAffected, decimal TotalPointsExpired);

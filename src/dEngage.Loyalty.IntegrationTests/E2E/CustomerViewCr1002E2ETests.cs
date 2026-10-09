@@ -156,6 +156,86 @@ public sealed class CustomerViewCr1002E2ETests : IAsyncLifetime
         detail.Event.Data.Value.GetProperty("amount").GetString().Should().Be("50");
     }
 
+    // CR 2026-10-06 D12: a repeated signup pays nothing; the drawer says why and links the event
+    // that already paid the bonus, so support needn't query the database.
+    [Fact]
+    public async Task A_repeated_signup_shows_which_rule_already_paid_and_when()
+    {
+        var ruleId = Guid.NewGuid();
+        var firstSignup = Guid.NewGuid().ToString();
+        var repeatSignup = Guid.NewGuid().ToString();
+        var t0 = DateTime.UtcNow.AddMinutes(-5);
+        await using (var db = _factory.CreateDbContext())
+        {
+            db.Rules.Add(new Rule
+            {
+                Id = ruleId, TenantId = _tenantGuid, ProgramId = _programId, Name = "Welcome bonus",
+                Type = RuleTypes.FixedBonusRule, Trigger = EventTypes.Signup, TargetAccountTypeId = _pointsId,
+                Calculation = """{"amount":100}""", Priority = 10, Status = RuleStatus.Active, CurrentVersion = 1,
+                CreatedAt = t0, UpdatedAt = t0
+            });
+            var accountId = db.CustomerAccounts.Single(a => a.ContactKey == _ck && a.AccountTypeId == _pointsId).Id;
+            db.EventInbox.AddRange(
+                Inbox(firstSignup, _ck, t0, new { contact_key = _ck }),
+                Inbox(repeatSignup, _ck, t0.AddMinutes(2), new { contact_key = _ck }));
+            db.LedgerEntries.Add(new LedgerEntry
+            {
+                Id = Guid.NewGuid(), TenantId = TenantSlug, CustomerAccountId = accountId, ContactKey = _ck, Delta = 100,
+                Reason = LedgerReason.Earn, SourceEventId = firstSignup, RuleId = ruleId,
+                IdempotencyKey = $"once:{ruleId}:{_ck}", CreatedAt = t0
+            });
+            await db.SaveChangesAsync();
+            await db.EventInbox.Where(e => e.EventId == firstSignup || e.EventId == repeatSignup)
+                .ExecuteUpdateAsync(s => s.SetProperty(e => e.EventType, EventTypes.Signup));
+        }
+
+        var repeat = await GetAsync<CustomerEventDetailResponse>($"{CustomerUrl}/events/{repeatSignup}");
+        var first = await GetAsync<CustomerEventDetailResponse>($"{CustomerUrl}/events/{firstSignup}");
+
+        var skip = repeat.OnceOnlySkips.Should().ContainSingle().Subject;
+        skip.RuleId.Should().Be(ruleId);
+        skip.RuleName.Should().Be("Welcome bonus");
+        skip.EarlierEventId.Should().Be(firstSignup);
+        first.OnceOnlySkips.Should().BeEmpty("the first signup is the one that paid");
+    }
+
+    // CR 2026-10-06 Phase 5: "expiring soon" follows each lot's own expiry date (an override), the
+    // same figure PointsExpiringDetectorJob warns about.
+    [Fact]
+    public async Task Expiring_soon_follows_a_lot_dated_by_an_expiry_override()
+    {
+        var walletId = Guid.NewGuid();
+        await using (var db = _factory.CreateDbContext())
+        {
+            db.AccountTypes.Add(new AccountTypeEntity
+            {
+                Id = walletId, TenantId = _tenantGuid, ProgramId = _programId, Type = "POINTS", Name = "Dated points",
+                Config = """{"expiration_days": 365, "warning_days": 30}""", CreatedAt = DateTime.UtcNow
+            });
+            var account = new CustomerAccount { Id = Guid.NewGuid(), TenantId = _tenantGuid, ContactKey = _ck, AccountTypeId = walletId, Balance = 160, UpdatedAt = DateTime.UtcNow };
+            db.CustomerAccounts.Add(account);
+            db.LedgerEntries.AddRange(
+                new LedgerEntry
+                {
+                    Id = Guid.NewGuid(), TenantId = TenantSlug, CustomerAccountId = account.Id, ContactKey = _ck, Delta = 100,
+                    Reason = LedgerReason.Earn, SourceEventId = "seed-a", IdempotencyKey = "seed-a", CreatedAt = DateTime.UtcNow.AddDays(-40)
+                },
+                new LedgerEntry
+                {
+                    Id = Guid.NewGuid(), TenantId = TenantSlug, CustomerAccountId = account.Id, ContactKey = _ck, Delta = 60,
+                    Reason = LedgerReason.Earn, SourceEventId = "seed-b", IdempotencyKey = "seed-b", CreatedAt = DateTime.UtcNow.AddDays(-5),
+                    ExpiresAt = DateTime.UtcNow.AddDays(10)
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var profile = await GetAsync<CustomerProfileResponse>(CustomerUrl);
+
+        var wallet = profile.Programs!.SelectMany(p => p.Wallets).Single(w => w.AccountTypeId == walletId);
+        wallet.ExpiringAmount.Should().Be(60m, "only the override lot expires within the 30-day warning window");
+        wallet.ExpiresOn.Should().Be(DateOnly.FromDateTime(DateTime.UtcNow.AddDays(10)));
+    }
+
     [Fact]
     public async Task A_fixed_bonus_streak_posting_is_shown_as_its_campaign()
     {

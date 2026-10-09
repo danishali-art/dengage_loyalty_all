@@ -13,4 +13,6 @@ public static class OutcomeReasons
     public const string RuleLimitReached = "rule_limit_reached";
     // Item 5: the program owning the wallet or reward is not Active + Published.
     public const string ProgramNotLive = "program_not_live";
+    // CR 2026-10-06 D23: cash.spent for more than the CASH wallet holds (cash.spend_failed).
+    public const string InsufficientBalance = "insufficient_balance";
 }

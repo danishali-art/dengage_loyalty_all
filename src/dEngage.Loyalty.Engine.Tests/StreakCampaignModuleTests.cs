@@ -91,7 +91,7 @@ public sealed class StreakCampaignModuleTests : IDisposable
         progress.Completions.Should().Be(0);
         _ledger.Verify(l => l.AddEntryAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(),
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()),
             Times.Never);
     }
 
@@ -102,7 +102,7 @@ public sealed class StreakCampaignModuleTests : IDisposable
         _ledger.Setup(l => l.UpsertAccountAsync("t1", "c1", _accountTypeId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _ledger.Setup(l => l.AddEntryAsync(
                 "t1", account.Id, "c1", 5m, LedgerReason.Earn, "evt-2",
-                It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new LedgerEntry { Id = Guid.NewGuid() });
 
         await Evaluate("evt-1", new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
@@ -120,7 +120,7 @@ public sealed class StreakCampaignModuleTests : IDisposable
 
         _ledger.Verify(l => l.AddEntryAsync(
             "t1", account.Id, "c1", 5m, LedgerReason.Earn, "evt-2",
-            It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()), Times.Once);
         _outbox.Verify(o => o.Enqueue("t1", dEngage.Loyalty.Shared.Events.OutboundEventTypes.StreakCompleted,
             "c1", It.IsAny<object>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }

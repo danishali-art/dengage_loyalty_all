@@ -24,6 +24,7 @@ public class HeldPostingConfiguration : IEntityTypeConfiguration<HeldPosting>
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.PostedAt).HasColumnName("posted_at");
         builder.Property(x => x.LedgerEntryId).HasColumnName("ledger_entry_id");
+        builder.Property(x => x.CancelledAt).HasColumnName("cancelled_at");
 
         builder.HasIndex(x => new { x.TenantId, x.IdempotencyKey })
             .IsUnique()
@@ -32,6 +33,11 @@ public class HeldPostingConfiguration : IEntityTypeConfiguration<HeldPosting>
         // Drives DelayedPostingPromotionJob's sweep: unposted rows due by HoldUntil.
         builder.HasIndex(x => new { x.HoldUntil, x.PostedAt })
             .HasDatabaseName("idx_held_postings_due");
+
+        // CR 2026-10-06 H1: RefundService finds the held postings of the refunded order by its
+        // source event.
+        builder.HasIndex(x => new { x.TenantId, x.SourceEventId })
+            .HasDatabaseName("idx_held_postings_tenant_source_event");
 
         // CR 2026-10-02 (Customer 360): per-customer lookups from the customer view.
         builder.HasIndex(x => new { x.TenantId, x.ContactKey, x.CreatedAt })

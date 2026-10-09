@@ -26,7 +26,13 @@ export interface Program {
    * digits and single hyphens — never `_`. Editable while a draft, locked once published.
    */
   slug: string;
+  /** CR 2026-10-06 Phase 4: the rounding direction rules inherit. */
+  defaultRounding: RoundingDirection;
 }
+
+/** CR 2026-10-06 Phase 4: mirrors RoundingDirection (Shared/Constants/RoundingDirection.cs). */
+export type RoundingDirection = 'down' | 'nearest' | 'up';
+export const ROUNDING_DIRECTIONS: readonly RoundingDirection[] = ['down', 'nearest', 'up'];
 
 /** Mirrors ProgramSlugRules.Pattern (ProgramsValidators.cs). */
 export const PROGRAM_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -49,4 +55,6 @@ export interface UpdateProgramRequest {
   status?: 'active' | 'inactive';
   /** Only while a draft — the API returns 409 slug_locked once published. */
   slug?: string;
+  /** CR 2026-10-06 Phase 4. */
+  defaultRounding?: RoundingDirection;
 }

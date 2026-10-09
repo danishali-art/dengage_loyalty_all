@@ -59,9 +59,12 @@ public sealed record EventPostingResponse(
     Guid? RuleId, string? RuleName, int? RuleVersion, Guid? CampaignId, string? CampaignName,
     Guid AccountTypeId, string AccountTypeName, string AccountTypeType, Guid ProgramId, string ProgramName);
 
+// CR 2026-10-06 H1: RefundedDelta is what refunds took back during the hold (null if none);
+// CancelledAt is set when they took back all of it — such a row is never posted.
 public sealed record HeldPostingResponse(
     Guid Id, Guid RuleId, string? RuleName, Guid AccountTypeId, string AccountTypeName, string Reason,
-    decimal Delta, DateTime HoldUntil, DateTime? PostedAt);
+    decimal Delta, DateTime HoldUntil, DateTime? PostedAt,
+    decimal? RefundedDelta = null, DateTime? CancelledAt = null);
 
 public sealed record RuleFireResponse(
     Guid Id, Guid RuleId, string? RuleName, int RuleVersion, decimal ResultingDelta, Guid? LedgerEntryId,
@@ -97,7 +100,12 @@ public sealed record CustomerEventDetailResponse(
     IReadOnlyList<StreakCompletionResponse> StreakCompletions,
     IReadOnlyList<RewardLogResponse> Rewards,
     IReadOnlyList<TierChangeResponse> TierChanges,
-    IReadOnlyList<SentMessageResponse> Messages);
+    IReadOnlyList<SentMessageResponse> Messages,
+    IReadOnlyList<OnceOnlySkipResponse>? OnceOnlySkips = null);
+
+// CR 2026-10-06 D12: a rule that paid nothing for this signup / kyc.completed event because it
+// already paid this customer once, for EarlierEventId (additive).
+public sealed record OnceOnlySkipResponse(Guid RuleId, string? RuleName, string EarlierEventId, DateTime EarlierAt);
 
 // ProgramId..SourceEventId: CR 2026-10-02 P2, additive. Cause is "points" (an inbound event),
 // "reward" (a tier-upgrade reward) or "downgrade" (the nightly job) — see TierChangeCause.
@@ -121,9 +129,10 @@ public sealed record ProgramOverviewResponse(
     ProgramTierStatusResponse? Tier,
     IReadOnlyList<StreakSummaryResponse> Streaks);
 
-// PendingAmount: delayed postings not yet released. ExpiringAmount/ExpiresOn: the same FIFO
-// figure PointsExpiringDetectorJob warns about — only for POINTS wallets with expiration_days and
-// warning_days; absent otherwise or when nothing is about to expire.
+// PendingAmount: delayed postings not yet released. ExpiringAmount/ExpiresOn: the same
+// soonest-expiring-first (CR 2026-10-06 Phase 5) figure PointsExpiringDetectorJob warns about —
+// only for POINTS wallets with expiration_days and warning_days; absent otherwise or when nothing
+// is about to expire.
 public sealed record WalletOverviewResponse(
     Guid AccountTypeId, string Name, string Type, decimal Balance, string? Currency,
     decimal PendingAmount, decimal? ExpiringAmount, DateOnly? ExpiresOn);

@@ -56,12 +56,16 @@ public static class RuleTypeCatalog
     // each have exactly one meaningful rule type (and reward.purchase has none: it is configured
     // through the reward definition, never through rules). Checked on top of the category/kind
     // test, never instead of it; events not listed here are unaffected.
+    // CR 2026-10-06 D22: order.refunded accepts no rule either — the built-in refund
+    // (RefundService) always reverses the order's earn, so a ReversalRule there could only reverse
+    // it a second time. ReversalRule stays available for tenant-defined events.
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> AllowedRuleTypesByEvent =
         new Dictionary<string, IReadOnlyList<string>>
         {
             [EventTypes.PointsTransfer] = new[] { RuleTypes.TransferRule },
             [EventTypes.PointsRedeem] = new[] { RuleTypes.RedemptionRule },
             [EventTypes.RewardPurchase] = Array.Empty<string>(),
+            [EventTypes.OrderRefunded] = Array.Empty<string>(),
         };
 
     public static bool IsCompatible(EventDefinition? evt, string ruleType)

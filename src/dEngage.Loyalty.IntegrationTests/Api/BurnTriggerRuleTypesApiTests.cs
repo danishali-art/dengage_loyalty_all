@@ -88,6 +88,47 @@ public sealed class BurnTriggerRuleTypesApiTests : IClassFixture<CustomWebApplic
         response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
     }
 
+    private CreateRuleRequest Reversal(string trigger) => new(
+        $"rev-{Guid.NewGuid():N}"[..20], trigger, null, RuleTypes.ReversalRule,
+        new RuleCalculation { Mode = "full", AllowNegative = "clamp to zero" },
+        null, null, 10, false, null, null, null, null, null);
+
+    // CR 2026-10-06 D22: the built-in refund already reverses the order; a Reversal rule on
+    // order.refunded could only reverse it a second time.
+    [Fact]
+    public async Task A_reversal_rule_on_order_refunded_is_rejected()
+    {
+        var response = await _client.PostAsync(RulesUrl, Json(Reversal(EventTypes.OrderRefunded)));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+    }
+
+    // D22: a Reversal rule saved before the change is disabled by migration and can't be switched
+    // back on — the same refusal as a retired rule type or trigger.
+    [Fact]
+    public async Task An_existing_reversal_rule_on_order_refunded_cant_be_switched_back_on()
+    {
+        var ruleId = Guid.NewGuid();
+        await using (var db = _factory.CreateDbContext())
+        {
+            var tenantId = db.Tenants.Single(t => t.Slug == TenantSlug).Id;
+            db.Rules.Add(new Rule
+            {
+                Id = ruleId, TenantId = tenantId, ProgramId = _programId, Name = "legacy reversal",
+                Type = RuleTypes.ReversalRule, Trigger = EventTypes.OrderRefunded,
+                Calculation = """{"mode":"full","allowNegative":"clamp to zero"}""",
+                Priority = 10, Status = RuleStatus.Disabled, CurrentVersion = 1,
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await _client.PatchAsync($"{RulesUrl}/{ruleId}/status", Json(new SetRuleStatusRequest(RuleStatus.Active)));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict, await response.Content.ReadAsStringAsync());
+        (await response.Content.ReadAsStringAsync()).Should().Contain("rule_type_retired");
+    }
+
     [Fact]
     public async Task Metadata_lists_no_rule_type_for_reward_purchase_and_only_its_own_for_burn_events()
     {
@@ -96,6 +137,7 @@ public sealed class BurnTriggerRuleTypesApiTests : IClassFixture<CustomWebApplic
 
         var byType = metadata!.Events.ToDictionary(e => e.EventType, e => e.CompatibleRuleTypes);
         byType[EventTypes.RewardPurchase].Should().BeEmpty();
+        byType[EventTypes.OrderRefunded].Should().BeEmpty(); // CR 2026-10-06 D22
         byType[EventTypes.PointsTransfer].Should().Equal(RuleTypes.TransferRule);
         byType[EventTypes.PointsRedeem].Should().Equal(RuleTypes.RedemptionRule);
     }

@@ -27,6 +27,7 @@ describe('ProgramOverviewPage', () => {
     publishedAt: null,
     publishedBy: null,
     slug: 'stars',
+    defaultRounding: 'down',
   };
 
   async function setup(program: Program, confirmed = true) {

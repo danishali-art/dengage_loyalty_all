@@ -2,7 +2,7 @@
 
 Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları ve kolonları açıklar.
 
-- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261006082544_RemoveBirthdayBonusCr1006`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
+- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261008162920_LedgerExpiresAtCr1006`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
 - **Kurulum:** boş bir PostgreSQL veritabanına `psql -d loyalty_dev -f loyalty_schema.sql`. Ardından **her tenant için** [`provision_tenant.sql`](provision_tenant.sql) (partition oluşturur) ve tenant'ın seed script'i (örn. [`starbucks_loyalty.sql`](starbucks_loyalty.sql)) çalıştırılır.
 - Tüm parasal/puan kolonları `numeric(20,4)`'tür; tüm zaman kolonları `timestamptz` (UTC) tutulur.
 - Event/mesaj davranışlarının detayı için: `docsv2/01_inbound_events.md`, `docsv2/02_outbound_events.md`.
@@ -17,7 +17,8 @@ Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları
 | [`rules`](#rules) | Kazanım kuralları (8 tip — CR-02: Spend / Stamp / FixedBonus / Redemption / Transfer / Reversal / Expiry / ManualAdjustment) |
 | [`rule_versions`](#rule_versions) | Kuralın önceki (superseded) versiyonları — CR-09 versiyonlama |
 | [`rule_limit_counters`](#rule_limit_counters) | Kural bütçesi/kardinalite için kalıcı sayaç — CR-07/CR-09 (Redis önünde cache olarak durur) |
-| [`held_postings`](#held_postings) | Gecikmeli (Delayed) postalama için bekleyen kayıtlar — CR-08, gece job'u ile ledger'a taşınır |
+| [`held_postings`](#held_postings) | Gecikmeli (Delayed) postalama için bekleyen kayıtlar — CR-08, saatlik job ile ledger'a taşınır |
+| [`held_posting_refunds`](#held_posting_refunds) | Bekleme sırasında iadeyle geri alınan tutarlar — CR 2026-10-06 H1 (append-only) |
 | [`tier_definitions`](#tier_definitions) | Tier basamakları (eşik, pencere, grace) |
 | [`tier_upgrade_log`](#tier_upgrade_log) | Tier değişim geçmişi (audit) |
 | [`reward_definitions`](#reward_definitions) | Ödül kataloğu (damga doluşu / puanla satın alma) |
@@ -72,6 +73,7 @@ Tenant'ın loyalty programı. Cüzdanlar, kurallar, tier'lar ve ödüller bir pr
 | `published_at` | timestamptz | ✓ |  | — |
 | `published_by` | varchar(255) | ✓ |  | — |
 | `slug` | varchar(40) | ✗ |  | — |
+| `default_rounding` | varchar(10) | ✗ | `'down'` | CR 2026-10-06 Phase 4: kendi `configuration.rounding` değeri olmayan kuralların devraldığı yuvarlama yönü (`down` / `nearest` / `up`); hassasiyeti hedef cüzdanın `decimals` değeri belirler. Varsayılan `down`, Spend kurallarının önceki davranışıyla aynıdır |
 | `qualifying_account_type_id` | uuid | ✓ |  | Tier hesabında hangi cüzdanın puanı sayılır (FK → `account_types`) |
 | `warning_days` | integer | ✓ |  | Puan sönmeden kaç gün önce `loyalty.points.expiring` uyarısı üretilir; null = uyarı yok |
 
@@ -170,7 +172,7 @@ yalnızca `active` satırlar — `pending_approval` eşleşmeye girmez).
 | `tenant_id` | uuid | ✗ |  | Tenant (iç kimlik, slug değil — `20260903200505_TenantIdGuidForeignKeys` ile bu branch'ten önce `varchar`'dan dönüştürüldü) |
 | `program_id` | uuid | ✗ |  | FK → `programs` (CASCADE) |
 | `name` | varchar(255) | ✗ |  | Kural adı — outbound `applied_rules[].name` olarak dışarı gider |
-| `type` | varchar(50) | ✗ |  | `SpendRule` / `FixedBonusRule` / `RedemptionRule` / `TransferRule` / `ReversalRule` / `ManualAdjustmentRule` (CR-02) — oluşturulduktan sonra değiştirilemez. `StampRule` ve `ExpiryRule` CR 2026-10-05 ile kaldırıldı; bu tipteki (ve `points.expired` tetikleyicili ya da STAMP hedefli) eski kurallar migration ile `disabled` yapıldı. CR 2026-10-05 (burn kuralları): o tarihten önce kaydedilmiş tüm `RedemptionRule` / `TransferRule` satırları (`active` / `pending_approval`) `DisableLegacyBurnRulesCr1005` migration'ı ile `disabled` yapıldı — yeni alanlar doldurulmadan tekrar açılamaz |
+| `type` | varchar(50) | ✗ |  | `SpendRule` / `FixedBonusRule` / `RedemptionRule` / `TransferRule` / `ReversalRule` / `ManualAdjustmentRule` (CR-02) — oluşturulduktan sonra değiştirilemez. `StampRule` ve `ExpiryRule` CR 2026-10-05 ile kaldırıldı; bu tipteki (ve `points.expired` tetikleyicili ya da STAMP hedefli) eski kurallar migration ile `disabled` yapıldı. CR 2026-10-05 (burn kuralları): o tarihten önce kaydedilmiş tüm `RedemptionRule` / `TransferRule` satırları (`active` / `pending_approval`) `DisableLegacyBurnRulesCr1005` migration'ı ile `disabled` yapıldı — yeni alanlar doldurulmadan tekrar açılamaz. CR 2026-10-06 D22: `order.refunded` artık hiçbir kural tipini kabul etmez (yerleşik iade siparişi zaten geri alır); bu tetikleyicideki `ReversalRule` satırları (`active` / `pending_approval`) `DisableReversalRulesOnOrderRefundedCr1006` migration'ı ile `disabled` yapıldı ve tekrar açılamaz |
 | `trigger` | varchar(50) | ✗ |  | Tetikleyici event tipi — built-in event kataloğundaki 14 tipten biri ya da tenant onaylı generic tip |
 | `conditions` | jsonb | ✓ |  | Gruplu AND/OR koşul ağacı (CR-05); null = koşulsuz (aşağıda) |
 | `calculation` | jsonb | ✗ |  | Tipe özgü kazanım/hesap parametreleri (aşağıda) |
@@ -198,7 +200,7 @@ yalnızca `active` satırlar — `pending_approval` eşleşmeye girmez).
 | `calculation` | Tipe göre alt küme — `rate` (Spend), `amount` (FixedBonus, ManualAdjustment'ta opsiyonel fallback), `rate` (puan başına nakit) + `cashAccountTypeId` (aktarılacak CASH cüzdanı, zorunlu) + `minRedeem` (opsiyonel) (Redemption, CR 2026-10-05 — `ratio` artık reddedilir), `maxPerDay` (günlük transfer limiti, zorunlu) (Transfer, CR 2026-10-05 — `ratio`/`fee` kullanılmaz; eski satırlarda kalmış olabilir), `mode`("proportional"\|"full")+`allowNegative`("allow negative"\|"clamp to zero") (Reversal), `reason`("goodwill"\|"correction"\|"dispute"\|"migration") (ManualAdjustment) — kaldırılan StampRule/ExpiryRule kurallarının eski satırlarında boş obje ya da `ageDays`/`order` kalmış olabilir | `{"rate": 0.10}` |
 | `conditions` | Gruplu AND/OR ağacı: `{"op":"AND\|OR","groups":[{"op":"AND\|OR","conditions":[{"field","operator","value":{"type","data","currency?","inferred?"}}]}]}`. `operator` ∈ `gte,lte,between,eq,neq,in,not_in,starts_with,exists,is_null`. Alan bulunamazsa: pozitif operatörler `false`, `not_in`/`neq`/`is_null` `true` döner. | `{"op":"AND","groups":[{"op":"AND","conditions":[{"field":"amount","operator":"gte","value":{"type":"money","data":100}}]}]}` |
 | `limits` | `per_customer_total`, `per_customer_per_day`, `max_per_event`, `min_event_amount`, `cooldown_hours`, `max_customers`, `rule_budget_total`, `rule_budget_per_period`, `per_customer_per_period`, `period`("Day\|Week\|Month\|Year"), `reset_window`("Calendar\|Rolling"), `on_breach`("Clamp\|Skip", varsayılan Clamp) — bütçe alanları `rule_limit_counters`'a karşı postalama transaction'ı içinde rezerve edilir (CR-07/CR-09) | `{"rule_budget_per_period": 10000, "period": "Month", "on_breach": "Skip"}` |
-| `configuration` | `rounding`("down\|nearest\|up", null=programdan miras), `posting`("Immediate\|Delayed" — "Pending" henüz desteklenmiyor), `holdDays` (Delayed iken zorunlu), `expiryOverrideDays`, `reversible`(varsayılan true), `testMode`(varsayılan false — postalamadan sadece audit), `notifyOnAward`(varsayılan false) | `{"posting": "Delayed", "holdDays": 3}` |
+| `configuration` | `rounding`("down\|nearest\|up", null=programdan miras), `posting`("Immediate\|Delayed" — "Pending" henüz desteklenmiyor), `holdDays` (Delayed iken zorunlu), `expiryOverrideDays` (> 0; CR 2026-10-06 Phase 5'ten beri uygulanır: kazanılan puan cüzdan süresi yerine kayıttan bu kadar gün sonra söner → `ledger_entries.expires_at`), `reversible`(varsayılan true), `testMode` (CR 2026-10-06 D20 ile kaldırıldı: API yalnızca false kabul eder ve her zaman false döner, motor yok sayar; açık olan kazanım kuralları `DisableTestModeEarnRulesCr1006` migration'ı ile `disabled` yapıldı), `notifyOnAward`(varsayılan false) | `{"posting": "Delayed", "holdDays": 3}` |
 
 **Soft-delete trigger'ı (`trg_rules_soft_delete`):** `rules` üzerinde fiziksel `DELETE`, satırın `status`'u `deleted` değilse iptal edilir ve satır `status='deleted'` olarak güncellenir (kural geçmişi ledger'dan izlenebilir kalır). Zaten `deleted` olan satırın DELETE'i gerçekten siler (purge).
 
@@ -290,6 +292,11 @@ ateşlendiğinde ledger'a hemen yazılmaz, burada `hold_until` tarihine kadar be
 job (`DelayedPostingPromotionWorker`, mevcut `PointsExpirationWorker` deseniyle aynı
 self-scheduling + idempotent SQL yaklaşımı) süresi dolanları `ledger_entries`'e taşır.
 
+CR 2026-10-06 H1: bekleme sırasında gelen bir iade (`order.refunded`) bekleyen tutarı geri alır
+(`held_posting_refunds`); tamamı geri alınan satır `cancelled_at` ile iptal edilir ve hiç
+postalanmaz, kısmen geri alınan satır süresi dolunca kalan tutarla postalanır. İade ile job aynı
+satırı `SELECT ... FOR UPDATE` ile kilitler.
+
 | Kolon | Tip | Null | Varsayılan | Açıklama |
 |-------|-----|------|------------|----------|
 | `id` | uuid | ✗ |  | PK |
@@ -306,6 +313,7 @@ self-scheduling + idempotent SQL yaklaşımı) süresi dolanları `ledger_entrie
 | `created_at` | timestamptz | ✗ |  | — |
 | `posted_at` | timestamptz | ✓ |  | Promote edildiği an; null = hâlâ bekliyor |
 | `ledger_entry_id` | uuid | ✓ |  | Promote sonrası oluşan `ledger_entries` satırı |
+| `cancelled_at` | timestamptz | ✓ |  | CR 2026-10-06 H1: iadeler tutarın tamamını geri aldığında set edilir; iptal edilen satır hiç postalanmaz |
 
 **PK:** `PK_held_postings (id)`.
 
@@ -313,7 +321,32 @@ self-scheduling + idempotent SQL yaklaşımı) süresi dolanları `ledger_entrie
 
 - `idx_held_postings_due (hold_until, posted_at)` — job'un "süresi dolmuş, henüz promote edilmemiş" sorgusu
 - `idx_held_postings_tenant_contact_date (tenant_id, contact_key, created_at)` — CR 2026-10-02 (Customer 360): müşteri görünümünün müşteri bazlı sorguları
+- `idx_held_postings_tenant_source_event (tenant_id, source_event_id)` — CR 2026-10-06 H1: iadenin, iade edilen siparişin bekleyen kayıtlarını bulması
 - `ux_held_postings_tenant_idempotency (tenant_id, idempotency_key)` UNIQUE
+
+---
+
+## held_posting_refunds
+
+CR 2026-10-06 H1: bekleyen (`held_postings`) bir kaydın, bekleme sırasında bir iadeyle geri alınan
+kısmı. Append-only; (bekleyen kayıt, iade event'i) başına tek satır — tekrar teslim edilen bir
+iade event'i ikinci kez geri almaz. Postalanacak kalan tutar = `held_postings.delta` − bu
+tablodaki `delta` toplamı.
+
+| Kolon | Tip | Null | Varsayılan | Açıklama |
+|-------|-----|------|------------|----------|
+| `id` | uuid | ✗ |  | PK |
+| `tenant_id` | uuid | ✗ |  | Tenant (iç kimlik, slug değil) |
+| `held_posting_id` | uuid | ✗ |  | Geri alınan `held_postings` satırı (DB seviyesinde FK yok, `held_postings` deseni) |
+| `refund_event_id` | varchar(255) | ✗ |  | Geri almayı yapan `order.refunded` event'i |
+| `delta` | numeric(20,4) | ✗ |  | Geri alınan tutar (pozitif) |
+| `created_at` | timestamptz | ✗ |  | — |
+
+**PK:** `PK_held_posting_refunds (id)`.
+
+**Index:**
+
+- `ux_held_posting_refunds_tenant_held_refund (tenant_id, held_posting_id, refund_event_id)` UNIQUE — aynı iade event'inin aynı kaydı ikinci kez geri almasını engeller
 
 ---
 
@@ -482,7 +515,8 @@ Kazanılan ödüllerin kaydı (damga doluşu, puanla satın alma ya da streak ta
 | `rule_id` | uuid | ✓ |  | Kazanımı üreten kural (yalnızca rule engine hareketlerinde) |
 | `idempotency_key` | varchar(500) | ✗ |  | Genelde `{eventId}:{reason}` — çift işlem engeli |
 | `metadata` | jsonb | ✓ |  | Harekete özgü ek bilgi (örn. redeem'de `{redeemed_points, cash_amount, rate}`) |
-| `created_at` | timestamptz | ✗ |  | FIFO expire modelinin yaş referansı |
+| `created_at` | timestamptz | ✗ |  | Hareket zamanı; `expires_at` boş olan eski kazanımlarda expire tarihi `created_at + expiration_days` olarak hesaplanır |
+| `expires_at` | timestamptz | ✓ |  | CR 2026-10-06 Phase 5: yalnızca `earn` / `transfer_in` (POINTS) kayıtlarında, kayıt anında yazılan son kullanma tarihi — kuralın `expiryOverrideDays` değeri varsa kayıt (gecikmeli kazanımda serbest bırakma) zamanı + o gün, yoksa cüzdanın `expiration_days` değeri; ikisi de yoksa boş (hiç sönmez). Cüzdan ayarı sonradan değişse de kayıtlı tarih değişmez; geriye dönük doldurma yapılmaz. Sönme ve harcama sırası: en erken sönecek puan önce (boş en son) |
 
 **`reason` sözlüğü:** `earn` (kural kazanımı) · `stamp_earn` (+1 damga) · `stamp_reset` (kart doluşunda sıfırlama) — bu ikisi CR 2026-10-05'ten beri yazılmaz, sadece geçmiş kayıtlarda bulunur · `cash_load` / `cash_spend` (nakit yükleme/harcama) · `points_redeemed` / `points_redeemed_cash` (puan→nakit dönüşümün iki bacağı) · `refund` (iade geri alımı) · `points_expired` (gece sönmesi) · `reward_purchase` (puanla ödül alımı).
 
@@ -494,7 +528,7 @@ Kazanılan ödüllerin kaydı (damga doluşu, puanla satın alma ya da streak ta
 
 - `IX_ledger_entries_customer_account_id (customer_account_id)`
 - `IX_ledger_entries_rule_id (rule_id)`
-- `idx_ledger_entries_tenant_account_date (tenant_id, customer_account_id, created_at)` — FIFO/ekstre sorguları
+- `idx_ledger_entries_tenant_account_date (tenant_id, customer_account_id, created_at)` — expire/ekstre sorguları
 - `idx_ledger_entries_tenant_source_event (tenant_id, source_event_id)` — iade akışının "orijinal siparişin kazanımları" araması
 - `uq_ledger_entries_idempotency_key (tenant_id, idempotency_key)` UNIQUE
 

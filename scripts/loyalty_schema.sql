@@ -2788,3 +2788,161 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101744_HeldPostingRefundsCr1006') THEN
+    ALTER TABLE held_postings ADD cancelled_at timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101744_HeldPostingRefundsCr1006') THEN
+    CREATE TABLE held_posting_refunds (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        held_posting_id uuid NOT NULL,
+        refund_event_id character varying(255) NOT NULL,
+        delta numeric(20,4) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_held_posting_refunds" PRIMARY KEY (id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101744_HeldPostingRefundsCr1006') THEN
+    CREATE INDEX idx_held_postings_tenant_source_event ON held_postings (tenant_id, source_event_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101744_HeldPostingRefundsCr1006') THEN
+    CREATE UNIQUE INDEX ux_held_posting_refunds_tenant_held_refund ON held_posting_refunds (tenant_id, held_posting_id, refund_event_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101744_HeldPostingRefundsCr1006') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261008101744_HeldPostingRefundsCr1006', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101801_DisableReversalRulesOnOrderRefundedCr1006') THEN
+    UPDATE programs
+    SET has_unpublished_changes = true
+    WHERE publication_status = 'published'
+      AND id IN (SELECT program_id FROM rules WHERE status IN ('active', 'pending_approval')
+    AND type = 'ReversalRule'
+    AND trigger = 'order.refunded');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101801_DisableReversalRulesOnOrderRefundedCr1006') THEN
+    UPDATE rules
+    SET status     = 'disabled',
+        updated_at = now()
+    WHERE status IN ('active', 'pending_approval')
+    AND type = 'ReversalRule'
+    AND trigger = 'order.refunded';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101801_DisableReversalRulesOnOrderRefundedCr1006') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261008101801_DisableReversalRulesOnOrderRefundedCr1006', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008120415_DisableTestModeEarnRulesCr1006') THEN
+    UPDATE programs
+    SET has_unpublished_changes = true
+    WHERE publication_status = 'published'
+      AND id IN (SELECT program_id FROM rules WHERE status IN ('active', 'pending_approval')
+    AND type IN ('SpendRule', 'FixedBonusRule', 'ManualAdjustmentRule')
+    AND configuration->>'testMode' = 'true');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008120415_DisableTestModeEarnRulesCr1006') THEN
+    UPDATE rules
+    SET status     = 'disabled',
+        updated_at = now()
+    WHERE status IN ('active', 'pending_approval')
+    AND type IN ('SpendRule', 'FixedBonusRule', 'ManualAdjustmentRule')
+    AND configuration->>'testMode' = 'true';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008120415_DisableTestModeEarnRulesCr1006') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261008120415_DisableTestModeEarnRulesCr1006', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008130056_ProgramDefaultRoundingCr1006') THEN
+    ALTER TABLE programs ADD default_rounding character varying(10) NOT NULL DEFAULT 'down';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008130056_ProgramDefaultRoundingCr1006') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261008130056_ProgramDefaultRoundingCr1006', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008162920_LedgerExpiresAtCr1006') THEN
+    ALTER TABLE ledger_entries ADD expires_at timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008162920_LedgerExpiresAtCr1006') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261008162920_LedgerExpiresAtCr1006', '8.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+

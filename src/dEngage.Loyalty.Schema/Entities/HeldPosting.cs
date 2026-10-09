@@ -23,4 +23,9 @@ public class HeldPosting
     // Set by DelayedPostingPromotionJob once actually posted — null means still held.
     public DateTime? PostedAt { get; set; }
     public Guid? LedgerEntryId { get; set; }
+
+    // CR 2026-10-06 H1: set when refunds (HeldPostingRefund rows) have taken back the whole
+    // Delta during the hold — the promotion job never posts a cancelled row. A partly refunded
+    // row stays null and is posted for Delta minus what was refunded.
+    public DateTime? CancelledAt { get; set; }
 }

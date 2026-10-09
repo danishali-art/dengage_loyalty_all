@@ -11,7 +11,12 @@ import { ConfirmService } from '../../core/ui/confirm.service';
 import { ApiError } from '../../core/http/api-error';
 import { ProgramContextStore } from '../../core/program/program-context.store';
 import { ProgramsService } from './programs.service';
-import { PROGRAM_SLUG_PATTERN, Program } from './program.model';
+import {
+  PROGRAM_SLUG_PATTERN,
+  Program,
+  ROUNDING_DIRECTIONS,
+  RoundingDirection,
+} from './program.model';
 import { AccountTypesService } from './account-types/account-types.service';
 import { AccountType } from './account-types/account-type.model';
 
@@ -162,6 +167,26 @@ interface SummaryCard {
                     "
                   />
                 </div>
+                <!-- CR 2026-10-06 Phase 4: the direction rules inherit; precision is the wallet's. -->
+                <div>
+                  <label for="defaultRounding" class="field-label">{{
+                    'programs.defaultRounding.label' | translate
+                  }}</label>
+                  <select
+                    id="defaultRounding"
+                    formControlName="defaultRounding"
+                    class="field-input"
+                    aria-describedby="defaultRounding-hint"
+                  >
+                    @for (d of roundingDirections; track d) {
+                      <option [value]="d">{{ 'rules.config.rounding.' + d | translate }}</option>
+                    }
+                  </select>
+                  <app-field-hint
+                    id="defaultRounding-hint"
+                    [hint]="'programs.defaultRounding.hint' | translate"
+                  />
+                </div>
                 <div>
                   <label for="description" class="field-label">Description</label>
                   <textarea
@@ -267,7 +292,10 @@ export class ProgramOverviewPage implements OnInit {
       Validators.maxLength(40),
       Validators.pattern(PROGRAM_SLUG_PATTERN),
     ]),
+    defaultRounding: this.fb.control<RoundingDirection>('down'),
   });
+
+  protected readonly roundingDirections = ROUNDING_DIRECTIONS;
 
   ngOnInit(): void {
     void this.reloadProgram();
@@ -282,6 +310,7 @@ export class ProgramOverviewPage implements OnInit {
       name: p.name,
       description: p.description ?? '',
       slug: p.slug,
+      defaultRounding: p.defaultRounding ?? 'down',
     });
   }
 
@@ -305,6 +334,10 @@ export class ProgramOverviewPage implements OnInit {
         name: v.name,
         description: v.description || null,
         ...(slugChanged ? { slug: v.slug } : {}),
+        // Only when changed: on a published program it marks a publish pending.
+        ...(v.defaultRounding !== current?.defaultRounding
+          ? { defaultRounding: v.defaultRounding }
+          : {}),
       });
       this.program.set(updated);
       this.programContext.updateName(updated);

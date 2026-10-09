@@ -38,9 +38,23 @@ The source of truth for customer balances. It references Schema, Shared and Engi
   whole table into memory.
 - Expiry posts negative entries with an expiry reason and idempotency key. It never deletes or
   edits the original credits.
+- Each earn / transfer_in lot expires on its own date: `ledger_entries.expires_at`, written once
+  by `AddEntryAsync` (the rule's expiry override, else the POINTS wallet's `expiration_days`,
+  else null = never), or `created_at + expiration_days` for entries from before CR 2026-10-06
+  Phase 5. Consumption is allocated soonest-expiring first, never-expiring last — the expiry job,
+  the detector job and `CustomerViewRules.ExpiringSoon` must use the same ordering, which equals
+  the old oldest-first when no lot has an override. A stored date is never recomputed when the
+  wallet or rule changes.
 - Retention (`RetentionPolicy`) applies only to `event_log` / inbox-type operational tables,
   **never** to the ledger.
 
 ## Refunds (`RefundService`)
 - A refund reverses exactly what the original posting granted (look it up by source event or
   idempotency key). Fail with `original_entries_not_found` rather than guessing.
+- Points a Delayed rule still holds for the order are part of what it granted (CR 2026-10-06 H1):
+  the refund takes them back with a `HeldPostingRefund` row (one per held posting and refund
+  event) instead of failing, and cancels the hold when nothing is left. It first locks the order's
+  `held_postings` rows (`FOR UPDATE`), the same lock `DelayedPostingPromotionJob` takes, so a
+  refund and a release never both act on one row.
+- The cumulative cap counts both reversal paths — `refund` and `rule_reversal` entries of the same
+  original entry (D22) — so between them they never take back more than the earn.

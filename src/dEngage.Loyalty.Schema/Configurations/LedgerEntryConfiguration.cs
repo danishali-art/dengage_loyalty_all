@@ -21,6 +21,7 @@ public class LedgerEntryConfiguration : IEntityTypeConfiguration<LedgerEntry>
         builder.Property(x => x.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(500).IsRequired();
         builder.Property(x => x.Metadata).HasColumnName("metadata").HasColumnType("jsonb");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
+        builder.Property(x => x.ExpiresAt).HasColumnName("expires_at"); // CR 2026-10-06 Phase 5
 
         builder.HasOne(x => x.CustomerAccount)
             .WithMany(x => x.LedgerEntries)

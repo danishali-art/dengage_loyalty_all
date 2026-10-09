@@ -14,7 +14,9 @@ public interface ILedgerService
         string idempotencyKey,
         Guid? ruleId = null,
         string? metadata = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        // CR 2026-10-06 Phase 5: the earning rule's expiry override, as a date; null = the wallet's.
+        DateTime? expiresAt = null);
 
     Task<CustomerAccount?> LockAccountAsync(
         string tenantId,

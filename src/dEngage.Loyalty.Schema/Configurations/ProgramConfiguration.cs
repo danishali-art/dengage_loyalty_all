@@ -1,3 +1,4 @@
+using dEngage.Loyalty.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -20,6 +21,9 @@ public class ProgramConfiguration : IEntityTypeConfiguration<Entities.Program>
         builder.Property(x => x.QualifyingAccountTypeId).HasColumnName("qualifying_account_type_id");
         builder.Property(x => x.WarningDays).HasColumnName("warning_days");
         builder.Property(x => x.PublicationStatus).HasColumnName("publication_status").HasMaxLength(20).IsRequired();
+        // CR 2026-10-06 Phase 4. The DB default fills existing rows and keeps raw-SQL seed inserts working.
+        builder.Property(x => x.DefaultRounding).HasColumnName("default_rounding").HasMaxLength(10).IsRequired()
+            .HasDefaultValue(RoundingDirection.Down);
         builder.Property(x => x.HasUnpublishedChanges).HasColumnName("has_unpublished_changes");
         builder.Property(x => x.PublishedVersion).HasColumnName("published_version");
         builder.Property(x => x.PublishedAt).HasColumnName("published_at");

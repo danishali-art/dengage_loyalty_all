@@ -17,7 +17,9 @@ public class LedgerService(LoyaltyDbContext db, ITenantSlugResolver tenantSlugRe
         string idempotencyKey,
         Guid? ruleId = null,
         string? metadata = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        // CR 2026-10-06 Phase 5: the earning rule's expiry override, as a date; null = the wallet's.
+        DateTime? expiresAt = null)
     {
         var entry = new LedgerEntry
         {
@@ -44,6 +46,12 @@ public class LedgerService(LoyaltyDbContext db, ITenantSlugResolver tenantSlugRe
         if (existing is not null)
             return existing;
 
+        // CR 2026-10-06 Phase 5: an earn / transfer_in into a POINTS wallet records when it expires —
+        // the caller's override, otherwise the wallet's expiration_days from now, read at posting
+        // time so a later change to the wallet never moves a date already given (design §3.9).
+        if (reason is LedgerReason.Earn or LedgerReason.TransferIn)
+            entry.ExpiresAt = await ExpiryDateAsync(customerAccountId, entry.CreatedAt, expiresAt, ct);
+
         // INSERT + balance UPDATE must happen in one transaction. With separate autocommits,
         // a crash in between leaves the entry written but the balance not updated;
         // since the idempotency check cuts off the retry, the balance would stay broken permanently.
@@ -59,6 +67,29 @@ public class LedgerService(LoyaltyDbContext db, ITenantSlugResolver tenantSlugRe
         }
 
         return entry;
+    }
+
+    // Cash never expires: an override reaching a CASH wallet (a rule saved before the API checked
+    // its target, CR 2026-10-06 Phase 2 validates new rules only) is dropped, not stored.
+    private async Task<DateTime?> ExpiryDateAsync(Guid customerAccountId, DateTime postedAt, DateTime? overrideDate, CancellationToken ct)
+    {
+        var wallet = await db.CustomerAccounts.AsNoTracking()
+            .Where(a => a.Id == customerAccountId)
+            .Select(a => new { a.AccountType.Type, a.AccountType.Config })
+            .FirstOrDefaultAsync(ct);
+        if (wallet is null || wallet.Type != "POINTS") return null;
+        if (overrideDate is not null) return overrideDate;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(wallet.Config);
+            return doc.RootElement.TryGetProperty("expiration_days", out var days) && days.TryGetInt32(out var n) && n > 0
+                ? postedAt.AddDays(n)
+                : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null; // a malformed config never blocks a posting; the job then treats it as no expiry
+        }
     }
 
     private async Task InsertAndApplyAsync(LedgerEntry entry, Guid customerAccountId, decimal delta, CancellationToken ct)

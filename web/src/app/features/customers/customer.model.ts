@@ -245,6 +245,10 @@ export interface HeldPosting {
   delta: DecimalString;
   holdUntil: string;
   postedAt: string | null;
+  /** CR 2026-10-06 H1: what refunds took back during the hold; null if none. */
+  refundedDelta?: DecimalString | null;
+  /** CR 2026-10-06 H1: set when refunds took back all of it — never posted. */
+  cancelledAt?: string | null;
 }
 
 export interface RuleFire {
@@ -320,6 +324,15 @@ export interface CustomerEventDetail {
   rewards: RewardLogEntry[];
   tierChanges: TierChange[];
   messages: SentMessage[];
+  /** CR 2026-10-06 D12: rules that paid nothing because they already paid this customer once. */
+  onceOnlySkips?: OnceOnlySkip[] | null;
+}
+
+export interface OnceOnlySkip {
+  ruleId: string;
+  ruleName: string | null;
+  earlierEventId: string;
+  earlierAt: string;
 }
 
 // ── CR 2026-10-02 (Customer 360) P2: rules & caps, streaks, rewards ──

@@ -1,3 +1,4 @@
+using dEngage.Loyalty.Shared;
 using System.Text.Json;
 
 namespace dEngage.Loyalty.Api.Programs;
@@ -7,8 +8,10 @@ namespace dEngage.Loyalty.Api.Programs;
 // to the account type. They stay on the records so old clients get a clear 400.
 // Slug: CR 2026-09-30 (A5) — the program slug that prefixes reward names. Optional on create
 // (derived from the name when omitted); changeable only while the program is a Draft.
-public sealed record CreateProgramRequest(string Name, string? Description, string? Status = null, Guid? QualifyingAccountTypeId = null, int? WarningDays = null, string? Slug = null);
-public sealed record UpdateProgramRequest(string? Name, string? Description, string? Status, Guid? QualifyingAccountTypeId = null, int? WarningDays = null, string? Slug = null);
+// DefaultRounding: CR 2026-10-06 Phase 4 — the direction rules inherit (down | nearest | up);
+// optional, "down" when omitted.
+public sealed record CreateProgramRequest(string Name, string? Description, string? Status = null, Guid? QualifyingAccountTypeId = null, int? WarningDays = null, string? Slug = null, string? DefaultRounding = null);
+public sealed record UpdateProgramRequest(string? Name, string? Description, string? Status, Guid? QualifyingAccountTypeId = null, int? WarningDays = null, string? Slug = null, string? DefaultRounding = null);
 
 // QualifyingAccountTypeId / WarningDays are deprecated (derived from the account type flag /
 // always null) for one release. PublicationStatus..PublishedBy are 1.3.CL item 8.
@@ -17,7 +20,7 @@ public sealed record ProgramResponse(
     Guid? QualifyingAccountTypeId, int? WarningDays, DateTime CreatedAt,
     int AccountTypeCount, int RuleCount,
     string PublicationStatus, bool HasUnpublishedChanges, int? PublishedVersion,
-    DateTime? PublishedAt, string? PublishedBy, string Slug);
+    DateTime? PublishedAt, string? PublishedBy, string Slug, string DefaultRounding = RoundingDirection.Down);
 
 // 1.3.CL item 9: the aggregate ConfigVersion snapshot written on Publish (EntityType
 // "ProgramPublication"). Built from these projections — never from tracked EF entities — so no
@@ -31,7 +34,7 @@ public sealed record ProgramPublicationSnapshot(
     IReadOnlyList<PublishedRule> Rules,
     IReadOnlyList<PublishedStreakCampaign> StreakCampaigns);
 
-public sealed record PublishedProgram(Guid Id, string Name, string? Description, string Status, string Slug);
+public sealed record PublishedProgram(Guid Id, string Name, string? Description, string Status, string Slug, string DefaultRounding = RoundingDirection.Down);
 public sealed record PublishedAccountType(Guid Id, string Type, string Name, JsonElement Config, bool IsTierQualifying);
 public sealed record PublishedTier(
     Guid Id, string Name, string DisplayName, string MinPoints, int? QualifyingDays, int GraceDays, int SortOrder);

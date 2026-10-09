@@ -43,4 +43,14 @@ public class RuleTypeCatalogTests
         RuleTypeCatalog.IsCompatible(null, RuleTypes.SpendRule).Should().BeTrue();
         RuleTypeCatalog.IsCompatible(null, RuleTypes.RedemptionRule).Should().BeTrue();
     }
+
+    // CR 2026-10-06 D22: the built-in refund always reverses the order, so a Reversal rule on
+    // order.refunded could only reverse it twice. Reversal rules stay for tenant-defined events.
+    [Fact]
+    public void Order_refunded_has_no_compatible_rule_type()
+    {
+        RuleTypeCatalog.CompatibleRuleTypes(EventTypes.Describe(EventTypes.OrderRefunded)).Should().BeEmpty();
+        RuleTypeCatalog.IsCompatible(EventTypes.Describe(EventTypes.OrderRefunded), RuleTypes.ReversalRule).Should().BeFalse();
+        RuleTypeCatalog.IsCompatible(null, RuleTypes.ReversalRule).Should().BeTrue();
+    }
 }

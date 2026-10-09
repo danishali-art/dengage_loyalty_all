@@ -10,33 +10,26 @@ public class RuleTypeHandlerRegistryTests
 {
     private static EvaluationEvent Event(decimal amount) => new() { EventType = "order.created", ContactKey = "c1", Amount = amount };
 
+    // CR 2026-10-06 Phase 4 (D2): the handler no longer rounds — these tests asserted the
+    // round-down that 1.3.CL item 2 put here. Rounding now happens once, in
+    // WinnerSelector.ApplyRounding, to the wallet's decimals in the rule's or program's direction;
+    // the same payouts (12, 12.8, 12.89, 12.897) are asserted end to end in
+    // IntegrationTests/Engine/RoundingCr1006Tests.
     [Fact]
-    public void SpendRuleHandler_computes_floor_of_amount_times_factor()
+    public void SpendRuleHandler_computes_amount_times_factor_unrounded()
     {
         var handler = new SpendRuleHandler();
-        var result = handler.Compute(new RuleCalculation { Factor = 0.3m }, Event(42.99m));
-        result.Should().Be(12m); // floor(42.99 * 0.3) = floor(12.897) = 12
+        handler.Compute(new RuleCalculation { Factor = 0.3m }, Event(42.99m)).Should().Be(12.897m);
     }
 
-    // 1.3.CL item 2: the target wallet's decimals sets the precision, always rounding down.
     [Theory]
-    [InlineData(0, "12")]
-    [InlineData(1, "12.8")]
-    [InlineData(2, "12.89")]
-    [InlineData(3, "12.897")]
-    [InlineData(4, "12.897")]
-    public void SpendRuleHandler_floors_to_the_target_wallets_decimal_places(int decimals, string expected)
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(9)]
+    public void SpendRuleHandler_ignores_the_target_wallets_decimals(int decimals)
     {
         var handler = new SpendRuleHandler();
-        var result = handler.Compute(new RuleCalculation { Factor = 0.3m }, Event(42.99m), decimals);
-        result.Should().Be(decimal.Parse(expected, System.Globalization.CultureInfo.InvariantCulture));
-    }
-
-    [Fact]
-    public void SpendRuleHandler_clamps_decimals_to_the_ledgers_four_places()
-    {
-        var handler = new SpendRuleHandler();
-        handler.Compute(new RuleCalculation { Factor = 1m }, Event(1.123456m), 9).Should().Be(1.1234m);
+        handler.Compute(new RuleCalculation { Factor = 1m }, Event(1.123456m), decimals).Should().Be(1.123456m);
     }
 
     [Fact]
