@@ -120,7 +120,7 @@ public sealed class StreakMonthlySumTests : IDisposable
         _ledger.Setup(l => l.UpsertAccountAsync("t1", "tq_h", _cashAccountTypeId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _ledger.Setup(l => l.AddEntryAsync(
                 "t1", account.Id, "tq_h", 25m, LedgerReason.Earn, "evt-5",
-                It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new LedgerEntry { Id = Guid.NewGuid() });
 
         await Evaluate("evt-1", 600m, monthAnchor.AddMonths(-2));
@@ -136,7 +136,7 @@ public sealed class StreakMonthlySumTests : IDisposable
 
         _ledger.Verify(l => l.AddEntryAsync(
             "t1", account.Id, "tq_h", 25m, LedgerReason.Earn, "evt-5",
-            It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()), Times.Once);
         _outbox.Verify(o => o.Enqueue("t1", dEngage.Loyalty.Shared.Events.OutboundEventTypes.StreakCompleted,
             "tq_h", It.IsAny<object>(), $"streak_completed:{_ruleId}:tq_h:1", It.IsAny<CancellationToken>()), Times.Once);
     }

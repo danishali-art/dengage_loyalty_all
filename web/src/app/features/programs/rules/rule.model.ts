@@ -67,6 +67,7 @@ export interface RuleConfiguration {
   holdDays?: number | null;
   expiryOverrideDays?: number | null;
   reversible?: boolean;
+  /** CR 2026-10-06 D20: test mode was removed — never sent; the API always returns false. */
   testMode?: boolean;
   notifyOnAward?: boolean;
 }
@@ -153,6 +154,16 @@ export interface EventMetadata {
   period: string | null;
   fields: EventFieldMetadata[];
   compatibleRuleTypes: RuleType[];
+  /** CR 2026-10-06 Phase 2: per compatible type, the fields a new rule may set (RuleFieldCatalog). */
+  applicableFields?: ApplicableFields[];
+}
+
+export interface ApplicableFields {
+  ruleType: RuleType;
+  /** RuleConfiguration keys, e.g. `posting`, `notifyOnAward`. */
+  configuration: string[];
+  /** RuleLimits keys, e.g. `min_event_amount`, `on_breach`. */
+  limits: string[];
 }
 
 export interface RuleTypeMetadata {

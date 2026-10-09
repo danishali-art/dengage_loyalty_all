@@ -37,7 +37,15 @@ public sealed class CreateProgramRequestValidator : AbstractValidator<CreateProg
         RuleFor(x => x.Status).Null().WithMessage(MovedFieldMessages.CreateStatus);
         RuleFor(x => x.QualifyingAccountTypeId).Null().WithMessage(MovedFieldMessages.QualifyingAccountType);
         RuleFor(x => x.WarningDays).Null().WithMessage(MovedFieldMessages.WarningDays);
+        RuleFor(x => x.DefaultRounding).Must(r => RoundingDirection.All.Contains(r)).When(x => x.DefaultRounding is not null)
+            .WithMessage(DefaultRoundingMessage.Text);
     }
+}
+
+// CR 2026-10-06 Phase 4.
+internal static class DefaultRoundingMessage
+{
+    public const string Text = "defaultRounding must be 'down', 'nearest' or 'up'.";
 }
 
 public sealed class UpdateProgramRequestValidator : AbstractValidator<UpdateProgramRequest>
@@ -52,5 +60,7 @@ public sealed class UpdateProgramRequestValidator : AbstractValidator<UpdateProg
             .WithMessage("Status must be 'active' or 'inactive'.");
         RuleFor(x => x.QualifyingAccountTypeId).Null().WithMessage(MovedFieldMessages.QualifyingAccountType);
         RuleFor(x => x.WarningDays).Null().WithMessage(MovedFieldMessages.WarningDays);
+        RuleFor(x => x.DefaultRounding).Must(r => RoundingDirection.All.Contains(r)).When(x => x.DefaultRounding is not null)
+            .WithMessage(DefaultRoundingMessage.Text);
     }
 }

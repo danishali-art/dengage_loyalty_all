@@ -29,6 +29,11 @@ public class Program : ITenantScopedEntity
     // the column's DB default that keeps raw-SQL seed inserts working.
     public string Slug { get; set; } = "p-" + Guid.NewGuid().ToString("N")[..10];
 
+    // CR 2026-10-06 Phase 4: the rounding direction a rule inherits when its own
+    // Configuration.rounding is unset (RoundingDirection). Down by default, which reproduces the
+    // rounding Spend rules always had, so no payout changes until an admin picks Nearest or Up.
+    public string DefaultRounding { get; set; } = RoundingDirection.Down;
+
     // Deprecated by 1.3.CL item 1 — superseded by AccountType.IsTierQualifying. Kept (and no
     // longer written) for one release so the column can be dropped in a follow-up CR.
     public Guid? QualifyingAccountTypeId { get; set; }

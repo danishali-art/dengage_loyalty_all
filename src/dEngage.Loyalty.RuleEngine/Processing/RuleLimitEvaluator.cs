@@ -8,6 +8,9 @@ public sealed class RuleLimitEvaluator(LoyaltyDbContext db) : IRuleLimitEvaluato
 {
     private static readonly string[] EarnReasons = { LedgerReason.Earn, LedgerReason.StampEarn, LedgerReason.Refund };
 
+    public Task<bool> HasOnceOnlyAwardAsync(string tenantId, Guid ruleId, string contactKey, CancellationToken ct) =>
+        OnceOnlyAward.ExistsAsync(db, tenantId, ruleId, contactKey, ct);
+
     public async Task<bool> IsCooldownActiveAsync(string tenantId, Guid ruleId, string contactKey, decimal cooldownHours, CancellationToken ct)
     {
         if (cooldownHours <= 0) return false;

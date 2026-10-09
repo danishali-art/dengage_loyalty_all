@@ -95,6 +95,12 @@ public sealed class RulesAppService(
                     $"Account type '{targetAccountKind}' is not a valid target for '{request.Type}'.");
         }
 
+        // CR 2026-10-06 Phase 2 (§3.9): an expiry override only means something for points —
+        // cash never expires (1.3.CL). New rules only (D5).
+        if (request.Configuration?.ExpiryOverrideDays is not null && targetAccountKind is not null && targetAccountKind != "POINTS")
+            throw new ValidationApiException(
+                $"field_not_applicable: 'configuration.expiryOverrideDays' applies only to a rule targeting a POINTS wallet, not {targetAccountKind}.");
+
         // CR 2026-10-05: a redeem rule's Redeem into wallet must be a CASH wallet of this program.
         if (request.Calculation?.CashAccountTypeId is { } cashId)
             await RequireCashWalletAsync(tenantId, programId, cashId, ct);
@@ -315,7 +321,13 @@ public sealed class RulesAppService(
             e.Cardinality.ToString(),
             e.Period?.ToString(),
             e.Fields.Select(f => new EventFieldMetadata(f.Path, f.Kind.ToString())).ToList(),
-            RuleTypeCatalog.CompatibleRuleTypes(e))).ToList();
+            RuleTypeCatalog.CompatibleRuleTypes(e),
+            // CR 2026-10-06 Phase 2: the fields a new rule of each compatible type may set.
+            RuleTypeCatalog.CompatibleRuleTypes(e).Select(type =>
+            {
+                var applicable = RuleFieldCatalog.For(e, type);
+                return new ApplicableFieldsResponse(type, applicable.Configuration, applicable.Limits);
+            }).ToList())).ToList();
 
         var ruleTypes = RuleTypeCatalog.Catalog.Values.Select(m => new RuleTypeMetadataResponse(
             m.RuleType,
@@ -333,10 +345,13 @@ public sealed class RulesAppService(
     // birthdaybonus triggers and STAMP targets are retired. Those rules were disabled by migration and stay readable as history,
     // but can't be edited, approved or re-activated — same shape as RewardsAppService's
     // reward_type_retired.
+    // CR 2026-10-06 D22: the same goes for a rule whose trigger no longer accepts its type (a
+    // ReversalRule on order.refunded) — RuleTypeCatalog is the one compatibility source.
     private async Task RequireNotRetiredAsync(string tenantId, RuleEntity entity, CancellationToken ct)
     {
         var retired = RuleTypes.IsRetired(entity.Type)
             || EventTypes.IsRetiredTrigger(entity.Trigger)
+            || !RuleTypeCatalog.IsCompatible(EventTypes.Describe(entity.Trigger), entity.Type)
             || (entity.TargetAccountTypeId is { } targetId
                 && await (await accountTypeRepository.Query(tenantId, ct))
                     .AnyAsync(a => a.Id == targetId && a.Type == nameof(AccountType.STAMP), ct));
@@ -374,7 +389,17 @@ public sealed class RulesAppService(
         FlatConditionsMigrator.ParseConditions(r.Conditions),
         r.Limits is null ? null : JsonSerializer.Deserialize<RuleLimits>(r.Limits, DslOptions),
         r.Priority, r.Stackable, r.ExclusivityGroup, r.StackMode,
-        r.Configuration is null ? null : JsonSerializer.Deserialize<RuleSettings>(r.Configuration, DslOptions),
+        ReadConfiguration(r.Configuration),
         r.CurrentVersion, r.ActiveFrom, r.ActiveTo,
         r.Status, r.CreatedBy, r.ApprovedBy, r.CreatedAt, r.UpdatedAt);
+
+    // CR 2026-10-06 D20: test mode was removed; a flag stored before (on rules disabled by
+    // migration, D21) is never reported as on, since nothing honours it any more.
+    private static RuleSettings? ReadConfiguration(string? json)
+    {
+        if (json is null) return null;
+        var settings = JsonSerializer.Deserialize<RuleSettings>(json, DslOptions);
+        if (settings is not null) settings.TestMode = false;
+        return settings;
+    }
 }

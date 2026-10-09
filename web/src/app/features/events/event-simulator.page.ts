@@ -19,6 +19,7 @@ import { ApiError } from '../../core/http/api-error';
 import { EventTypesCatalog } from '../../core/events/event-types.service';
 import { EventsService } from './events.service';
 import { EventStatus } from './event.model';
+import { eventSampleJson } from './event-samples';
 
 /** Field guidance per event type, checked against the Consumer handlers that read each payload. */
 interface EventHelp {
@@ -77,12 +78,6 @@ const GENERIC_HELP: EventHelp = {
   note: 'events.simulator.help.generic',
 };
 
-const DEFAULT_DATA_JSON = `{
-  "contact_key": "cust_test_1",
-  "channel": "web",
-  "amount": "1250"
-}`;
-
 const STATUS_POLL_INTERVAL_MS = 1500;
 const STATUS_POLL_ATTEMPTS = 6;
 
@@ -120,7 +115,7 @@ const STATUS_POLL_ATTEMPTS = 6;
             placeholder="Select an event type…"
             ariaLabelledby="eventType-label"
             [ngModel]="eventType()"
-            (ngModelChange)="eventType.set($event)"
+            (ngModelChange)="selectEventType($event)"
           />
           <p class="mt-1.5 text-xs text-gray-500">
             @if (types(); as t) {
@@ -139,7 +134,14 @@ const STATUS_POLL_ATTEMPTS = 6;
         </div>
 
         <div>
-          <label for="eventData" class="field-label">Event data (JSON)</label>
+          <div class="flex items-center justify-between">
+            <label for="eventData" class="field-label">Event data (JSON)</label>
+            @if (dataJson() !== sampleJson()) {
+              <app-button variant="ghost" size="sm" (click)="useSample()">{{
+                'events.simulator.useSample' | translate
+              }}</app-button>
+            }
+          </div>
           <textarea
             id="eventData"
             rows="8"
@@ -149,6 +151,11 @@ const STATUS_POLL_ATTEMPTS = 6;
             spellcheck="false"
           ></textarea>
           <p class="mt-1.5 text-xs text-gray-500">{{ 'events.simulator.dataHint' | translate }}</p>
+          @if (dataJson().includes('REPLACE_WITH_')) {
+            <p class="text-warn-fg mt-1 text-xs">
+              {{ 'events.simulator.placeholderHint' | translate }}
+            </p>
+          }
           @if (help(); as h) {
             <p class="mt-1 text-xs text-gray-600">
               {{ 'events.simulator.requires' | translate }}
@@ -231,7 +238,12 @@ export class EventSimulatorPage implements OnInit {
 
   protected readonly types = signal<EventTypesCatalog | null>(null);
   protected readonly eventType = signal<string | null>(null);
-  protected readonly dataJson = signal(DEFAULT_DATA_JSON);
+  /** The selected type's sample payload (event-samples.ts); a tenant-defined one before a type is picked. */
+  protected readonly sampleJson = computed(() => {
+    const type = this.eventType();
+    return eventSampleJson(type, !type || (this.types()?.generic.includes(type) ?? false));
+  });
+  protected readonly dataJson = signal(eventSampleJson(null, true));
   protected readonly sending = signal(false);
   protected readonly polling = signal(false);
   protected readonly formErrors = signal<string[]>([]);
@@ -262,6 +274,17 @@ export class EventSimulatorPage implements OnInit {
     if (known) return known;
     return this.types()?.generic.includes(type) ? GENERIC_HELP : BUILT_IN_DEFAULT_HELP;
   });
+
+  /** Swaps in the new type's sample — unless the admin edited the JSON, which is kept. */
+  protected selectEventType(type: string | null): void {
+    const untouched = this.dataJson() === this.sampleJson();
+    this.eventType.set(type);
+    if (untouched) this.useSample();
+  }
+
+  protected useSample(): void {
+    this.dataJson.set(this.sampleJson());
+  }
 
   ngOnInit(): void {
     void this.loadTypes();

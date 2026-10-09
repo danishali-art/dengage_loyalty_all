@@ -13,6 +13,7 @@ public class LoyaltyDbContext(DbContextOptions<LoyaltyDbContext> options) : DbCo
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
     public DbSet<RuleFireAudit> RuleFireAudits => Set<RuleFireAudit>();
     public DbSet<HeldPosting> HeldPostings => Set<HeldPosting>();
+    public DbSet<HeldPostingRefund> HeldPostingRefunds => Set<HeldPostingRefund>();
     public DbSet<RuleVersion> RuleVersions => Set<RuleVersion>();
     public DbSet<RuleLimitCounter> RuleLimitCounters => Set<RuleLimitCounter>();
     public DbSet<EventInbox> EventInbox => Set<EventInbox>();

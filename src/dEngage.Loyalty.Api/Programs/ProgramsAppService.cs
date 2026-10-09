@@ -75,6 +75,7 @@ public sealed class ProgramsAppService(
             TenantId = tenantGuid,
             Name = request.Name,
             Slug = slug,
+            DefaultRounding = request.DefaultRounding ?? RoundingDirection.Down,
             Description = request.Description,
             // 1.3.CL item 8: always a draft, and inactive until it has been published.
             Status = ProgramStatus.Inactive,
@@ -113,11 +114,14 @@ public sealed class ProgramsAppService(
 
         if (request.Name is not null) entity.Name = request.Name;
         if (request.Description is not null) entity.Description = request.Description;
+        // CR 2026-10-06 Phase 4: configuration — rules inherit it — so it marks a publish pending.
+        var roundingChanged = request.DefaultRounding is not null && request.DefaultRounding != entity.DefaultRounding;
+        if (request.DefaultRounding is not null) entity.DefaultRounding = request.DefaultRounding;
         if (request.Status is not null) entity.Status = request.Status;
 
         // Toggling Active/Inactive is operational, not configuration (D8) — it neither needs a
         // publish nor marks one as pending. Name/description edits do.
-        if ((request.Name is not null || request.Description is not null)
+        if ((request.Name is not null || request.Description is not null || roundingChanged)
             && entity.PublicationStatus == ProgramPublicationStatus.Published)
             entity.HasUnpublishedChanges = true;
 
@@ -229,7 +233,7 @@ public sealed class ProgramsAppService(
             .ToList();
 
         return new ProgramPublicationSnapshot(
-            new PublishedProgram(program.Id, program.Name, program.Description, program.Status, program.Slug),
+            new PublishedProgram(program.Id, program.Name, program.Description, program.Status, program.Slug, program.DefaultRounding),
             accountTypes, tiers, rewards, rules, streaks);
     }
 
@@ -247,7 +251,7 @@ public sealed class ProgramsAppService(
             (int?)null, p.CreatedAt,
             db.AccountTypes.Count(a => a.ProgramId == p.Id),
             db.Rules.Count(r => r.ProgramId == p.Id && r.Status != RuleStatus.Deleted),
-            p.PublicationStatus, p.HasUnpublishedChanges, p.PublishedVersion, p.PublishedAt, p.PublishedBy, p.Slug));
+            p.PublicationStatus, p.HasUnpublishedChanges, p.PublishedVersion, p.PublishedAt, p.PublishedBy, p.Slug, p.DefaultRounding));
 
     // A5 default for a create without a slug: same rule as the migration backfill (lowercase,
     // non [a-z0-9] runs -> '-', at most 32 chars so a "-N" suffix still fits, at least 2).

@@ -45,8 +45,14 @@ public sealed class WinnerSelector(
         IReadOnlyList<CachedRule> earnRules,
         EvaluationEvent evt,
         ConditionContext context,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? programDefaultRounding = null)
     {
+        // CR 2026-10-06 Phase 4: the one rounding step, applied right after the calculation and
+        // the max-per-event cap and before the limits, so a cap trims an already-rounded award
+        // and is never pushed over by rounding up afterwards.
+        decimal Round(CachedRule rule, decimal delta) => ApplyRounding(rule, delta, programDefaultRounding);
+
         // Earn-category rules must produce a strictly positive delta to be worth a winner
         // slot/stacking slot. Burn/Adjust-category rules post negative or operator-signed
         // deltas, so they're only discarded on an exact zero (no effect at all) — see
@@ -88,18 +94,29 @@ public sealed class WinnerSelector(
                 }
 
                 var delta = ruleTypeHandlers.Resolve(rule.Type).Compute(rule.Calculation, evt, rule.TargetDecimals);
-                delta = ClampMaxPerEvent(rule, delta); // CR-07: "clamp at calculation"
+                delta = Round(rule, ClampMaxPerEvent(rule, delta)); // CR-07: "clamp at calculation"
                 if (HasNoEffect(delta))
                 {
                     logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] zero delta", tenantId, rule.Name);
                     continue;
                 }
 
-                if (await IsLimitExhaustedAsync(tenantId, rule, evt, category, ct))
+                if (await AlreadyAwardedOnceAsync(tenantId, rule, evt, ct))
                     continue;
 
+                // CR 2026-10-06 D6/D13: the same cap check as stackable rules. The award is trimmed
+                // to what the caps leave (On breach = Clamp) or the rule is skipped (Skip, or a cap
+                // already used up) — then the next exclusive rule gets its chance. Before, an
+                // exclusive rule only checked "already at the cap?" and could pay past it.
+                var clipped = await ClipToLimitAsync(tenantId, rule, evt, category, delta, ct);
+                if (clipped is null || HasNoEffect(clipped.Value))
+                {
+                    logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] limit reached", tenantId, rule.Name);
+                    continue;
+                }
+
                 winner = rule;
-                winnerDelta = delta;
+                winnerDelta = clipped.Value;
                 logger.LogInformation("RuleEngine: [{Tenant}] rule WINNER [{Rule}] group={Group} p={Priority}",
                     tenantId, rule.Name, rule.ExclusivityGroup, rule.Priority);
                 break;
@@ -155,7 +172,7 @@ public sealed class WinnerSelector(
 
             foreach (var (rule, delta, losers) in basesForWallet)
             {
-                var scaledDelta = ApplyRounding(rule, delta * factor);
+                var scaledDelta = Round(rule, delta * factor); // a no-op unless a legacy multiplier applied
                 var snapshot = new ResolutionSnapshot(
                     rule.ExclusivityGroup, losers, appliedMultiplierIds, factor, delta, scaledDelta);
                 appliedRules.Add(new AppliedRule(rule, scaledDelta, walletId, JsonSerializer.Serialize(snapshot)));
@@ -167,13 +184,15 @@ public sealed class WinnerSelector(
                     continue;
 
                 var rawDelta = ruleTypeHandlers.Resolve(rule.Type).Compute(rule.Calculation, evt, rule.TargetDecimals);
-                rawDelta = ClampMaxPerEvent(rule, rawDelta);
+                rawDelta = Round(rule, ClampMaxPerEvent(rule, rawDelta));
                 if (HasNoEffect(rawDelta)) continue;
 
-                var clippedDelta = await ClipToLimitAsync(tenantId, rule, evt, category, rawDelta, ct);
-                if (clippedDelta is null) continue; // limit already exhausted
+                if (await AlreadyAwardedOnceAsync(tenantId, rule, evt, ct)) continue;
 
-                var roundedDelta = ApplyRounding(rule, clippedDelta.Value);
+                var clippedDelta = await ClipToLimitAsync(tenantId, rule, evt, category, rawDelta, ct);
+                if (clippedDelta is null || HasNoEffect(clippedDelta.Value)) continue; // limit reached
+
+                var roundedDelta = clippedDelta.Value;
                 var snapshot = new ResolutionSnapshot(null, Array.Empty<Guid>(), Array.Empty<Guid>(), 1m, roundedDelta, roundedDelta);
                 appliedRules.Add(new AppliedRule(rule, roundedDelta, walletId, JsonSerializer.Serialize(snapshot)));
             }
@@ -182,27 +201,28 @@ public sealed class WinnerSelector(
         return appliedRules;
     }
 
-    // CR-08 (A8): "round once per account kind, post" (A6). Deliberately a no-op unless the
-    // rule EXPLICITLY sets Configuration.Rounding — A8's stated default is "inherit from
-    // program," but Programs has no default-rounding column yet (out of this CR's file set), so
-    // silently defaulting to e.g. "down" here would change every existing/unconfigured rule's
-    // output (a CASH FixedBonusRule of 2.5 would become 2) without anyone asking for that.
-    // Explicit configuration always applies.
-    //
-    // 1.3.CL item 2 (§5 d): for Spend rules the target wallet's `decimals` sets the precision and
-    // Rounding only the direction, so a 3-4 place wallet is not cut back to 2. Every other rule
-    // type keeps the fixed 2 places (§5 g — out of scope).
-    private static decimal ApplyRounding(CachedRule rule, decimal delta)
+    // CR-08 (A8) "round once per account kind, post", completed by CR 2026-10-06 Phase 4 (§3.8):
+    // the target wallet's decimals set the precision for every pipeline rule type (Spend, Fixed
+    // bonus, Manual adjustment — it used to be the wallet's for Spend and a fixed 2 places for the
+    // others), and the rule's Configuration.rounding — or, when unset, the program's
+    // default_rounding (Down unless changed) — sets the direction. Down reproduces the rounding
+    // Spend always had, so payouts only change once someone picks Nearest or Up. The direction
+    // applies to the award's size: a negative adjustment rounds toward zero on Down, as a
+    // positive one does. "Nearest" is half away from zero. Rounding twice with the same settings
+    // changes nothing, so the second call after a multiplier is safe.
+    private static decimal ApplyRounding(CachedRule rule, decimal delta, string? programDefaultRounding)
     {
-        var places = rule.Type == RuleTypes.SpendRule ? Math.Clamp(rule.TargetDecimals, 0, 4) : 2;
+        var places = Math.Clamp(rule.TargetDecimals, 0, 4);
         var scale = places switch { 0 => 1m, 1 => 10m, 2 => 100m, 3 => 1000m, _ => 10000m };
-        return rule.Configuration?.Rounding switch
+        var direction = rule.Configuration?.Rounding ?? programDefaultRounding ?? RoundingDirection.Down;
+        var size = Math.Abs(delta) * scale;
+        var rounded = direction switch
         {
-            "down" => Math.Floor(delta * scale) / scale,
-            "up" => Math.Ceiling(delta * scale) / scale,
-            "nearest" => Math.Round(delta, places, MidpointRounding.AwayFromZero),
-            _ => delta
-        };
+            RoundingDirection.Up => Math.Ceiling(size),
+            RoundingDirection.Nearest => Math.Round(size, MidpointRounding.AwayFromZero),
+            _ => Math.Floor(size)
+        } / scale;
+        return delta < 0 ? -rounded : rounded;
     }
 
     // CR-07: "max per event, clamp at calculation." Sign-aware — clamps magnitude, preserves
@@ -218,92 +238,38 @@ public sealed class WinnerSelector(
         };
     }
 
-    // PerCustomerTotal/PerCustomerPerDay are Earn-shaped caps ("how much can this customer earn
-    // from this rule") — unchanged from before CR-07. The CR-07 additions below (cooldown, max
-    // customers, rule budget, per-customer-per-period) are checked regardless of category except
-    // where individually noted.
-    private async Task<bool> IsLimitExhaustedAsync(string tenantId, CachedRule rule, EvaluationEvent evt, EventCategory category, CancellationToken ct)
+    // CR 2026-10-06 D12: signup / kyc.completed pay each rule at most once per customer
+    // (OnceOnlyAward). Checked before the caps, so a lower-priority exclusive rule still gets its
+    // chance; LedgerPoster re-checks inside its transaction and posts under the once key.
+    private async Task<bool> AlreadyAwardedOnceAsync(string tenantId, CachedRule rule, EvaluationEvent evt, CancellationToken ct)
     {
-        if (category == EventCategory.Earn && rule.Limits?.PerCustomerTotal.HasValue == true)
-        {
-            var total = await limitCache.GetTotalAsync(tenantId, rule.Id, evt.ContactKey, ct);
-            if (total >= rule.Limits.PerCustomerTotal.Value)
-            {
-                logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] per_customer_total exhausted", tenantId, rule.Name);
-                return true;
-            }
-        }
-        if (category == EventCategory.Earn && rule.Limits?.PerCustomerPerDay.HasValue == true)
-        {
-            var daily = await limitCache.GetDailyAsync(tenantId, rule.Id, evt.ContactKey, ct);
-            if (daily >= rule.Limits.PerCustomerPerDay.Value)
-            {
-                logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] per_customer_per_day exhausted", tenantId, rule.Name);
-                return true;
-            }
-        }
+        if (!OnceOnlyAward.Applies(evt.EventType) ||
+            !await limitEvaluator.HasOnceOnlyAwardAsync(tenantId, rule.Id, evt.ContactKey, ct))
+            return false;
 
-        if (rule.Limits is null) return false;
-
-        if (rule.Limits.CooldownHours.HasValue &&
-            await limitEvaluator.IsCooldownActiveAsync(tenantId, rule.Id, evt.ContactKey, rule.Limits.CooldownHours.Value, ct))
-        {
-            logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] cooldown active", tenantId, rule.Name);
-            return true;
-        }
-
-        if (rule.Limits.MaxCustomers.HasValue &&
-            await limitEvaluator.IsNewCustomerBlockedByMaxAsync(tenantId, rule.Id, evt.ContactKey, rule.Limits.MaxCustomers.Value, ct))
-        {
-            logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] max_customers reached", tenantId, rule.Name);
-            return true;
-        }
-
-        if (rule.Limits.RuleBudgetTotal.HasValue)
-        {
-            var used = await limitEvaluator.GetRuleBudgetUsedAsync(tenantId, rule.Id, null, null, ct);
-            if (used >= rule.Limits.RuleBudgetTotal.Value)
-            {
-                logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] rule_budget_total exhausted", tenantId, rule.Name);
-                return true;
-            }
-        }
-        if (rule.Limits.RuleBudgetPerPeriod.HasValue)
-        {
-            var used = await limitEvaluator.GetRuleBudgetUsedAsync(tenantId, rule.Id, rule.Limits.Period, rule.Limits.ResetWindow, ct);
-            if (used >= rule.Limits.RuleBudgetPerPeriod.Value)
-            {
-                logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] rule_budget_per_period exhausted", tenantId, rule.Name);
-                return true;
-            }
-        }
-        if (category == EventCategory.Earn && rule.Limits.PerCustomerPerPeriod.HasValue)
-        {
-            var used = await limitEvaluator.GetCustomerPeriodUsedAsync(tenantId, rule.Id, evt.ContactKey, rule.Limits.Period, rule.Limits.ResetWindow, ct);
-            if (used >= rule.Limits.PerCustomerPerPeriod.Value)
-            {
-                logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] per_customer_per_period exhausted", tenantId, rule.Name);
-                return true;
-            }
-        }
-
-        return false;
+        logger.LogInformation("RuleEngine: [{Tenant}] rule SKIP  [{Rule}] {Reason}", tenantId, rule.Name, OnceOnlyAward.SkipReason);
+        return true;
     }
 
-    // Additive stackable path only — the exclusive-winner path gates eligibility but has never
-    // clipped (pre-existing behavior, unchanged by CR-06/CR-07). CR-07's new budget/period
-    // limits DO clip here, per their on_breach="Clamp" default (on_breach="Skip" returns null
-    // instead, same as the legacy fields already do implicitly).
+    // The one cap check for exclusive and stackable rules (CR 2026-10-06 D6/D13 — exclusive rules
+    // used to check only "already at the cap?" and could pay past it). Returns the award trimmed to
+    // what every cap leaves, or null to skip the rule. A cap already used up, a cooldown or max
+    // customers always skips; a cap the award would exceed trims it (On breach = Clamp, the
+    // default) or skips the rule (Skip). PerCustomerTotal/PerCustomerPerDay/PerCustomerPerPeriod
+    // are Earn-shaped caps ("how much can this customer earn from this rule"); the rest apply to
+    // every category.
     private async Task<decimal?> ClipToLimitAsync(string tenantId, CachedRule rule, EvaluationEvent evt, EventCategory category, decimal delta, CancellationToken ct)
     {
         if (rule.Limits is null) return delta;
+
+        var skip = rule.Limits.OnBreach == "Skip";
 
         if (category == EventCategory.Earn && rule.Limits.PerCustomerTotal.HasValue)
         {
             var total = await limitCache.GetTotalAsync(tenantId, rule.Id, evt.ContactKey, ct);
             if (total >= rule.Limits.PerCustomerTotal.Value) return null;
             var remaining = rule.Limits.PerCustomerTotal.Value - total;
-            if (delta > remaining) delta = remaining;
+            if (delta > remaining) { if (skip) return null; delta = remaining; }
         }
 
         if (category == EventCategory.Earn && rule.Limits.PerCustomerPerDay.HasValue)
@@ -311,7 +277,7 @@ public sealed class WinnerSelector(
             var daily = await limitCache.GetDailyAsync(tenantId, rule.Id, evt.ContactKey, ct);
             if (daily >= rule.Limits.PerCustomerPerDay.Value) return null;
             var remaining = rule.Limits.PerCustomerPerDay.Value - daily;
-            if (delta > remaining) delta = remaining;
+            if (delta > remaining) { if (skip) return null; delta = remaining; }
         }
 
         if (rule.Limits.CooldownHours.HasValue &&
@@ -321,8 +287,6 @@ public sealed class WinnerSelector(
         if (rule.Limits.MaxCustomers.HasValue &&
             await limitEvaluator.IsNewCustomerBlockedByMaxAsync(tenantId, rule.Id, evt.ContactKey, rule.Limits.MaxCustomers.Value, ct))
             return null;
-
-        var skip = rule.Limits.OnBreach == "Skip";
 
         if (rule.Limits.RuleBudgetTotal is { } budgetTotal)
         {

@@ -4,9 +4,11 @@ import {
   ElementRef,
   OnInit,
   computed,
+  effect,
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { startWith } from 'rxjs';
@@ -43,7 +45,9 @@ import {
 } from '../../../shared/forms/condition-tree-dsl';
 import { RulesService } from './rules.service';
 import { BurnRuleDefaults, burnRuleDefaults } from './burn-rule-defaults';
+import { fieldVisibility, isConfigVisible, isLimitVisible } from './rule-field-visibility';
 import {
+  ALL_LIMIT_FIELDS,
   LIMIT_GROUPS,
   LimitControl,
   LimitValues,
@@ -52,6 +56,8 @@ import {
   validateLimits,
 } from './rule-limits';
 import { AccountTypesService } from '../account-types/account-types.service';
+import { ProgramsService } from '../programs.service';
+import { RoundingDirection } from '../program.model';
 import { AccountType } from '../account-types/account-type.model';
 import {
   CreateRuleRequest,
@@ -296,10 +302,21 @@ export function buildTriggerOptions(
 
       <section class="card space-y-4">
         <div class="section-header">
-          <h2 class="section-heading">Calculation</h2>
-          <p class="mt-1 text-xs text-gray-500">
-            How much this rule awards, debits, or adjusts when it fires.
-          </p>
+          <!-- CR 2026-10-06 D17: a redeem / transfer rule's calculation holds the customer-facing terms. -->
+          @switch (typeValue()) {
+            @case ('RedemptionRule') {
+              <h2 class="section-heading">{{ 'rules.calc.headingRedeem' | translate }}</h2>
+              <p class="mt-1 text-xs text-gray-500">{{ 'rules.calc.introRedeem' | translate }}</p>
+            }
+            @case ('TransferRule') {
+              <h2 class="section-heading">{{ 'rules.calc.headingTransfer' | translate }}</h2>
+              <p class="mt-1 text-xs text-gray-500">{{ 'rules.calc.introTransfer' | translate }}</p>
+            }
+            @default {
+              <h2 class="section-heading">{{ 'rules.calc.heading' | translate }}</h2>
+              <p class="mt-1 text-xs text-gray-500">{{ 'rules.calc.intro' | translate }}</p>
+            }
+          }
         </div>
         <form [formGroup]="form" class="grid grid-cols-2 gap-3">
           @switch (typeValue()) {
@@ -324,7 +341,12 @@ export function buildTriggerOptions(
                   [attr.aria-invalid]="calcRateError ? 'true' : null"
                   [attr.aria-describedby]="calcRateError ? 'calcRate-error' : null"
                 />
-                <app-field-hint id="calcRate-error" [error]="calcRateError" />
+                <!-- CR 2026-10-06 D14: a tenant-defined event may or may not carry an amount. -->
+                <app-field-hint
+                  id="calcRate-error"
+                  [error]="calcRateError"
+                  [hint]="genericTrigger() ? ('rules.calc.rateNeedsAmount' | translate) : null"
+                />
               </div>
             }
             @case ('FixedBonusRule') {
@@ -500,209 +522,256 @@ export function buildTriggerOptions(
         </form>
       </section>
 
-      <!-- Limits: grouped by what they cap; each value validated by its kind (rule-limits.ts). -->
-      <section class="card space-y-5">
-        <div class="section-header">
-          <h2 class="section-heading">{{ 'rules.limits.heading' | translate }}</h2>
-          <p class="mt-1 text-xs text-gray-500">{{ 'rules.limits.intro' | translate }}</p>
-        </div>
-        <form [formGroup]="form" class="space-y-5">
-          @for (group of limitGroups; track group.id) {
-            <fieldset class="rounded-lg border border-gray-200 p-4">
-              <legend class="px-1 text-sm font-medium text-gray-800">
-                {{ group.i18n + '.title' | translate }}
-              </legend>
-              <p class="mb-3 text-xs text-gray-500">{{ group.i18n + '.hint' | translate }}</p>
-              <div class="grid grid-cols-3 gap-3">
-                @for (field of group.fields; track field.control) {
-                  @let error = limitError(field.control);
-                  <div>
-                    <label [for]="field.control" class="field-label">{{
-                      field.i18n + '.label' | translate
-                    }}</label>
-                    <div class="relative">
-                      <input
-                        [id]="field.control"
-                        type="text"
-                        [attr.inputmode]="field.kind === 'count' ? 'numeric' : 'decimal'"
-                        autocomplete="off"
-                        [formControlName]="field.control"
-                        class="field-input pr-16"
-                        [placeholder]="'rules.limits.none' | translate"
-                        [attr.aria-invalid]="error ? 'true' : null"
-                        [attr.aria-describedby]="field.control + '-hint'"
+      <!-- Limits: grouped by what they cap; each value validated by its kind (rule-limits.ts).
+           CR 2026-10-06 Phase 2: a new rule shows only the limits that apply to it. -->
+      @if (visibleLimitGroups().length > 0) {
+        <section class="card space-y-5">
+          <div class="section-header">
+            <h2 class="section-heading">{{ 'rules.limits.heading' | translate }}</h2>
+            <p class="mt-1 text-xs text-gray-500">{{ 'rules.limits.intro' | translate }}</p>
+          </div>
+          <form [formGroup]="form" class="space-y-5">
+            @for (group of visibleLimitGroups(); track group.id) {
+              <fieldset class="rounded-lg border border-gray-200 p-4">
+                <legend class="px-1 text-sm font-medium text-gray-800">
+                  {{ group.i18n + '.title' | translate }}
+                </legend>
+                <p class="mb-3 text-xs text-gray-500">{{ group.i18n + '.hint' | translate }}</p>
+                <div class="grid grid-cols-3 gap-3">
+                  @for (field of group.fields; track field.control) {
+                    @let error = limitError(field.control);
+                    <div>
+                      <label [for]="field.control" class="field-label">{{
+                        field.i18n + '.label' | translate
+                      }}</label>
+                      <div class="relative">
+                        <input
+                          [id]="field.control"
+                          type="text"
+                          [attr.inputmode]="field.kind === 'count' ? 'numeric' : 'decimal'"
+                          autocomplete="off"
+                          [formControlName]="field.control"
+                          class="field-input pr-16"
+                          [placeholder]="'rules.limits.none' | translate"
+                          [attr.aria-invalid]="error ? 'true' : null"
+                          [attr.aria-describedby]="field.control + '-hint'"
+                        />
+                        <span
+                          class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400"
+                          aria-hidden="true"
+                          >{{ 'rules.limits.units.' + field.kind | translate }}</span
+                        >
+                      </div>
+                      <app-field-hint
+                        [id]="field.control + '-hint'"
+                        [error]="error ? (error | translate) : null"
+                        [hint]="
+                          field.apiKey === 'min_event_amount' && genericTrigger()
+                            ? ('rules.limits.minEventAmount.genericHint' | translate)
+                            : (field.i18n + '.hint' | translate)
+                        "
                       />
-                      <span
-                        class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400"
-                        aria-hidden="true"
-                        >{{ 'rules.limits.units.' + field.kind | translate }}</span
-                      >
                     </div>
+                  }
+                </div>
+              </fieldset>
+            }
+
+            <!-- Only shown when a per-period cap is set — otherwise the engine would silently use "Day". -->
+            @if (limitsUsePeriod() && showLimit('period')) {
+              <fieldset class="rounded-lg border border-gray-200 p-4">
+                <legend class="px-1 text-sm font-medium text-gray-800">
+                  {{ 'rules.limits.groups.period.title' | translate }}
+                </legend>
+                <p class="mb-3 text-xs text-gray-500">
+                  {{ 'rules.limits.groups.period.hint' | translate }}
+                </p>
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    @let periodError = limitError('limitPeriod');
+                    <label for="limitPeriod" class="field-label">{{
+                      'rules.limits.period.label' | translate
+                    }}</label>
+                    <select
+                      id="limitPeriod"
+                      formControlName="limitPeriod"
+                      class="field-input"
+                      [attr.aria-invalid]="periodError ? 'true' : null"
+                      aria-describedby="limitPeriod-hint"
+                    >
+                      <option value="">{{ 'rules.limits.period.choose' | translate }}</option>
+                      <option value="Day">{{ 'rules.limits.period.Day' | translate }}</option>
+                      <option value="Week">{{ 'rules.limits.period.Week' | translate }}</option>
+                      <option value="Month">{{ 'rules.limits.period.Month' | translate }}</option>
+                      <option value="Year">{{ 'rules.limits.period.Year' | translate }}</option>
+                    </select>
                     <app-field-hint
-                      [id]="field.control + '-hint'"
-                      [error]="error ? (error | translate) : null"
-                      [hint]="field.i18n + '.hint' | translate"
+                      id="limitPeriod-hint"
+                      [error]="periodError ? (periodError | translate) : null"
                     />
                   </div>
-                }
-              </div>
-            </fieldset>
-          }
+                  <div class="col-span-2">
+                    <label for="limitResetWindow" class="field-label">{{
+                      'rules.limits.resetWindow.label' | translate
+                    }}</label>
+                    <select
+                      id="limitResetWindow"
+                      formControlName="limitResetWindow"
+                      class="field-input"
+                    >
+                      <option value="Calendar">
+                        {{ 'rules.limits.resetWindow.Calendar' | translate }}
+                      </option>
+                      <option value="Rolling">
+                        {{ 'rules.limits.resetWindow.Rolling' | translate }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </fieldset>
+            }
 
-          <!-- Only shown when a per-period cap is set — otherwise the engine would silently use "Day". -->
-          @if (limitsUsePeriod()) {
-            <fieldset class="rounded-lg border border-gray-200 p-4">
-              <legend class="px-1 text-sm font-medium text-gray-800">
-                {{ 'rules.limits.groups.period.title' | translate }}
-              </legend>
-              <p class="mb-3 text-xs text-gray-500">
-                {{ 'rules.limits.groups.period.hint' | translate }}
-              </p>
-              <div class="grid grid-cols-3 gap-3">
+            <!-- Only shown when a cap that can be partly paid out is set (RuleLimits.cs). -->
+            @if (limitsUseOnBreach() && showLimit('on_breach')) {
+              <fieldset class="rounded-lg border border-gray-200 p-4">
+                <legend class="px-1 text-sm font-medium text-gray-800">
+                  {{ 'rules.limits.groups.breach.title' | translate }}
+                </legend>
+                <p class="mb-3 text-xs text-gray-500">
+                  {{ 'rules.limits.groups.breach.hint' | translate }}
+                </p>
+                <label for="limitOnBreach" class="sr-only">{{
+                  'rules.limits.groups.breach.title' | translate
+                }}</label>
+                <select
+                  id="limitOnBreach"
+                  formControlName="limitOnBreach"
+                  class="field-input max-w-md"
+                >
+                  <option value="Clamp">{{ 'rules.limits.onBreach.Clamp' | translate }}</option>
+                  <option value="Skip">{{ 'rules.limits.onBreach.Skip' | translate }}</option>
+                </select>
+              </fieldset>
+            }
+          </form>
+        </section>
+      }
+
+      @if (anyConfigVisible()) {
+        <section class="card space-y-4">
+          <div class="section-header">
+            <h2 class="section-heading">{{ 'rules.config.heading' | translate }}</h2>
+            <p class="mt-1 text-xs text-gray-500">{{ 'rules.config.intro' | translate }}</p>
+          </div>
+          <form [formGroup]="form" class="grid grid-cols-2 gap-3">
+            @if (showConfig('rounding')) {
+              <div>
+                <label for="cfgRounding" class="field-label">{{
+                  'rules.config.rounding.label' | translate
+                }}</label>
+                <select id="cfgRounding" formControlName="cfgRounding" class="field-input">
+                  <option value="">
+                    {{
+                      programRounding()
+                        ? ('rules.config.rounding.inheritWith'
+                          | translate
+                            : {
+                                direction:
+                                  ('rules.config.rounding.' + programRounding() | translate),
+                              })
+                        : ('rules.config.rounding.inherit' | translate)
+                    }}
+                  </option>
+                  <option value="down">{{ 'rules.config.rounding.down' | translate }}</option>
+                  <option value="nearest">{{ 'rules.config.rounding.nearest' | translate }}</option>
+                  <option value="up">{{ 'rules.config.rounding.up' | translate }}</option>
+                </select>
+              </div>
+            }
+            @if (showConfig('posting')) {
+              <div>
+                <label for="cfgPosting" class="field-label">{{
+                  'rules.config.posting.label' | translate
+                }}</label>
+                <select id="cfgPosting" formControlName="cfgPosting" class="field-input">
+                  <option value="Immediate">
+                    {{ 'rules.config.posting.Immediate' | translate }}
+                  </option>
+                  <option value="Delayed">{{ 'rules.config.posting.Delayed' | translate }}</option>
+                </select>
+              </div>
+              @if (postingValue() === 'Delayed') {
                 <div>
-                  @let periodError = limitError('limitPeriod');
-                  <label for="limitPeriod" class="field-label">{{
-                    'rules.limits.period.label' | translate
-                  }}</label>
-                  <select
-                    id="limitPeriod"
-                    formControlName="limitPeriod"
-                    class="field-input"
-                    [attr.aria-invalid]="periodError ? 'true' : null"
-                    aria-describedby="limitPeriod-hint"
+                  @let cfgHoldDaysError =
+                    fieldError('cfgHoldDays', {
+                      required: ('rules.config.holdDays.required' | translate),
+                      min: ('rules.config.holdDays.min' | translate),
+                    });
+                  <label for="cfgHoldDays" class="field-label"
+                    >{{ 'rules.config.holdDays.label' | translate }}
+                    <span class="text-danger-fg" aria-hidden="true">*</span></label
                   >
-                    <option value="">{{ 'rules.limits.period.choose' | translate }}</option>
-                    <option value="Day">{{ 'rules.limits.period.Day' | translate }}</option>
-                    <option value="Week">{{ 'rules.limits.period.Week' | translate }}</option>
-                    <option value="Month">{{ 'rules.limits.period.Month' | translate }}</option>
-                    <option value="Year">{{ 'rules.limits.period.Year' | translate }}</option>
-                  </select>
-                  <app-field-hint
-                    id="limitPeriod-hint"
-                    [error]="periodError ? (periodError | translate) : null"
+                  <input
+                    id="cfgHoldDays"
+                    type="number"
+                    min="1"
+                    step="1"
+                    formControlName="cfgHoldDays"
+                    class="field-input"
+                    [attr.aria-invalid]="cfgHoldDaysError ? 'true' : null"
+                    [attr.aria-describedby]="cfgHoldDaysError ? 'cfgHoldDays-error' : null"
                   />
+                  <app-field-hint id="cfgHoldDays-error" [error]="cfgHoldDaysError" />
                 </div>
-                <div class="col-span-2">
-                  <label for="limitResetWindow" class="field-label">{{
-                    'rules.limits.resetWindow.label' | translate
-                  }}</label>
-                  <select
-                    id="limitResetWindow"
-                    formControlName="limitResetWindow"
-                    class="field-input"
-                  >
-                    <option value="Calendar">
-                      {{ 'rules.limits.resetWindow.Calendar' | translate }}
-                    </option>
-                    <option value="Rolling">
-                      {{ 'rules.limits.resetWindow.Rolling' | translate }}
-                    </option>
-                  </select>
-                </div>
+              }
+            }
+            @if (showConfig('expiryOverrideDays')) {
+              <div>
+                @let cfgExpiryOverrideDaysError =
+                  fieldError('cfgExpiryOverrideDays', {
+                    min: ('rules.config.expiryOverride.min' | translate),
+                  });
+                <label for="cfgExpiryOverrideDays" class="field-label">{{
+                  'rules.config.expiryOverride.label' | translate
+                }}</label>
+                <input
+                  id="cfgExpiryOverrideDays"
+                  type="number"
+                  min="1"
+                  step="1"
+                  formControlName="cfgExpiryOverrideDays"
+                  class="field-input"
+                  [placeholder]="
+                    walletExpirationDays()
+                      ? ('rules.config.expiryOverride.placeholderDays'
+                        | translate: { days: walletExpirationDays() })
+                      : ('rules.config.expiryOverride.placeholderNever' | translate)
+                  "
+                  [attr.aria-invalid]="cfgExpiryOverrideDaysError ? 'true' : null"
+                  aria-describedby="cfgExpiryOverrideDays-hint"
+                />
+                <app-field-hint
+                  id="cfgExpiryOverrideDays-hint"
+                  [hint]="'rules.config.expiryOverride.hint' | translate"
+                  [error]="cfgExpiryOverrideDaysError"
+                />
               </div>
-            </fieldset>
-          }
-
-          <!-- Only shown when a cap that can be partly paid out is set (RuleLimits.cs). -->
-          @if (limitsUseOnBreach()) {
-            <fieldset class="rounded-lg border border-gray-200 p-4">
-              <legend class="px-1 text-sm font-medium text-gray-800">
-                {{ 'rules.limits.groups.breach.title' | translate }}
-              </legend>
-              <p class="mb-3 text-xs text-gray-500">
-                {{ 'rules.limits.groups.breach.hint' | translate }}
-              </p>
-              <label for="limitOnBreach" class="sr-only">{{
-                'rules.limits.groups.breach.title' | translate
-              }}</label>
-              <select
-                id="limitOnBreach"
-                formControlName="limitOnBreach"
-                class="field-input max-w-md"
-              >
-                <option value="Clamp">{{ 'rules.limits.onBreach.Clamp' | translate }}</option>
-                <option value="Skip">{{ 'rules.limits.onBreach.Skip' | translate }}</option>
-              </select>
-            </fieldset>
-          }
-        </form>
-      </section>
-
-      <section class="card space-y-4">
-        <div class="section-header">
-          <h2 class="section-heading">Configuration</h2>
-          <p class="mt-1 text-xs text-gray-500">
-            Posting behavior and rounding for this rule's ledger entries.
-          </p>
-        </div>
-        <form [formGroup]="form" class="grid grid-cols-2 gap-3">
-          <div>
-            <label for="cfgRounding" class="field-label">Rounding</label>
-            <select id="cfgRounding" formControlName="cfgRounding" class="field-input">
-              <option value="">Inherit from program</option>
-              <option value="down">Down</option>
-              <option value="nearest">Nearest</option>
-              <option value="up">Up</option>
-            </select>
-          </div>
-          <div>
-            <label for="cfgPosting" class="field-label">Posting</label>
-            <select id="cfgPosting" formControlName="cfgPosting" class="field-input">
-              <option value="Immediate">Immediate</option>
-              <option value="Delayed">Delayed</option>
-            </select>
-          </div>
-          @if (postingValue() === 'Delayed') {
-            <div>
-              @let cfgHoldDaysError =
-                fieldError('cfgHoldDays', {
-                  required: 'Hold days is required for delayed posting.',
-                  min: 'Hold days must be at least 1.',
-                });
-              <label for="cfgHoldDays" class="field-label"
-                >Hold days <span class="text-danger-fg" aria-hidden="true">*</span></label
-              >
-              <input
-                id="cfgHoldDays"
-                type="number"
-                min="1"
-                step="1"
-                formControlName="cfgHoldDays"
-                class="field-input"
-                [attr.aria-invalid]="cfgHoldDaysError ? 'true' : null"
-                [attr.aria-describedby]="cfgHoldDaysError ? 'cfgHoldDays-error' : null"
-              />
-              <app-field-hint id="cfgHoldDays-error" [error]="cfgHoldDaysError" />
-            </div>
-          }
-          <div>
-            <label for="cfgExpiryOverrideDays" class="field-label"
-              >Expiry override (days, optional)</label
-            >
-            <input
-              id="cfgExpiryOverrideDays"
-              type="number"
-              min="0"
-              step="1"
-              formControlName="cfgExpiryOverrideDays"
-              class="field-input"
-              placeholder="Use account default"
-            />
-          </div>
-          <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" formControlName="cfgReversible" class="checkbox" />
-            Reversible
-          </label>
-          <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" formControlName="cfgTestMode" class="checkbox" />
-            Test mode (evaluate and audit only, post nothing)
-          </label>
-          <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" formControlName="cfgNotifyOnAward" class="checkbox" />
-            Notify on award
-          </label>
-        </form>
-      </section>
+            }
+            @if (showConfig('reversible')) {
+              <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" formControlName="cfgReversible" class="checkbox" />
+                {{ 'rules.config.reversible' | translate }}
+              </label>
+            }
+            @if (showConfig('notifyOnAward')) {
+              <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" formControlName="cfgNotifyOnAward" class="checkbox" />
+                {{ 'rules.config.notifyOnAward' | translate }}
+              </label>
+            }
+          </form>
+        </section>
+      }
 
       <app-condition-tree-editor
         [tree]="conditions()"
@@ -717,6 +786,8 @@ export class RuleFormPage implements OnInit {
   readonly ruleId = input<string | undefined>(undefined);
 
   private readonly rulesService = inject(RulesService);
+
+  private readonly programsService = inject(ProgramsService);
   private readonly accountTypesService = inject(AccountTypesService);
   private readonly eventTypesService = inject(EventTypesService);
   private readonly toast = inject(ToastService);
@@ -731,6 +802,8 @@ export class RuleFormPage implements OnInit {
   protected readonly accountTypes = signal<readonly AccountType[]>([]);
   protected readonly conditions = signal<ConditionTree>(emptyTree());
   protected readonly metadata = signal<RulesMetadata | null>(null);
+  /** CR 2026-10-06 Phase 4: the program's default_rounding, shown on "Inherit from program". */
+  protected readonly programRounding = signal<RoundingDirection | null>(null);
 
   // Field errors stay hidden until a first save attempt (rather than per-field blur), then
   // update live as the user fixes things — driven off form.statusChanges since a sibling
@@ -810,9 +883,8 @@ export class RuleFormPage implements OnInit {
         requiredWhen((root) => root.get('cfgPosting')?.value === 'Delayed'),
         Validators.min(1),
       ]),
-      cfgExpiryOverrideDays: this.fb.control<number | null>(null),
+      cfgExpiryOverrideDays: this.fb.control<number | null>(null, [Validators.min(1)]),
       cfgReversible: this.fb.control(true),
-      cfgTestMode: this.fb.control(false),
       cfgNotifyOnAward: this.fb.control(false),
     },
     { validators: [limitsValidator] },
@@ -826,8 +898,13 @@ export class RuleFormPage implements OnInit {
     this.form.controls.type.valueChanges.pipe(startWith(this.form.controls.type.value)),
     { initialValue: this.form.controls.type.value },
   );
+  private readonly targetValue = toSignal(
+    this.form.controls.targetAccountTypeId.valueChanges.pipe(
+      startWith(this.form.controls.targetAccountTypeId.value),
+    ),
+    { initialValue: this.form.controls.targetAccountTypeId.value },
+  );
   // ── Limits (rule-limits.ts) ─────────────────────────────────────────────────────────
-  protected readonly limitGroups = LIMIT_GROUPS;
   private readonly limitValues = toSignal(
     this.form.valueChanges.pipe(startWith(this.form.getRawValue())),
     { initialValue: this.form.getRawValue() },
@@ -879,6 +956,87 @@ export class RuleFormPage implements OnInit {
   private readonly eventMetaForTrigger = computed(
     () => this.metadata()?.events.find((e) => e.eventType === this.triggerValue()) ?? null,
   );
+
+  // ── CR 2026-10-06 Phase 2: fields shown per trigger and rule type (rule-field-visibility.ts) ──
+  /** Null = every field: an existing rule (D5) or a tenant-defined trigger (D7). */
+  protected readonly fieldVisibility = computed(() =>
+    fieldVisibility(this.eventMetaForTrigger(), this.typeValue(), this.isEdit()),
+  );
+
+  /** A tenant-defined trigger: nobody declared whether it carries an amount (D14). */
+  protected readonly genericTrigger = computed(
+    () => this.metadata() !== null && this.eventMetaForTrigger() === null,
+  );
+
+  private readonly targetKind = computed(
+    () => this.accountTypes().find((a) => a.id === this.targetValue())?.type ?? null,
+  );
+
+  /** CR 2026-10-06 Phase 5: the target wallet's own expiry, shown as the override's placeholder. */
+  protected readonly walletExpirationDays = computed<number | null>(() => {
+    const config = this.accountTypes().find((a) => a.id === this.targetValue())?.config as
+      { expiration_days?: number | null } | undefined;
+    return config?.expiration_days ?? null;
+  });
+
+  protected showConfig(key: string): boolean {
+    // An expiry override only means something for points — cash never expires (§3.9).
+    if (key === 'expiryOverrideDays' && !this.isEdit() && this.targetKind() === 'CASH')
+      return false;
+    return isConfigVisible(this.fieldVisibility(), key);
+  }
+
+  protected showLimit(key: string): boolean {
+    return isLimitVisible(this.fieldVisibility(), key);
+  }
+
+  protected readonly visibleLimitGroups = computed(() => {
+    const visibility = this.fieldVisibility();
+    return LIMIT_GROUPS.map((g) => ({
+      ...g,
+      fields: g.fields.filter((f) => isLimitVisible(visibility, f.apiKey)),
+    })).filter((g) => g.fields.length > 0);
+  });
+
+  protected readonly anyConfigVisible = computed(() =>
+    ['rounding', 'posting', 'expiryOverrideDays', 'reversible', 'notifyOnAward'].some((k) =>
+      this.showConfig(k),
+    ),
+  );
+
+  // On a new rule, a field that stops applying (another trigger, type or target was picked) is
+  // reset, so a value the admin can no longer see is never validated or sent.
+  private readonly clearHiddenFields = effect(() => {
+    if (this.isEdit()) return;
+    const visibility = this.fieldVisibility();
+    const cashTarget = this.targetKind() === 'CASH';
+    untracked(() => {
+      const c = this.form.controls;
+      for (const field of ALL_LIMIT_FIELDS) {
+        if (!isLimitVisible(visibility, field.apiKey) && c[field.control].value !== '')
+          c[field.control].setValue('');
+      }
+      if (!isLimitVisible(visibility, 'period') && c.limitPeriod.value !== '')
+        c.limitPeriod.setValue('');
+      if (!isLimitVisible(visibility, 'on_breach') && c.limitOnBreach.value !== 'Clamp')
+        c.limitOnBreach.setValue('Clamp');
+      if (!isConfigVisible(visibility, 'rounding') && c.cfgRounding.value !== '')
+        c.cfgRounding.setValue('');
+      if (!isConfigVisible(visibility, 'posting') && c.cfgPosting.value !== 'Immediate') {
+        c.cfgPosting.setValue('Immediate');
+        c.cfgHoldDays.setValue(null);
+      }
+      if (
+        (!isConfigVisible(visibility, 'expiryOverrideDays') || cashTarget) &&
+        c.cfgExpiryOverrideDays.value !== null
+      )
+        c.cfgExpiryOverrideDays.setValue(null);
+      if (!isConfigVisible(visibility, 'reversible') && !c.cfgReversible.value)
+        c.cfgReversible.setValue(true);
+      if (!isConfigVisible(visibility, 'notifyOnAward') && c.cfgNotifyOnAward.value)
+        c.cfgNotifyOnAward.setValue(false);
+    });
+  });
 
   // Unknown to the metadata catalog (a tenant-approved generic event type) — treated as
   // compatible with everything, mirroring RuleTypeCatalog.IsCompatible's server-side fallback.
@@ -995,14 +1153,16 @@ export class RuleFormPage implements OnInit {
 
   private async load(): Promise<void> {
     this.isEdit.set(!!this.ruleId());
-    const [accountTypes, eventTypes, metadata] = await Promise.all([
+    const [accountTypes, eventTypes, metadata, program] = await Promise.all([
       this.accountTypesService.listAll(this.programId()),
       this.eventTypesService.get().catch(() => null),
       this.rulesService.getMetadata(this.programId()).catch(() => null),
+      this.programsService.get(this.programId()).catch(() => null),
     ]);
     this.accountTypes.set(accountTypes);
     if (eventTypes) this.eventTypesCatalog.set(eventTypes);
     if (metadata) this.metadata.set(metadata);
+    this.programRounding.set(program?.defaultRounding ?? null);
 
     const ruleId = this.ruleId();
     if (ruleId) {
@@ -1082,7 +1242,6 @@ export class RuleFormPage implements OnInit {
       cfgHoldDays: config?.holdDays ?? null,
       cfgExpiryOverrideDays: config?.expiryOverrideDays ?? null,
       cfgReversible: config?.reversible ?? true,
-      cfgTestMode: config?.testMode ?? false,
       cfgNotifyOnAward: config?.notifyOnAward ?? false,
     });
     this.conditions.set(rule.conditions ? structuredClone(rule.conditions) : emptyTree());
@@ -1126,6 +1285,7 @@ export class RuleFormPage implements OnInit {
     const limits: RuleLimits = {};
     for (const group of LIMIT_GROUPS) {
       for (const field of group.fields) {
+        if (!this.showLimit(field.apiKey)) continue; // Phase 2: not sent when it doesn't apply
         const raw = values[field.control].trim();
         if (raw === '') continue;
         (limits as Record<string, unknown>)[field.apiKey] =
@@ -1135,24 +1295,26 @@ export class RuleFormPage implements OnInit {
     if (Object.keys(limits).length === 0) return null;
     // Period / reset window only mean something with a per-period cap; On breach only with a
     // cap that can be partly paid out (rule-limits.ts). Don't send settings that do nothing.
-    if (usesPeriod(values)) {
+    if (usesPeriod(values) && this.showLimit('period')) {
       limits.period = values.limitPeriod || null;
       limits.reset_window = values.limitResetWindow || 'Calendar';
     }
-    if (usesOnBreach(values)) limits.on_breach = v.limitOnBreach;
+    if (usesOnBreach(values) && this.showLimit('on_breach')) limits.on_breach = v.limitOnBreach;
     return limits;
   }
 
   private buildConfiguration(v: ReturnType<typeof this.form.getRawValue>): RuleConfiguration {
+    // Phase 2: a field that doesn't apply is sent at its default (the API accepts defaults).
+    const posting = this.showConfig('posting') ? v.cfgPosting : 'Immediate';
     const config: RuleConfiguration = {
-      posting: v.cfgPosting,
-      reversible: v.cfgReversible,
-      testMode: v.cfgTestMode,
-      notifyOnAward: v.cfgNotifyOnAward,
+      posting,
+      reversible: this.showConfig('reversible') ? v.cfgReversible : true,
+      notifyOnAward: this.showConfig('notifyOnAward') ? v.cfgNotifyOnAward : false,
     };
-    if (v.cfgRounding) config.rounding = v.cfgRounding;
-    if (v.cfgHoldDays !== null) config.holdDays = Number(v.cfgHoldDays);
-    if (v.cfgExpiryOverrideDays !== null)
+    if (v.cfgRounding && this.showConfig('rounding')) config.rounding = v.cfgRounding;
+    if (v.cfgHoldDays !== null && this.showConfig('posting'))
+      config.holdDays = Number(v.cfgHoldDays);
+    if (v.cfgExpiryOverrideDays !== null && this.showConfig('expiryOverrideDays'))
       config.expiryOverrideDays = Number(v.cfgExpiryOverrideDays);
     return config;
   }

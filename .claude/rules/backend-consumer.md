@@ -19,9 +19,13 @@ Every path must be idempotent and safe to retry.**
    (`ON CONFLICT DO NOTHING`).
 4. `IEventHandlerRegistry.Resolve(eventType).HandleAsync(...)`.
 5. **The worker itself then calls `ICampaignEvaluationService.EvaluateAsync` for every event type
-   except `order.created`.**
+   except those in `HandlerEvaluatedEvents`** (`order.created`, `signup`, `kyc.completed`,
+   `card.transaction`, `remittance`, `points.adjusted`, `cash.spent`), whose handlers call it
+   themselves (CR 2026-10-06 D18, D23).
 6. Failure → the inbox is marked `Failed`, then **nack without requeue → dead-letter queue**. A
-   failure is never lost and never retried in a hot loop.
+   failure is never lost and never retried in a hot loop. A `Failed` event replayed from the DLQ
+   is processed again from step 3, so every step must tolerate a rerun; the rule engine skips rules
+   an earlier delivery already posted (CR 2026-10-06 R15).
 
 ## Adding an event handler
 - `public class <Name>Handler(...) : IEventHandler` in `Handlers/`, with
@@ -31,9 +35,16 @@ Every path must be idempotent and safe to retry.**
   An unregistered handler silently falls back to generic handling.
 - Read payload fields in **snake_case** (`contact_key`, `account_type_id`, ...). Missing fields
   must be logged and handled explicitly, never silently skipped.
-- **Don't call `ICampaignEvaluationService.EvaluateAsync` from a handler** unless you also exclude
-  that event type in the worker (as `order.created` is). Otherwise the rule engine runs twice for
-  one event. Ledger postings are deduped, but budget reservations and Redis limit counters are not.
+- **Don't call `ICampaignEvaluationService.EvaluateAsync` from a handler** unless you also add
+  that event type to `HandlerEvaluatedEvents`, so the worker skips it. Otherwise the rule engine
+  runs twice for one event. Ledger postings are deduped, but budget reservations and Redis limit
+  counters are not (the R15 redelivery guard only catches a second run after the first posted).
+  `HandlerEvaluatedEventsTests` and `ConsumerEvaluatesOnceCr1006Tests` fail if a handler that takes
+  `ICampaignEvaluationService` and the list disagree. A handler evaluates itself when rules must
+  run only after its own work succeeded (`cash.spent`: a refused spend earns nothing).
+- A refused business action (program not live, insufficient balance or points, no rule) is an
+  outcome event through the outbox with the inbox `processed` — decided by an explicit check under
+  the row lock, never by catching an exception — not a thrown, dead-lettered failure.
 - Balance changes go through `ILedgerService` / the rule engine, never through direct
   `CustomerAccount` edits. Outbound messages go through the outbox (`IOutboxService` or
   `IDomainEventDispatcher`), never a direct RabbitMQ publish.

@@ -21,6 +21,11 @@ internal static class RetiredRuleMessages
     // tenant generic type and accepted.
     public static string RetiredTrigger(string? trigger) =>
         $"trigger_retired: '{trigger}' is no longer a rule trigger (retired by CR 2026-10-05).";
+
+    // CR 2026-10-06 D20: test mode was removed from every rule — the field stays on the wire
+    // (existing fields are frozen) but only false is accepted.
+    public const string TestMode =
+        "test_mode_removed: test mode was removed (CR 2026-10-06) — 'configuration.testMode' must be false or omitted. Trial a rule in a staging tenant, with the Event Simulator, or with a condition or a short active window.";
 }
 
 // Structural/required-field checks only — the condition DSL itself is validated by
@@ -78,6 +83,17 @@ public sealed class CreateRuleRequestValidator : AbstractValidator<CreateRuleReq
             .When(x => x.Type == RuleTypes.FixedBonusRule && x.Calculation is not null)
             .WithMessage("Calculation.amount is required and must be positive for FixedBonusRule.");
 
+        // CR 2026-10-06 Phase 2 (D5): a NEW rule may set only the Configuration / Limits fields
+        // that apply to its trigger and type (RuleFieldCatalog — the same list GET rules/metadata
+        // serves the portal). Edits of existing rules are not checked, so saved values survive.
+        RuleFor(x => x).Custom((x, context) =>
+        {
+            var applicable = RuleFieldCatalog.For(EventTypes.Describe(x.Trigger), x.Type);
+            foreach (var field in RuleFieldCatalog.SetButNotApplicable(applicable, x.Configuration, x.Limits))
+                context.AddFailure(field,
+                    $"field_not_applicable: '{field}' doesn't apply to a {x.Type} on '{x.Trigger}' — leave it unset (see GET .../rules/metadata, applicableFields).");
+        }).When(x => RuleTypeCatalog.IsCompatible(EventTypes.Describe(x.Trigger), x.Type));
+
         // CR 2026-10-05: redeem / transfer rules carry the wallet's fields (cash per point,
         // minimum, Redeem into / daily transfer limit). Shared with RulesAppService's edit path.
         RuleFor(x => x).Custom((x, context) =>
@@ -123,6 +139,14 @@ public sealed class CreateRuleRequestValidator : AbstractValidator<CreateRuleReq
         RuleFor(x => x.Configuration!.Posting).Must(p => p is "Immediate" or "Delayed")
             .When(x => x.Configuration is not null)
             .WithMessage("Configuration.posting must be 'Immediate' or 'Delayed' ('Pending' is not yet implemented — it needs a settlement-confirmation mechanism this system doesn't have).");
+        // CR 2026-10-06 Phase 5 (E1): any whole number of days above 0 — longer or shorter than
+        // the wallet's own expiry.
+        RuleFor(x => x.Configuration!.ExpiryOverrideDays).GreaterThan(0)
+            .When(x => x.Configuration?.ExpiryOverrideDays is not null)
+            .WithMessage("Configuration.expiryOverrideDays must be greater than 0 (omit it to use the wallet's expiry).");
+        RuleFor(x => x.Configuration!.TestMode).Equal(false)
+            .When(x => x.Configuration is not null)
+            .WithMessage(RetiredRuleMessages.TestMode);
         RuleFor(x => x.Configuration!.Rounding).Must(r => r is null or "down" or "nearest" or "up")
             .When(x => x.Configuration is not null)
             .WithMessage("Configuration.rounding must be 'down', 'nearest', or 'up' (or omitted to inherit).");
@@ -206,6 +230,14 @@ public sealed class UpdateRuleRequestValidator : AbstractValidator<UpdateRuleReq
         RuleFor(x => x.Configuration!.Posting).Must(p => p is "Immediate" or "Delayed")
             .When(x => x.Configuration is not null)
             .WithMessage("Configuration.posting must be 'Immediate' or 'Delayed' ('Pending' is not yet implemented).");
+        // CR 2026-10-06 Phase 5 (E1): any whole number of days above 0 — longer or shorter than
+        // the wallet's own expiry.
+        RuleFor(x => x.Configuration!.ExpiryOverrideDays).GreaterThan(0)
+            .When(x => x.Configuration?.ExpiryOverrideDays is not null)
+            .WithMessage("Configuration.expiryOverrideDays must be greater than 0 (omit it to use the wallet's expiry).");
+        RuleFor(x => x.Configuration!.TestMode).Equal(false)
+            .When(x => x.Configuration is not null)
+            .WithMessage(RetiredRuleMessages.TestMode);
     }
 }
 

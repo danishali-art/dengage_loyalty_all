@@ -47,9 +47,14 @@ public sealed record SetRuleStatusRequest(string Status);
 // compatible with every rule type.
 public sealed record EventFieldMetadata(string Path, string Kind);
 
+// ApplicableFields (CR 2026-10-06 Phase 2, additive): per compatible rule type, the Configuration
+// and Limits fields a new rule may set — RuleEngine.Metadata.RuleFieldCatalog.
 public sealed record EventMetadataResponse(
     string EventType, string Category, string Source, string Cardinality, string? Period,
-    IReadOnlyList<EventFieldMetadata> Fields, IReadOnlyList<string> CompatibleRuleTypes);
+    IReadOnlyList<EventFieldMetadata> Fields, IReadOnlyList<string> CompatibleRuleTypes,
+    IReadOnlyList<ApplicableFieldsResponse>? ApplicableFields = null);
+
+public sealed record ApplicableFieldsResponse(string RuleType, IReadOnlyList<string> Configuration, IReadOnlyList<string> Limits);
 
 public sealed record RuleTypeMetadataResponse(
     string RuleType, string Category, IReadOnlyList<string> RequiredKinds,

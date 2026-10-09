@@ -59,17 +59,26 @@ public sealed class ReversalRuleProcessor(
         var reversedByAccount = new Dictionary<Guid, decimal>();
         foreach (var entry in originalEntries)
         {
-            // Cumulative cap, same shape as RefundService's — but tracked under the distinct
-            // rule_reversal reason/metadata key so this path's bookkeeping never mixes with
-            // the legacy Refund path's (they are not wired to the same event in this milestone,
-            // but the moment they were, sharing a cap would silently under- or over-reverse).
+            // CR 2026-10-06 R15: a redelivered event already reversed this entry — redoing it would
+            // give the original rule's budget back again and re-enqueue points.reversed (which the
+            // outbox dedupe index refuses, so the redelivery could never complete). Same check the
+            // redeem / transfer handlers make before they reserve.
+            var idempotencyKey = $"{eventId}:{rule.Id}:reversal:{entry.Id}";
+            if (await db.LedgerEntries.AnyAsync(x => x.TenantId == tenantId && x.IdempotencyKey == idempotencyKey, ct))
+                continue;
+
+            // Cumulative cap, same shape as RefundService's. CR 2026-10-06 D22: both paths DID run
+            // for the same order.refunded (the built-in refund, then this processor), reversing
+            // the earn twice (RefundPathsCr1006E2ETests). The cap now counts the built-in
+            // refunds of the entry too, so between them the two paths can never take back more
+            // than the earn. Each path still writes its own reason and metadata key.
             var entryIdStr = entry.Id.ToString();
             var alreadyReversed = await db.Database.SqlQuery<decimal>($"""
                 SELECT COALESCE(ABS(SUM(delta)), 0) AS "Value"
                 FROM ledger_entries
                 WHERE tenant_id = {tenantId}
-                  AND reason = {LedgerReason.RuleReversal}
-                  AND metadata->>'reversal_of_entry_id' = {entryIdStr}
+                  AND ((reason = {LedgerReason.RuleReversal} AND metadata->>'reversal_of_entry_id' = {entryIdStr})
+                    OR (reason = {LedgerReason.Refund} AND metadata->>'refund_of_entry_id' = {entryIdStr}))
                 """).FirstAsync(ct);
 
             var remaining = entry.Delta - alreadyReversed;
@@ -89,7 +98,6 @@ public sealed class ReversalRuleProcessor(
                 if (amount <= 0) continue;
             }
 
-            var idempotencyKey = $"{eventId}:{rule.Id}:reversal:{entry.Id}";
             var metadata = JsonSerializer.Serialize(new
             {
                 reversal_of_entry_id = entry.Id,

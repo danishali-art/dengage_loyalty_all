@@ -21,4 +21,7 @@ public interface IRuleLimitEvaluator
     // Sum of this rule's Earn/StampEarn/Refund postings for one customer, period-scoped —
     // parallel to ILimitCacheService.GetDailyAsync but with a configurable period.
     Task<decimal> GetCustomerPeriodUsedAsync(string tenantId, Guid ruleId, string contactKey, string? period, string? resetWindow, CancellationToken ct);
+
+    // CR 2026-10-06 D12: true when this rule already awarded contactKey once (OnceOnlyAward).
+    Task<bool> HasOnceOnlyAwardAsync(string tenantId, Guid ruleId, string contactKey, CancellationToken ct);
 }

@@ -350,6 +350,10 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
                     b.Property<string>("ContactKey")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -419,10 +423,51 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .IsUnique()
                         .HasDatabaseName("ux_held_postings_tenant_idempotency");
 
+                    b.HasIndex("TenantId", "SourceEventId")
+                        .HasDatabaseName("idx_held_postings_tenant_source_event");
+
                     b.HasIndex("TenantId", "ContactKey", "CreatedAt")
                         .HasDatabaseName("idx_held_postings_tenant_contact_date");
 
                     b.ToTable("held_postings", (string)null);
+                });
+
+            modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.HeldPostingRefund", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("Delta")
+                        .HasColumnType("numeric(20,4)")
+                        .HasColumnName("delta");
+
+                    b.Property<Guid>("HeldPostingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("held_posting_id");
+
+                    b.Property<string>("RefundEventId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("refund_event_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "HeldPostingId", "RefundEventId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_held_posting_refunds_tenant_held_refund");
+
+                    b.ToTable("held_posting_refunds", (string)null);
                 });
 
             modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.LedgerEntry", b =>
@@ -453,6 +498,10 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.Property<decimal>("Delta")
                         .HasColumnType("numeric(20,4)")
                         .HasColumnName("delta");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<string>("IdempotencyKey")
                         .IsRequired()
@@ -591,6 +640,14 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("DefaultRounding")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("down")
+                        .HasColumnName("default_rounding");
 
                     b.Property<string>("Description")
                         .HasColumnType("text")

@@ -109,7 +109,8 @@ public class EventConsumerWorker(
         await Task.Delay(Timeout.Infinite, ct);
     }
 
-    private async Task ProcessAsync(EventEnvelope envelope, CancellationToken ct)
+    // internal for Engine.Tests (one engine run per delivery, CR 2026-10-06 D18 / R15).
+    internal async Task ProcessAsync(EventEnvelope envelope, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LoyaltyDbContext>();
@@ -151,9 +152,9 @@ public class EventConsumerWorker(
             await AppendEventLogAsync(db, envelope, ct);
             await DispatchAsync(envelope, scope, ct);
 
-            // Campaign rules run for EVERY event type. order.created already evaluates
-            // inside its handler — calling again here would double-grant.
-            if (envelope.EventType != EventTypes.OrderCreated)
+            // Campaign rules run for EVERY event type — here, or in the handler for the types
+            // listed in HandlerEvaluatedEvents (calling again here would run the engine twice).
+            if (!HandlerEvaluatedEvents.All.Contains(envelope.EventType))
                 await scope.ServiceProvider.GetRequiredService<ICampaignEvaluationService>()
                     .EvaluateAsync(envelope, ct);
 

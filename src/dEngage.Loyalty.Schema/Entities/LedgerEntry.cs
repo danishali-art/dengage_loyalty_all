@@ -14,6 +14,13 @@ public class LedgerEntry
     public string? Metadata { get; set; }
     public DateTime CreatedAt { get; set; }
 
+    // CR 2026-10-06 Phase 5 (expiry override): when the points of an earn / transfer_in entry
+    // expire — the earning rule's Configuration.expiryOverrideDays, otherwise the POINTS wallet's
+    // expiration_days, counted from the posting. Set once, on insert; null means "earn date +
+    // the wallet's current expiration_days" (every entry written before this change) or, with no
+    // wallet expiry either, never. Not set on other reasons.
+    public DateTime? ExpiresAt { get; set; }
+
     public CustomerAccount CustomerAccount { get; set; } = default!;
     public Rule? Rule { get; set; }
 }

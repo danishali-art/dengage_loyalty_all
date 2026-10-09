@@ -109,7 +109,12 @@ export function inboxStatusTone(status: string): StatusTone {
                     <span class="text-gray-600">{{ h.delta }}</span>
                   </div>
                   <div class="mt-1 text-xs text-gray-500">
-                    @if (h.postedAt) {
+                    @if (h.cancelledAt) {
+                      {{
+                        'customers.drawer.heldCancelled'
+                          | translate: { date: (h.cancelledAt | date: 'medium') }
+                      }}
+                    } @else if (h.postedAt) {
                       {{
                         'customers.drawer.heldPosted'
                           | translate: { date: (h.postedAt | date: 'medium') }
@@ -119,6 +124,10 @@ export function inboxStatusTone(status: string): StatusTone {
                         'customers.drawer.heldUntil'
                           | translate: { date: (h.holdUntil | date: 'medium') }
                       }}
+                    }
+                    @if (h.refundedDelta && !h.cancelledAt) {
+                      ·
+                      {{ 'customers.drawer.heldRefunded' | translate: { amount: h.refundedDelta } }}
                     }
                     @if (h.ruleName) {
                       · {{ h.ruleName }}
@@ -185,6 +194,21 @@ export function inboxStatusTone(status: string): StatusTone {
             <h3 class="section-label mb-2">{{ 'customers.drawer.why' | translate }}</h3>
             @if (d.ruleFires.length === 0) {
               <p class="text-gray-500">{{ 'customers.drawer.noRuleFires' | translate }}</p>
+            }
+            @for (s of d.onceOnlySkips ?? []; track s.ruleId) {
+              <p
+                class="mb-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-gray-600"
+              >
+                {{
+                  'customers.drawer.onceOnlySkip'
+                    | translate
+                      : {
+                          name: s.ruleName ?? s.ruleId,
+                          date: (s.earlierAt | date: 'medium'),
+                          eventId: s.earlierEventId,
+                        }
+                }}
+              </p>
             }
             @for (f of d.ruleFires; track f.id) {
               <details class="mb-2 rounded-lg border border-gray-200 px-3 py-2">

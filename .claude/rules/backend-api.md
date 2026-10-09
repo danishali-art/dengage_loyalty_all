@@ -63,7 +63,8 @@ such types in the resource folder.
 - **Rule / campaign / card-bucket changes** → invalidate `IRuleCacheService` /
   `ICampaignConfigCacheService` for that `(tenant, program)`.
 - **Validate against the catalog:** a rule's type, trigger and target account kind must be checked
-  against `RuleTypeCatalog` (RuleEngine) and the event metadata. Don't keep a second list.
+  against `RuleTypeCatalog` (RuleEngine) and the event metadata, and a new rule's Configuration /
+  Limits fields against `RuleFieldCatalog` (CR 2026-10-06 Phase 2). Don't keep a second list.
 
 ## Events (ingestion)
 - Publish only through `IEventsAppService.PublishAsync` → `EventEnvelopeFactory` →

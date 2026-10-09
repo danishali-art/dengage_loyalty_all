@@ -47,12 +47,13 @@ public class PointsExpiringDetectorJob(LoyaltyDbContext db, ILogger<PointsExpiri
                 continue;
             }
 
-            // "will expire within warning_days days" = warning_days ahead of the expire cutoff:
-            // the remainder of earns before today - (expiration_days - warning_days).
-            var warnCutoff = DateTime.UtcNow.Date.AddDays(-(at.ExpirationDays - at.WarningDays));
+            // "will expire within warning_days days": lots whose effective expiry date (CR
+            // 2026-10-06 Phase 5) is on or before today + warning_days — for a lot without its own
+            // date exactly the old "earned before today - (expiration_days - warning_days)".
+            var warnBefore = DateTime.UtcNow.Date.AddDays(at.WarningDays);
 
             var warnings = await db.Database.ExecuteSqlRawAsync(
-                DetectSql, [at.Id, at.Name, at.ExpirationDays, warnCutoff], ct);
+                DetectSql, [at.Id, at.Name, at.ExpirationDays, warnBefore], ct);
 
             logger.LogInformation(
                 "PointsExpiringDetector: account_type={AccountTypeId} tenant={Tenant} " +
@@ -66,20 +67,22 @@ public class PointsExpiringDetectorJob(LoyaltyDbContext db, ILogger<PointsExpiri
         return totalWarnings;
     }
 
-    // Same as PointsExpirationJob's FIFO CTE, with two differences:
-    //   1. cutoff = @warn_cutoff (warning_days ahead of the expire cutoff)
+    // Same as PointsExpirationJob's allocation CTE (soonest-expiring first, CR 2026-10-06 Phase 5),
+    // with two differences:
+    //   1. lots expiring on or before {3} = today + warning_days
     //   2. Does NOT touch the ledger/balance — only writes a warning row to the outbox.
     //
     // Idempotency is in the outbox, not the ledger: dedup_key = expiring:{account}:{expires_on}
     // → a single warning per window (same first expiry date). When the first wave expires/gets
     // consumed and the next earn's date moves to the front, new window = new warning.
     //
-    // expires_on = date of the oldest earn with a remainder + expiration_days
-    // (in FIFO, that is the first day anything starts to expire). amount is not just that
-    // window's; it is the remainder of ALL earns before @warn_cutoff (capped by balance).
+    // expires_on = the earliest effective expiry date among lots with a remainder (the first
+    // day anything expires). amount is the remainder of ALL lots expiring by {3} (capped by
+    // balance). A lot dated by an expiry override is warned about too (in a wallet that has
+    // warning_days — a wallet without expiration_days has no warning_days).
     //
     // Parameters: {0}=account_type_id, {1}=account_type_name,
-    //             {2}=expiration_days, {3}=warn_cutoff (UTC)
+    //             {2}=expiration_days, {3}=warn_before (UTC)
     private const string DetectSql = """
         WITH consumption AS (
             SELECT
@@ -101,24 +104,34 @@ public class PointsExpiringDetectorJob(LoyaltyDbContext db, ILogger<PointsExpiri
             WHERE ca.account_type_id = {0}
               AND ca.balance > 0
         ),
-        earn_entries AS (
+        lots AS (
             SELECT
                 le.customer_account_id AS account_id,
+                le.id,
                 le.delta,
                 le.created_at,
-                SUM(le.delta) OVER (
-                    PARTITION BY le.customer_account_id
-                    ORDER BY le.created_at, le.id
-                    ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
-                ) AS cumulative_before
+                COALESCE(le.expires_at, le.created_at + make_interval(days => {2})) AS effective_expires_at
             FROM ledger_entries le
             WHERE le.reason IN ('earn', 'transfer_in')
               AND le.customer_account_id IN (SELECT account_id FROM consumption)
         ),
+        earn_entries AS (
+            SELECT
+                l.account_id,
+                l.delta,
+                l.created_at,
+                l.effective_expires_at,
+                SUM(l.delta) OVER (
+                    PARTITION BY l.account_id
+                    ORDER BY l.effective_expires_at ASC NULLS LAST, l.created_at, l.id
+                    ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+                ) AS cumulative_before
+            FROM lots l
+        ),
         expirable_per_entry AS (
             SELECT
                 e.account_id,
-                e.created_at,
+                e.effective_expires_at,
                 GREATEST(
                     0,
                     e.delta - GREATEST(
@@ -128,7 +141,7 @@ public class PointsExpiringDetectorJob(LoyaltyDbContext db, ILogger<PointsExpiri
                 ) AS remaining
             FROM earn_entries e
             JOIN consumption c ON c.account_id = e.account_id
-            WHERE e.created_at <= {3}
+            WHERE e.effective_expires_at <= {3}
         ),
         to_warn AS (
             SELECT
@@ -137,14 +150,14 @@ public class PointsExpiringDetectorJob(LoyaltyDbContext db, ILogger<PointsExpiri
                 ca.id            AS account_id,
                 ca.contact_key,
                 LEAST(et.expirable, ca.balance) AS amount,
-                (et.first_expiring_at AT TIME ZONE 'UTC')::date + {2} AS expires_on
+                (et.first_expiring_at AT TIME ZONE 'UTC')::date AS expires_on
             FROM customer_accounts ca
             JOIN tenants tn ON tn.id = ca.tenant_id
             JOIN (
                 SELECT
                     account_id,
                     SUM(remaining) AS expirable,
-                    MIN(created_at) FILTER (WHERE remaining > 0) AS first_expiring_at
+                    MIN(effective_expires_at) FILTER (WHERE remaining > 0) AS first_expiring_at
                 FROM expirable_per_entry
                 GROUP BY account_id
             ) et ON et.account_id = ca.id
