@@ -7,7 +7,7 @@ using Spectre.Console;
 
 public static class RewardTest
 {
-    const string PG     = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
+    const string PG     = "Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres";
     const string TENANT = "starbucks";
     const string StarsAccountId = "018fcd02-0000-7000-8000-000000000001";
     const string OutboundExchange = "loyalty.outbound";

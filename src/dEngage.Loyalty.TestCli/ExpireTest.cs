@@ -23,7 +23,7 @@ using Spectre.Console;
 /// </summary>
 public static class ExpireTest
 {
-    const string PG     = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
+    const string PG     = "Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres";
     const string TENANT = "starbucks";
 
     // Stars account type ID from the Starbucks seed

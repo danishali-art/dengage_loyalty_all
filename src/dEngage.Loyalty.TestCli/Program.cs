@@ -4,7 +4,7 @@ using Npgsql;
 using RabbitMQ.Client;
 using Spectre.Console;
 
-const string PG = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
+const string PG = "Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres";
 const string TENANT = "starbucks";
 
 var factory = new ConnectionFactory { HostName = "localhost", Port = 5672, UserName = "guest", Password = "guest" };

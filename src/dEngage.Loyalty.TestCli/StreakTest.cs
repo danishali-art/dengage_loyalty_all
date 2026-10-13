@@ -25,7 +25,7 @@ using Spectre.Console;
 /// </summary>
 public static class StreakTest
 {
-    const string PG        = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
+    const string PG        = "Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres";
     const string TENANT    = "fintech";
     const string FinPuanId = "019fd002-0000-7000-8000-000000000001"; // POINTS
     const string ProgramId = "019fd001-0000-7000-8000-000000000001";

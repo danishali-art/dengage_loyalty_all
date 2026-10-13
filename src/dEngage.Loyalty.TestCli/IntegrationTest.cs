@@ -7,7 +7,7 @@ using Spectre.Console;
 
 public static class IntegrationTest
 {
-    const string PG     = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
+    const string PG     = "Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres";
     const string TENANT = "starbucks";
 
     static int _passed = 0;

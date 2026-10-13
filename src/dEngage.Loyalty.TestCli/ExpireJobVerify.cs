@@ -14,7 +14,7 @@ using Spectre.Console;
 /// </summary>
 public static class ExpireJobVerify
 {
-    const string PG = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
+    const string PG = "Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres";
 
     // Fixed IDs come from the seed scripts
     const string SBUX          = "starbucks";
