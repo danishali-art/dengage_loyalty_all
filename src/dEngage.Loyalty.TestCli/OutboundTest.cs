@@ -26,7 +26,7 @@ using Spectre.Console;
 /// </summary>
 public static class OutboundTest
 {
-    const string PG     = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
+    const string PG     = "Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres";
     const string TENANT = "starbucks";
     const string OutboundExchange = "loyalty.outbound";
     const string TestQueue = "q.test.outbound";

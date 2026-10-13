@@ -28,7 +28,7 @@ using Spectre.Console;
 /// </summary>
 public static class MultiTenantTest
 {
-    const string PG_DEV = "Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres";
+    const string PG_DEV = "Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres";
 
     // Tenants
     const string SBUX = "starbucks";

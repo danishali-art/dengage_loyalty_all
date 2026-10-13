@@ -8,7 +8,7 @@ public class LoyaltyDbContextFactory : IDesignTimeDbContextFactory<LoyaltyDbCont
     public LoyaltyDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<LoyaltyDbContext>()
-            .UseNpgsql("Host=localhost;Database=loyalty_dev;Username=postgres;Password=postgres")
+            .UseNpgsql("Host=localhost;Port=5433;Database=loyalty_dev;Username=postgres;Password=postgres")
             .Options;
 
         return new LoyaltyDbContext(options);
