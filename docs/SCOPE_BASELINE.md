@@ -86,6 +86,32 @@ Legend: **Done** (implemented) / **In Progress** / **Not Started** / **Built-but
 functional global search. See `docs/SOW.md` §3 for the full known-limitations list, including
 partial i18n coverage (en/tr, nav+auth+error strings only).
 
+## Frontend (Vue 3) — `webVue3/src`
+
+A phased rewrite of the portal above in Vue 3, running beside it on `:4201` (scope change
+`docs/scope-changes/2026-10-12-vue3-portal-rewrite.md`, proposed 2026-10-12, awaiting team lead approval). No capability is
+added, removed or changed: each row ports the Angular row of the same name. `web/` stays the live
+portal until parity is signed off (phase 4).
+
+| Area | Capability | Status | Phase |
+|---|---|---|---|
+| foundation | Vite + TS app; Feature-Sliced Design with lint-enforced boundaries; shadcn-vue (Reka UI + Tailwind v4) wrapped in `shared/ui`; Pinia (client state) + Vue Query (server state); VeeValidate + Zod; vue-i18n (en); API types generated from an OpenAPI spec built from the C# source, with a drift check | Done | 0 |
+| auth | Login (no signup/reset/MFA); 401 ends the session | Done | 0 |
+| layout | Shell, sidebar with program sub-nav, topbar tenant switcher + user menu, select-tenant, forbidden, not-found | Done | 0 |
+| programs | List, create, overview (edit info, slug while Draft, default rounding, Active switch, Publish, Delete) | Done | 0 |
+| programs/account-types | List, create / edit (POINTS: decimals, expiry + warning days, tier-qualifying, redemption and transfer defaults; CASH: currency locked once created); settings the form doesn't show are kept on save | Done | 1 |
+| programs/tiers | List in order, reorder (up / down), create / edit (qualifying model locked once customers are assigned), delete (blocked with customers or while the program is active) | Done | 1 |
+| programs/rewards | List with pending-approval and retired states, create / edit (acquisition first, types filtered by it; cashback currency + CASH wallet; tier-upgrade target + optional days; `{slug}_` name prefix, grandfathered names kept), Approve (second admin), retired rewards view-only | Done | 1 |
+| programs/history | Published versions with sectioned snapshot view; per-edit changes with raw JSON | Done | 1 |
+| programs/rules | Rules grouped as the engine applies them (trigger → wallet; exclusive with winner / tie / fallback, stackable, outside winner selection); activate / disable, Approve (second admin), delete; rule form with the metadata cascade (grouped triggers, type by trigger, "no rule type" state, target by type), calculation per type, redeem / transfer pre-fill from the wallet, limits by kind with cross-checks, configuration per trigger (Phase 2 field visibility), AND/OR condition tree; the condition DSL ported verbatim | Done | 2 |
+| programs/streak-campaigns | List, activate / disable, delete; form with trigger catalog, flat conditions, streak config (snake_case engine DSL, IANA timezone, fixed bonus or an eligible streak reward), engine validators ported verbatim | Done | 2 |
+| programs/card-buckets | List, activate / disable, delete; form with MCC / amount / geo / captured / hours / days / per-customer caps and additional AND conditions | Done | 2 |
+| dashboard | Tenant-wide tiles (programs, tiers, customer accounts, total balance, redemptions, streaks) filtered by program and date range; the landing page | Done | 3 |
+| customers | List with search (Enter on an exact contact key opens it), program count and first seen per row; Customer 360 with the Overview, Activity, Events, Rules & caps, Streaks, Rewards, Tiers, Card buckets and Messages sent tabs, cursor-paged filters, and the event drawer (wallets, masked payload, rule fires, effects, messages) | Done | 3 |
+| events | Event Simulator (feature flag): per-type sample payloads and field guidance, send through the admin simulate route, status polling | Done | 3 |
+| platform | Tenants list + create, tenant overview (suspend / reactivate), API keys (raw key shown once, revoke with confirmation), tenant admins (create); tenant sub-nav in the sidebar; platform_admin only | Done | 4 |
+| sign-off | Playwright e2e (mocked shell + platform with axe checks; real-backend ports of `web/e2e`, not yet run); parity checklist `docs/scope-changes/2026-10-12-vue3-parity-checklist.md` | Awaiting PO + Architect sign-off | 4 |
+
 ## Open items for Product Owner review
 
 - Confirm none of the rows above should be `Built-but-not-in-SOW` — i.e., that everything
@@ -122,3 +148,8 @@ partial i18n coverage (en/tr, nav+auth+error strings only).
 | 2026-10-08 | Scope Change (approved by all stakeholders, CR 2026-10-06 rule configuration & limits by trigger) **Phase 5 implemented**: expiry override applied (E1–E3) — `ledger_entries.expires_at` (migration `LedgerExpiresAtCr1006`, no backfill) written on earn / transfer_in postings from the rule's `expiryOverrideDays` (dated from release for delayed postings) or the wallet's `expiration_days`; expiry job and expiring-soon warning (job and Customer 360) use each lot's effective date, soonest-expiring first, never-expiring last; override also works in wallets without expiry; API rejects `expiryOverrideDays` ≤ 0; portal shows the wallet default as the placeholder. See `docs/scope-changes/2026-10-05-rule-config-limits-by-trigger.md` §7.10–§7.11. | Claude Code, at the request of Moiz Ali Afzal |
 | 2026-10-08 | Bug fix (CR 2026-10-06 R15, no scope change): a redelivered event (replayed from the dead-letter queue, or redelivered after a crash) no longer re-runs winner selection when its rules already posted — budgets and Redis limit counters are no longer recorded twice, and a rule that paid or reached its cap in the first delivery can no longer let the next exclusive rule pay a second award for the same event (seen on signup / KYC and capped rules); a redelivered partial Reversal no longer fails on the outbox dedupe. See `docs/scope-changes/2026-10-05-rule-config-limits-by-trigger.md` §7.12. | Claude Code, at the request of Moiz Ali Afzal |
 | 2026-10-08 | UI only (no scope change): Event Simulator pre-fills the event data JSON per selected event type (`web/src/app/features/events/event-samples.ts`), keeps an edited payload, offers "Reset to sample" and warns while a `REPLACE_WITH_…` placeholder is left; en/tr. | Claude Code, at the request of Moiz Ali Afzal |
+| 2026-10-12 | Stack change (proposed 2026-10-12, awaiting team lead approval; scope change `docs/scope-changes/2026-10-12-vue3-portal-rewrite.md`): Vue 3 portal in `webVue3/` **phase 0 implemented** — foundation, OpenAPI types generated from the C# source, auth, shell, tenant picker, programs list/create/overview. New section "Frontend (Vue 3)". No backend, API, schema or `web/` change. | Claude Code, at the request of Syed jamal ud din |
+| 2026-10-12 | Vue 3 portal (`webVue3/`, scope change 2026-10-12) **phase 1 implemented**: account types, tiers, rewards, program history — ports of the Angular screens; no backend, API or `web/` change. | Claude Code, at the request of Syed jamal ud din |
+| 2026-10-12 | Vue 3 portal (`webVue3/`, scope change 2026-10-12) **phase 2 implemented**: rules (grouped list, rule builder with the AND/OR condition tree), streak campaigns, card buckets — ports of the Angular screens with the condition and streak DSL validators ported verbatim; no backend, API or `web/` change. | Claude Code, at the request of Syed jamal ud din |
+| 2026-10-12 | Vue 3 portal (`webVue3/`, scope change 2026-10-12) **phase 3 implemented**: dashboard (now the landing page, as in `web/`), customers list and Customer 360 with its nine tabs and the event drawer, Event Simulator — ports of the Angular screens; no backend, API or `web/` change. | Claude Code, at the request of Syed jamal ud din |
+| 2026-10-12 | Vue 3 portal (`webVue3/`, scope change 2026-10-12) **phase 4 implemented**: platform tenants, tenant overview, API keys, tenant admins — every Angular screen now has a Vue port; Playwright e2e (mocked suites pass; real-backend ports not yet run); parity checklist for sign-off; text colours darkened to WCAG AA. No backend, API or `web/` change. | Claude Code, at the request of Syed jamal ud din |

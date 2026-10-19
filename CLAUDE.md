@@ -1,7 +1,10 @@
 # CLAUDE.md — dEngage.Loyalty (repo root)
 
 Multi-tenant loyalty platform: .NET backend under `src/` + Angular admin portal under `web/`
-(see `web/CLAUDE.md` for frontend-specific conventions).
+(see `web/CLAUDE.md` for frontend-specific conventions). A Vue 3 rewrite of the portal is being
+built in phases beside it under `webVue3/` (see `webVue3/CLAUDE.md`; scope change
+`docs/scope-changes/2026-10-12-vue3-portal-rewrite.md`). `web/` stays the live portal until parity
+is signed off.
 
 ## Scope governance — read this before implementing a scope change
 
@@ -64,3 +67,7 @@ committed anywhere before this repo was git-initialized.
 - `scripts/loyalty_schema_reference.md` — DB schema reference (Turkish), maintained by hand: update
   it in the same change as each migration, checked against the EF Core configurations.
 - `web/CLAUDE.md` — Angular portal conventions.
+- `webVue3/CLAUDE.md` — Vue 3 portal (in progress): architecture, commands, phase status. Rules in
+  `.claude/rules/frontend-vue.md`.
+- `webVue3/openapi/openapi.json` — machine-readable API contract **generated from the C# source**
+  (`npm run api:spec` in `webVue3/`); the Vue portal's TypeScript types come from it.
