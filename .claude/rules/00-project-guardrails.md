@@ -36,8 +36,9 @@ If a task seems to need breaking one of these, stop and explain why. Don't work 
 
 ## 3. Match what's already there
 - Before writing code, find the nearest existing example and copy its shape. Use `Rewards/` for
-  API resources and `features/programs/rewards/` for portal features. Don't invent a new
-  pattern, layer, base class or folder layout.
+  API resources and `features/programs/rewards/` for portal features. In the Vue 3 portal
+  (`webVue3/`), copy `entities/program` + `features/program-create` + `pages/programs-list`.
+  Don't invent a new pattern, layer, base class or folder layout.
 - Keep the change as small as possible. No drive-by renames, reformatting of untouched code, or
   "cleanup" outside the task.
 - Don't add NuGet or npm packages, change framework versions, or swap libraries (Nancy, EF Core,

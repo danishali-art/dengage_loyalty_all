@@ -1,0 +1,1345 @@
+{
+  "app": {
+    "title": "Loyalty",
+    "home": "Loyalty home"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "programs": "Programs",
+    "customers": "Customers",
+    "events": "Events",
+    "reports": "Reports",
+    "settings": "Settings",
+    "platform": "Platform",
+    "primary": "Primary",
+    "program": {
+      "overview": "Overview"
+    },
+    "tenant": {
+      "overview": "Overview",
+      "apiKeys": "API Keys",
+      "admins": "Tenant Admins"
+    }
+  },
+  "action": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "retry": "Retry",
+    "new": "New",
+    "close": "Close"
+  },
+  "common": {
+    "loading": "Loading…",
+    "empty": "Nothing here yet",
+    "error": "Something went wrong",
+    "active": "Active",
+    "inactive": "Inactive",
+    "genericError": "Something went wrong. Please try again.",
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled",
+      "deleted": "Deleted",
+      "pending_approval": "Pending approval"
+    }
+  },
+  "auth": {
+    "signOut": "Sign out",
+    "login": {
+      "title": "Sign in to Loyalty",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "errors": {
+        "email": "Enter a valid email address.",
+        "password": "Enter your password.",
+        "generic": "Sign in failed. Check your credentials."
+      }
+    }
+  },
+  "tenant": {
+    "switch": "Switch tenant",
+    "select": {
+      "title": "Select a tenant",
+      "body": "Choose which tenant you want to administer."
+    },
+    "none": "No tenant",
+    "picker": {
+      "searchPlaceholder": "Search by name or tenant id…",
+      "empty": "No tenants found",
+      "emptyHint": "Try a different search.",
+      "listLabel": "Tenants",
+      "current": "Current",
+      "select": "Select"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you are looking for does not exist or has moved."
+  },
+  "forbidden": {
+    "title": "Access denied",
+    "body": "You do not have permission to view this page."
+  },
+  "accountTypes": {
+    "decimals": {
+      "info": "Points earned by Spending rules are rounded down to this many decimal places (0–4)."
+    },
+    "warningDays": {
+      "label": "Expiry warning (days before)",
+      "placeholder": "Disabled",
+      "hint": "Customers get an \"expiring soon\" notice this many days before their points expire.",
+      "needsExpiry": "Set Points expiration first — a warning needs an expiry date.",
+      "positive": "Enter a whole number of days greater than 0.",
+      "beforeExpiry": "Must be less than Points expiration (days)."
+    },
+    "tierQualifying": {
+      "label": "Tier qualifying account",
+      "hint": "Points in this wallet count toward tiers. Only one per program; locked while the program is active.",
+      "badge": "Tier qualifying"
+    },
+    "currency": {
+      "label": "Currency",
+      "locked": "Currency cannot be changed after creation."
+    },
+    "cash": {
+      "noExpiry": "Cash balances are real credit and never expire."
+    },
+    "transfer": {
+      "label": "Default daily limit for new transfer rules",
+      "hint": "Transfer events use rules, not this value. A new transfer rule for this wallet starts with it; changing it later doesn't change existing rules.",
+      "dailyLimit": "Daily transfer limit (points)",
+      "dailyLimitHint": "The most points one customer can send per day (UTC), copied into new transfer rules.",
+      "dailyLimitError": "Enter a limit of at least 1 point."
+    },
+    "redemption": {
+      "label": "Default redemption values for new redeem rules",
+      "hint": "Redeem events use rules, not these values. A new redeem rule for this wallet starts with them; changing them later doesn't change existing rules.",
+      "cashPerPoint": "Cash per point",
+      "minimum": "Minimum redemption",
+      "redeemInto": "Redeem into",
+      "selectWallet": "Select a wallet…",
+      "noTarget": "No other account type exists yet to redeem into — create one (e.g. CASH) first."
+    },
+    "add": "Add account type",
+    "created": "Account type \"{name}\" created",
+    "saved": "Account type saved",
+    "empty": "No account types yet",
+    "emptyHint": "Create one so this program has something to earn.",
+    "form": {
+      "newHeading": "New account type",
+      "editHeading": "Edit account type",
+      "create": "Create",
+      "name": "Account name",
+      "type": "Account type",
+      "typeLocked": "Type cannot be changed after creation.",
+      "decimals": "Decimal places",
+      "expirationDays": "Points expiration (days)",
+      "never": "Never",
+      "errors": {
+        "nameRequired": "Enter an account name.",
+        "nameTooLong": "Use at most {max} characters.",
+        "decimals": "Use a whole number from 0 to 4.",
+        "expiration": "Use a whole number of days greater than 0, or leave it empty.",
+        "number": "Enter a number (up to 4 decimal places).",
+        "redemptionTarget": "Select which wallet redeemed points convert into."
+      }
+    }
+  },
+  "programs": {
+    "tierQualifying": {
+      "none": "None — tier system disabled",
+      "movedHint": "Set on the account type (Account Types → Tier qualifying account).",
+      "manage": "Manage account types ›"
+    },
+    "status": {
+      "label": "Status",
+      "hint": "Inactive programs stop earning and burning immediately. Toggling does not need a publish.",
+      "draftHint": "Publish the program before activating it.",
+      "activated": "Program activated",
+      "deactivated": "Program deactivated"
+    },
+    "publication": {
+      "draft": "Draft",
+      "draftShort": "Draft",
+      "published": "Published v{version}",
+      "unpublishedChanges": "Unpublished changes",
+      "publish": "Publish",
+      "publishChanges": "Publish changes",
+      "upToDate": "Nothing has changed since the last publish.",
+      "confirmTitle": "Publish program?",
+      "confirmMessage": "This records a new version of \"{name}\" with all its account types, tiers, rewards and rules.",
+      "done": "Published as version {version}"
+    },
+    "defaultRounding": {
+      "label": "Default rounding",
+      "hint": "The direction rules round their awards in when they inherit from the program. The wallet's decimals set the precision."
+    },
+    "slug": {
+      "label": "Program slug",
+      "createHint": "Starts every reward name of this program (e.g. fintech_cashback_50). Lowercase letters, digits and hyphens, no underscores. Leave empty to derive it from the name.",
+      "draftHint": "Starts every reward name of this program. It can only be changed until the program is published.",
+      "locked": "Fixed once the program has been published — integrations send reward names that start with it."
+    },
+    "overview": {
+      "cards": {
+        "accountTypes": {
+          "label": "Account Types",
+          "description": "Wallets a customer can hold"
+        },
+        "tiers": {
+          "label": "Tiers",
+          "description": "Automatic status levels"
+        },
+        "rules": {
+          "label": "Rules",
+          "description": "What earns and how much"
+        },
+        "rewards": {
+          "label": "Rewards",
+          "description": "What customers redeem"
+        },
+        "streakCampaigns": {
+          "label": "Streak Campaigns",
+          "description": "Rewards for repeat activity"
+        },
+        "cardBuckets": {
+          "label": "Card Buckets",
+          "description": "Card spend categories"
+        },
+        "history": {
+          "label": "History",
+          "description": "What changed and when"
+        }
+      },
+      "manage": "Manage ›",
+      "fallbackHeading": "Program",
+      "infoHeading": "Program information",
+      "saved": "Program saved",
+      "notFound": "Program not found",
+      "notFoundBody": "It may have been deleted, or it belongs to another tenant."
+    },
+    "list": {
+      "heading": "Loyalty Programs",
+      "new": "New program",
+      "caption": "Programs",
+      "empty": "No programs yet — create one to get started.",
+      "col": {
+        "name": "Name",
+        "status": "Status",
+        "accountTypes": "Account Types",
+        "rules": "Rules"
+      }
+    },
+    "create": {
+      "heading": "New program",
+      "submit": "Create program",
+      "done": "Program \"{name}\" created"
+    },
+    "form": {
+      "name": "Program name",
+      "description": "Description",
+      "errors": {
+        "nameRequired": "Enter a program name.",
+        "nameTooLong": "Use at most {max} characters.",
+        "slugLength": "Use {min} to {max} characters.",
+        "slugPattern": "Use lowercase letters, digits and single hyphens."
+      }
+    },
+    "delete": {
+      "confirmTitle": "Delete program?",
+      "confirmMessage": "\"{name}\" and its configuration will be removed. This cannot be undone.",
+      "done": "Program \"{name}\" deleted",
+      "mustBeInactive": "Program must be inactive before it can be deleted."
+    }
+  },
+  "rules": {
+    "priority": {
+      "hint": "Higher numbers win when exclusive rules on the same target account would otherwise both fire."
+    },
+    "stackable": {
+      "label": "Stackable with other rules",
+      "hint": "Stackable rules always add their award on top. Exclusive rules compete per target account — the highest-priority match wins.",
+      "column": "Stackable",
+      "yes": "Stackable",
+      "no": "Exclusive"
+    },
+    "groups": {
+      "intro": "Rules are grouped the way the engine applies them. For each event, every trigger → account card is resolved separately: one exclusive rule can win per account, and all matching stackable rules add on top. Greyed-out rules are not active and do not compete.",
+      "onAccount": "on account",
+      "exclusiveHint": "One winner per event on this account: the engine tries active rules from the highest priority down and awards only the first that matches. Lower ones only fire when the ones above them don't match.",
+      "stackableHint": "Every matching rule fires and adds its award on top of the winner. Priority only sets the posting order — it doesn't change the amounts.",
+      "outside": "Not in winner selection",
+      "outsideHint": "Redemption, Transfer and Reversal rules are applied on their own — they neither compete with nor stack on other rules. For a redeem or transfer, the highest-priority active rule for the wallet applies.",
+      "trigger": "Trigger",
+      "retiredAccount": "Retired wallet",
+      "rank": {
+        "top": "Wins when it matches",
+        "tie": "Tied top priority — engine picks by rule id",
+        "fallback": "Fallback"
+      }
+    },
+    "limits": {
+      "heading": "Limits (optional)",
+      "intro": "Caps that stop this rule from paying out indefinitely. Leave a field blank for no limit.",
+      "none": "No limit",
+      "units": {
+        "points": "points",
+        "amount": "amount",
+        "hours": "hours",
+        "count": "customers"
+      },
+      "groups": {
+        "customer": {
+          "title": "Per customer",
+          "hint": "How much one customer can earn from this rule."
+        },
+        "event": {
+          "title": "Per event",
+          "hint": "Checked on every event before the rule pays out."
+        },
+        "rule": {
+          "title": "Whole rule",
+          "hint": "Caps across all customers together."
+        },
+        "period": {
+          "title": "Period window",
+          "hint": "Used by the \"per period\" caps above."
+        },
+        "breach": {
+          "title": "When a cap is reached",
+          "hint": "Applies to the rule budgets and the per-customer per-period cap. Cooldown, minimum amount and max customers always skip."
+        }
+      },
+      "perCustomerTotal": {
+        "label": "Total",
+        "hint": "Lifetime points one customer can earn."
+      },
+      "perCustomerPerDay": {
+        "label": "Per day",
+        "hint": "Resets every day (UTC)."
+      },
+      "perCustomerPerPeriod": {
+        "label": "Per period",
+        "hint": "Resets every period chosen below."
+      },
+      "maxPerEvent": {
+        "label": "Max award per event",
+        "hint": "Larger awards are cut to this."
+      },
+      "minEventAmount": {
+        "label": "Minimum event amount",
+        "hint": "Smaller events are ignored.",
+        "genericHint": "Works only if this event carries an amount — tenant-defined events may not; without one the rule never fires."
+      },
+      "cooldownHours": {
+        "label": "Cooldown",
+        "hint": "Wait between awards to the same customer, e.g. 1.5."
+      },
+      "ruleBudgetTotal": {
+        "label": "Budget, total",
+        "hint": "Points this rule can ever pay out."
+      },
+      "ruleBudgetPerPeriod": {
+        "label": "Budget, per period",
+        "hint": "Resets every period chosen below."
+      },
+      "maxCustomers": {
+        "label": "Max distinct customers",
+        "hint": "After this many customers, nobody new earns."
+      },
+      "period": {
+        "label": "Period",
+        "choose": "Choose…",
+        "Day": "Day",
+        "Week": "Week",
+        "Month": "Month",
+        "Year": "Year"
+      },
+      "resetWindow": {
+        "label": "Resets",
+        "Calendar": "At the start of each calendar period (UTC)",
+        "Rolling": "Rolling — counts the last full period up to now"
+      },
+      "onBreach": {
+        "Clamp": "Clamp — pay only what is left of the cap",
+        "Skip": "Skip — don't pay anything"
+      },
+      "errors": {
+        "format": {
+          "points": "Enter a number, up to 4 decimal places (e.g. 250 or 12.5).",
+          "amount": "Enter an amount, up to 4 decimal places (e.g. 100 or 49.99).",
+          "hours": "Enter hours, up to 2 decimal places (e.g. 24 or 1.5).",
+          "count": "Enter a whole number (e.g. 1000)."
+        },
+        "positive": "Must be greater than 0 — leave it blank for no limit.",
+        "atLeastOne": "Must be at least 1 — leave it blank for no limit.",
+        "aboveCustomerTotal": "Can't be more than the per-customer total.",
+        "aboveBudgetTotal": "Can't be more than the total budget.",
+        "periodRequired": "Choose a period for the per-period caps."
+      }
+    },
+    "calc": {
+      "heading": "Calculation",
+      "intro": "How much this rule awards, debits, or adjusts when it fires.",
+      "headingRedeem": "Redemption terms",
+      "introRedeem": "The terms a customer redeems points under: cash per point, the minimum, and the cash wallet paid into.",
+      "headingTransfer": "Transfer terms",
+      "introTransfer": "The terms a customer transfers points under: the daily transfer limit.",
+      "rateNeedsAmount": "Works only if this event carries an amount — tenant-defined events may not; without one the rule awards nothing.",
+      "none": "None",
+      "prefillHint": "Pre-filled from the wallet's defaults. The rule keeps these values: changing the wallet later won't change this rule.",
+      "redeem": {
+        "cashPerPoint": "Cash per point",
+        "cashPerPointRequired": "Enter the cash paid per point (more than 0).",
+        "minimum": "Minimum redemption (optional)",
+        "redeemInto": "Redeem into (cash wallet)",
+        "redeemIntoPlaceholder": "Select a cash wallet…",
+        "redeemIntoRequired": "Choose the cash wallet redeemed points are paid into.",
+        "noCashWallets": "This program has no cash wallet yet — create one under Account types first.",
+        "approvalHint": "A redeem rule pays real money, so a second admin must approve it before it applies — and again after its cash per point or wallet changes."
+      },
+      "transfer": {
+        "dailyLimit": "Daily transfer limit (points)",
+        "dailyLimitRequired": "Enter the most points one customer can send per day (more than 0)."
+      }
+    },
+    "config": {
+      "heading": "Configuration",
+      "intro": "Posting behavior and rounding for this rule's ledger entries.",
+      "rounding": {
+        "label": "Rounding",
+        "inherit": "Inherit from program",
+        "inheritWith": "Inherit from program ({direction})",
+        "down": "Down",
+        "nearest": "Nearest",
+        "up": "Up"
+      },
+      "posting": {
+        "label": "Posting",
+        "Immediate": "Immediate",
+        "Delayed": "Delayed"
+      },
+      "holdDays": {
+        "label": "Hold days",
+        "required": "Hold days is required for delayed posting.",
+        "min": "Hold days must be at least 1."
+      },
+      "expiryOverride": {
+        "label": "Points expire after (days, optional)",
+        "placeholderDays": "Wallet default: {days}",
+        "placeholderNever": "Wallet default: never",
+        "min": "Points must expire after at least 1 day.",
+        "hint": "Points earned through this rule expire this many days after they are posted — shorter or longer than the wallet's expiry, even if the wallet has none."
+      },
+      "reversible": "Reversible",
+      "notifyOnAward": "Notify on award"
+    },
+    "type": {
+      "none": "No rule type can be used with this trigger. Events such as reward.purchase are configured through Rewards, not rules."
+    },
+    "heading": "Rules",
+    "list": {
+      "add": "New rule",
+      "empty": "No rules yet",
+      "emptyHint": "Create one to start earning points.",
+      "activate": "Activate rule",
+      "disable": "Disable rule",
+      "activated": "Rule activated",
+      "disabled": "Rule disabled",
+      "approve": "Approve",
+      "approved": "Rule approved and activated",
+      "approveFailed": "Could not approve this rule.",
+      "col": {
+        "name": "Name",
+        "type": "Type",
+        "priority": "Priority",
+        "status": "Status"
+      },
+      "delete": {
+        "title": "Delete rule",
+        "message": "Delete \"{name}\"? This cannot be undone.",
+        "done": "Rule deleted"
+      }
+    },
+    "form": {
+      "newHeading": "New rule",
+      "editHeading": "Edit rule",
+      "newCrumb": "New",
+      "editCrumb": "Edit",
+      "notFound": "This rule doesn't exist any more.",
+      "created": "Rule created",
+      "saved": "Rule saved",
+      "fixFields": "Please fix the highlighted fields.",
+      "basics": "Basics",
+      "basicsIntro": "What fires this rule, and how it ranks against other rules on the same wallet.",
+      "name": "Name",
+      "priority": "Priority",
+      "trigger": "Trigger event",
+      "triggerHint": "Sets which event fields are available under Conditions below.",
+      "selectTrigger": "Select a trigger…",
+      "otherTriggers": "Other",
+      "type": "Rule type",
+      "typeLocked": "Rule type cannot be changed after creation.",
+      "target": "Target account",
+      "selectAccount": "Select an account…",
+      "reversalTarget": "ReversalRule inherits its target account from the original posting — nothing to configure here.",
+      "activeFrom": "Active from",
+      "activeFromHint": "Leave blank to make the rule active immediately.",
+      "activeTo": "Active to",
+      "activeToHint": "Leave blank for no end date.",
+      "changeTrigger": {
+        "title": "Change trigger event?",
+        "message": "This rule’s conditions are written for the current trigger. Changing it clears them, since the available fields depend on the event.",
+        "confirm": "Change trigger"
+      },
+      "calc": {
+        "rate": "Rate (units earned per 1 spent)",
+        "amount": "Fixed amount",
+        "mode": "Reversal mode",
+        "modeProportional": "Proportional — scales with the reversed amount",
+        "modeFull": "Full — reverses the entire original posting",
+        "negative": "If balance would go negative",
+        "allowNegative": "Allow negative",
+        "clampToZero": "Clamp to zero",
+        "reasonLabel": "Reason code",
+        "reason": {
+          "goodwill": "Goodwill",
+          "correction": "Correction",
+          "dispute": "Dispute",
+          "migration": "Migration"
+        },
+        "fallbackAmount": "Fallback amount (optional)",
+        "fallbackPlaceholder": "Uses operator.amount from the event",
+        "retired": "This rule type is retired: the rule can be viewed, not changed."
+      },
+      "errors": {
+        "nameRequired": "Name is required.",
+        "tooLong": "Must be {max} characters or fewer.",
+        "required": "Choose one.",
+        "priority": "Priority must be a whole number, 0 or greater.",
+        "positive": "Enter a number greater than 0, with up to 4 decimals.",
+        "decimal": "Enter a number with up to 4 decimals."
+      }
+    }
+  },
+  "history": {
+    "published": {
+      "heading": "Published versions",
+      "empty": "Not published yet.",
+      "by": "Published by {by}"
+    },
+    "changes": {
+      "heading": "Change log"
+    },
+    "snapshot": {
+      "Program": "Program",
+      "AccountTypes": "Account types",
+      "Tiers": "Tiers",
+      "Rewards": "Rewards",
+      "Rules": "Rules",
+      "StreakCampaigns": "Streak campaigns"
+    },
+    "heading": "History",
+    "intro": "Every saved change to this program's configuration.",
+    "view": "View",
+    "empty": "No history yet",
+    "emptyHint": "Every save from now on will appear here.",
+    "versionHeading": "Version {version}",
+    "changedBy": "{change} by {by} — {at}",
+    "changedByShort": "{change} by {by}",
+    "change": {
+      "created": "Created",
+      "updated": "Updated",
+      "deleted": "Deleted",
+      "published": "Published"
+    }
+  },
+  "events": {
+    "simulator": {
+      "typesHint": "Built-in: {builtIn}. Generic (deployment-wide, set in RabbitMq:GenericEventTypes): {generic}.",
+      "noGeneric": "none configured",
+      "loadingTypes": "Loading available event types…",
+      "dataHint": "Field names are snake_case. Send money and point values as strings (for example \"150.00\"). The event is sent as-is, so a missing field only shows up as a failed status after processing.",
+      "requires": "Requires",
+      "placeholderHint": "Replace the REPLACE_WITH_… values with real ids from your program (wallet account type id, order event id, reward name) before sending.",
+      "useSample": "Reset to sample",
+      "optional": "Optional",
+      "help": {
+        "orderCreated": "The customer's wallet is created by the first earn rule that matches.",
+        "orderRefunded": "original_event_id is the eventId of an earlier order.created. Also send refund_ratio, or amount together with original_amount, all as strings. Fails if the original order earned nothing.",
+        "cashAdded": "amount is a string and account_type_id is a CASH wallet. Creates the wallet if it doesn't exist. In a program that isn't published and active, nothing is credited and loyalty.cash.add_failed (program_not_live) is sent.",
+        "cashSpent": "amount is a string and account_type_id is a CASH wallet. Fails with insufficient_balance unless the customer already has enough cash. In a program that isn't published and active, nothing is debited and loyalty.cash.spend_failed (program_not_live) is sent.",
+        "pointsRedeem": "points_amount is a string and source_account_type_id is a POINTS wallet. The highest-priority active redeem rule for that wallet decides the cash per point, minimum and cash wallet. With no usable rule, a balance too low or a program that isn't live, the event is still processed and loyalty.points.redeem_failed is sent (reason no_rule, rule_limit_reached, below_minimum, insufficient_points or program_not_live).",
+        "pointsTransfer": "contact_key is the sender and points_amount is a string. The highest-priority active transfer rule for the wallet sets the daily limit. With no usable rule, too few points, the limit reached or a program that isn't live, loyalty.points.transfer_failed is sent.",
+        "rewardPurchase": "reward_name (or reward_id) is an active Purchase-with-points reward. The customer needs enough points for its price and the program must be published and active, otherwise loyalty.reward.purchase_failed is sent.",
+        "pointsAdjusted": "Only has an effect if a ManualAdjustment rule matches.",
+        "builtInDefault": "Other fields depend on the rules that use this event (for example amount or channel).",
+        "generic": "A generic event type needs all of these fields, or the consumer rejects it."
+      },
+      "heading": "Event Simulator",
+      "subtitle": "Publish a test event straight to RabbitMQ — the same pipeline a real integration uses — to see how it's processed and which rules react.",
+      "event": "Event",
+      "eventType": "Event type",
+      "selectType": "Select an event type…",
+      "data": "Event data (JSON)",
+      "send": "Send event",
+      "sendAnother": "Send another",
+      "result": "Result",
+      "eventId": "Event id",
+      "checking": "Checking…",
+      "received": "Received",
+      "processed": "Processed",
+      "error": "Error",
+      "refresh": "Refresh status",
+      "invalidJson": "Event data must be valid JSON, and must be an object (e.g. {'{'} \"contact_key\": \"...\" {'}'}).",
+      "published": "Event published",
+      "acceptedAs": "Accepted as {id}",
+      "typesFailed": "Could not load available event types."
+    }
+  },
+  "rewards": {
+    "form": {
+      "newHeading": "New reward",
+      "editHeading": "Edit reward",
+      "retiredNotice": "This reward type is retired. It is kept for history and can no longer be edited or activated.",
+      "pendingNotice": "Waiting for a second admin's approval — it can't be bought or earned until then.",
+      "name": "Name",
+      "nameHint": "Integrations send this name. It always starts with {prefix}.",
+      "displayName": "Display name",
+      "acquisition": "How it's earned",
+      "acquisitionLocked": "Can't be changed after creation.",
+      "rewardType": "Reward type",
+      "rewardTypeLocked": "Can't be changed after creation.",
+      "tierNeedsStreak": "A tier upgrade can only be earned through a streak.",
+      "pointsPrice": "Points price",
+      "pointsAccount": "Points account",
+      "selectAccount": "Select an account…",
+      "streakHint": "Earned automatically when a streak campaign that pays this reward is completed.",
+      "cashbackHeading": "Cashback details",
+      "amount": "Amount",
+      "currencyLocked": "Fixed once the reward has been approved.",
+      "cashWallet": "Paid into CASH wallet",
+      "noWalletInCurrency": "This program has no CASH wallet in that currency.",
+      "approvalHint": "Cashback pays real money: a second admin must approve it before it can be bought or earned.",
+      "tierHeading": "Tier upgrade details",
+      "targetTier": "Target tier",
+      "selectTier": "Select a tier…",
+      "durationDays": "Protected for (days)",
+      "untilNextReview": "Until next tier review",
+      "durationHint": "Leave empty to apply the normal tier rules at the next review. Otherwise the tier can't drop for this many days.",
+      "close": "Close",
+      "create": "Create",
+      "fixFields": "Please fix the highlighted fields.",
+      "genericError": "Something went wrong. Please try again.",
+      "errors": {
+        "displayNameRequired": "Enter a display name.",
+        "tooLong": "Use at most {max} characters.",
+        "nameSuffix": "Use lowercase letters, digits and underscores.",
+        "positiveDecimal": "Enter a number greater than 0 (up to 4 decimal places).",
+        "required": "Choose one.",
+        "durationDays": "Enter a whole number of days of 1 or more, or leave it empty."
+      }
+    },
+    "acquisition": {
+      "points_purchase": "Purchase with points",
+      "streak_completion": "Streak completion",
+      "stamp_completion": "Stamp card completion (retired)"
+    },
+    "type": {
+      "cashback": "Cashback",
+      "tier_upgrade": "Tier upgrade",
+      "points_bonus": "Points bonus",
+      "discount": "Discount",
+      "free_product": "Free product",
+      "gift_card": "Gift card"
+    },
+    "list": {
+      "retired": "retired",
+      "pendingApproval": "Pending approval",
+      "approve": "Approve",
+      "view": "View"
+    },
+    "add": "Add reward",
+    "created": "Reward \"{name}\" created",
+    "saved": "Reward saved",
+    "empty": "No rewards yet",
+    "emptyHint": "Create one so customers have something to redeem.",
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "acquisition": "Acquisition",
+      "status": "Status"
+    },
+    "approve": {
+      "done": "Reward \"{name}\" approved",
+      "failed": "Could not approve this reward."
+    }
+  },
+  "customers": {
+    "detail": {
+      "copyKey": "Copy contact key",
+      "notFound": "Customer not found",
+      "notFoundBody": "No profile exists yet for this contact key.",
+      "lastActivity": "last activity",
+      "title": "Customer"
+    },
+    "tab": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "events": "Events",
+      "rules": "Rules & caps",
+      "streaks": "Streaks",
+      "rewards": "Rewards",
+      "tiers": "Tiers",
+      "cardBuckets": "Card buckets",
+      "messages": "Messages sent"
+    },
+    "overview": {
+      "noTier": "No tier",
+      "qualifyingOf": "{points} qualifying points of {target} for {tier}",
+      "tierHistory": "Tier history",
+      "noTierHistory": "No tier changes recorded yet.",
+      "wallets": "Wallets",
+      "pending": "{amount} pending (held)",
+      "expiring": "{amount} expiring by {date}",
+      "tier": "Tier",
+      "noPrograms": "The customer has no wallet in any program."
+    },
+    "col": {
+      "from": "From",
+      "to": "To",
+      "qualifyingPoints": "Qualifying points",
+      "date": "Date",
+      "wallet": "Wallet",
+      "reason": "Reason",
+      "amount": "Amount",
+      "source": "Source",
+      "eventType": "Event type",
+      "status": "Status",
+      "outcome": "Outcome",
+      "occurred": "Occurred",
+      "received": "Received",
+      "processed": "Processed",
+      "error": "Error",
+      "rule": "Rule",
+      "details": "Details"
+    },
+    "filter": {
+      "activityLabel": "Filter activity",
+      "eventsLabel": "Filter events",
+      "search": "Search",
+      "reset": "Reset",
+      "all": "All",
+      "program": "Program",
+      "wallet": "Wallet",
+      "reasonGroup": "Reason",
+      "eventType": "Event type",
+      "status": "Status",
+      "from": "From",
+      "to": "To",
+      "eventId": "Event id",
+      "localTime": "Times are in your local time.",
+      "rulesLabel": "Filter rule decisions",
+      "messagesLabel": "Filter messages sent"
+    },
+    "reasonGroup": {
+      "earn": "Earn",
+      "burn": "Burn",
+      "transfer": "Transfer",
+      "expiry": "Expiry",
+      "reward": "Reward payout",
+      "adjustment": "Adjustment"
+    },
+    "reason": {
+      "earn": "Earned",
+      "stamp_earn": "Stamp earned",
+      "stamp_reset": "Stamp card reset",
+      "cash_load": "Cash loaded",
+      "cash_spend": "Cash spent",
+      "points_redeemed": "Points redeemed",
+      "points_redeemed_cash": "Cash from redeemed points",
+      "refund": "Refund",
+      "points_expired": "Points expired",
+      "reward_purchase": "Reward bought",
+      "transfer_out": "Transferred out",
+      "transfer_in": "Transferred in",
+      "points_adjusted": "Manual adjustment",
+      "rule_reversal": "Rule reversal",
+      "reward_cashback": "Cashback reward"
+    },
+    "source": {
+      "rule": "{name} (v{version})",
+      "streak": "Streak: {name}"
+    },
+    "status": {
+      "pending": "Pending",
+      "processed": "Processed",
+      "failed": "Failed"
+    },
+    "activity": {
+      "empty": "No activity in this range",
+      "emptyBody": "Widen the dates or clear a filter.",
+      "scheduledJob": "Scheduled job",
+      "openEvent": "Open event details"
+    },
+    "events": {
+      "empty": "No events in this range",
+      "emptyBody": "Events are listed from the Customer 360 release on; older ones open from the Activity tab.",
+      "sinceDeploy": "Lists events received since the Customer 360 release.",
+      "noPostings": "No postings"
+    },
+    "loadError": "Could not load this data. Try again.",
+    "drawer": {
+      "heading": "Event details",
+      "close": "Close event details",
+      "notFound": "This event is not linked to this customer.",
+      "wallets": "Wallets involved",
+      "noPostings": "This event posted nothing.",
+      "counterparty": "counterparty {contactKey}",
+      "heldUntil": "Held until {date}",
+      "heldPosted": "Held, posted {date}",
+      "heldCancelled": "Cancelled by a refund {date} — never posted",
+      "heldRefunded": "{amount} taken back by a refund",
+      "onceOnlySkip": "No award from {name}: bonus already received on {date} (event {eventId})",
+      "event": "Event",
+      "payload": "Payload",
+      "copy": "Copy",
+      "copied": "Copied",
+      "masked": "Phone, card and national-id fields are masked.",
+      "noInbound": "Inbound event: none (scheduled job).",
+      "why": "Why",
+      "noRuleFires": "No rule fired for this event.",
+      "conditions": "Conditions",
+      "calculation": "Calculation",
+      "resolution": "Resolution",
+      "effects": "Everything else this event did",
+      "noEffects": "No streak, reward or tier change.",
+      "streakApplied": "Counted towards streak {name}",
+      "streakCompleted": "Completed streak {name} (#{n}), reward: {reward}",
+      "reward": "Reward {name} ({status})",
+      "tierChange": "Tier changed: {from} → {to}",
+      "messages": "Messages sent",
+      "noMessages": "No messages were sent for this event."
+    },
+    "rules": {
+      "caps": "Per-customer caps",
+      "noCaps": "No rule in the customer's programs has a per-customer cap.",
+      "capsNote": "Usage is counted from the ledger the way the engine counts it (earned, minus refunds). Day and period windows are UTC.",
+      "today": "Today: {used} of {cap}",
+      "total": "Total: {used} of {cap}",
+      "noFires": "No rule fired for this customer in this range",
+      "onlyRule": "Showing only {name}.",
+      "allRules": "Show all rules",
+      "snapshots": "Snapshots",
+      "bucketsElsewhere": "Card buckets are on the Card buckets tab.",
+      "summary": "{count} rules · {reached} limit reached",
+      "reached": "Limit reached",
+      "earning": "Earning",
+      "windowTotal": "Total",
+      "windowToday": "Today",
+      "windowPeriod": "This period ({period})",
+      "noCap": "no cap",
+      "tightest": "Tightest cap {percent}% used"
+    },
+    "streaks": {
+      "progress": "{count} of {target} periods · {completions} completed",
+      "rule": "Each period needs",
+      "ruleText": "{metric} ≥ {threshold} per {period}",
+      "lastMet": "Last period met",
+      "latestPeriod": "Latest recorded period",
+      "latestPeriodText": "from {date}: sum {sum}, count {count}",
+      "met": "met",
+      "notMet": "not met yet",
+      "completedPeriod": "Completed period",
+      "reward": "Reward",
+      "kind": {
+        "fixed_bonus": "Fixed bonus",
+        "reward_definition": "Reward definition"
+      },
+      "status": {
+        "active": "Active",
+        "completed_stopped": "Completed (stopped)"
+      },
+      "empty": "The customer has no streak progress",
+      "note": "Progress is shown as the engine last stored it; a missed period is applied when the customer's next event arrives."
+    },
+    "rewards": {
+      "reward": "Reward",
+      "how": "How",
+      "cost": "Cost",
+      "payout": "Payout",
+      "empty": "The customer has no rewards",
+      "outcome": {
+        "cash_credited": "Cash credited",
+        "tier_upgraded": "Tier upgraded",
+        "none": "Nothing paid"
+      }
+    },
+    "tiers": {
+      "periodStart": "Period start",
+      "graceEnds": "Tier review (grace ends)",
+      "lockedUntil": "Locked by reward until",
+      "cause": "Cause",
+      "causes": {
+        "points": "Points",
+        "reward": "Reward",
+        "downgrade": "Nightly downgrade"
+      },
+      "statusHeading": "Tier status",
+      "review": "Tier review",
+      "summary": "{count} programs",
+      "toNext": "{percent}% of the way to {tier}",
+      "topTierShort": "Top tier",
+      "points": "Qualifying points",
+      "nextTier": "Next tier",
+      "noneTiered": "None of this customer's programs has a tier system."
+    },
+    "buckets": {
+      "summary": "Reward {reward} per transaction · {postings} postings",
+      "last": "last {date}",
+      "noCap": "No per-customer cap · {used} earned in total",
+      "showPostings": "Show postings",
+      "hidePostings": "Hide postings",
+      "empty": "No card bucket in the customer's programs"
+    },
+    "messages": {
+      "created": "Created",
+      "reason": "Reason",
+      "published": "Published",
+      "dedupKey": "Dedup key",
+      "empty": "No messages in this range",
+      "retention": "Published messages are kept for 30 days.",
+      "status": {
+        "pending": "Pending",
+        "published": "Published",
+        "failed": "Failed"
+      },
+      "typePlaceholder": "loyalty.points.earned"
+    },
+    "panel": {
+      "memberSince": "Member since",
+      "programs": "Programs & tiers",
+      "noTiers": "No tiers",
+      "engagement": "Engagement",
+      "streaksInProgress": "Streaks in progress",
+      "failedEvents": "Failed events (7 days)",
+      "wallets": "Wallets"
+    },
+    "progress": {
+      "heading": "Progress",
+      "topTier": "{points} qualifying points · top tier",
+      "none": "No tier or streak in this program."
+    },
+    "paging": {
+      "pageView": "Page view"
+    },
+    "list": {
+      "subtitle": "Find a customer by contact key, or browse them all.",
+      "searchLabel": "Search customers",
+      "searchPlaceholder": "Search by contact key, e.g. cust_1001",
+      "searchHint": "Matches any part of the contact key. Press Enter on an exact key to open that customer.",
+      "empty": "No customers yet",
+      "emptyBody": "Customers appear here once an ingested event creates their first balance.",
+      "noMatch": "No customer matches",
+      "noMatchBody": "Check the contact key, or clear the search.",
+      "col": {
+        "contactKey": "Contact key",
+        "firstSeen": "First seen",
+        "lastActivity": "Last activity",
+        "programs": "Programs",
+        "accounts": "Accounts"
+      }
+    }
+  },
+  "ui": {
+    "breadcrumbs": "Breadcrumb",
+    "confirm": {
+      "ok": "Confirm"
+    },
+    "skipToContent": "Skip to content",
+    "paginator": {
+      "none": "0 results",
+      "range": "{from}–{to} of {total}",
+      "page": "Page {page} of {pages}",
+      "previous": "Previous page",
+      "next": "Next page",
+      "pageView": "Page view"
+    },
+    "select": {
+      "search": "Search",
+      "noResults": "No results",
+      "clear": "Clear selection"
+    },
+    "toast": {
+      "dismiss": "Dismiss"
+    },
+    "filter": {
+      "search": "Search",
+      "reset": "Reset"
+    }
+  },
+  "tiers": {
+    "heading": "Tier Levels",
+    "intro": "Assigned automatically based on the qualifying points threshold.",
+    "add": "Add tier",
+    "created": "Tier \"{name}\" created",
+    "saved": "Tier saved",
+    "empty": "No tiers yet",
+    "emptyHint": "Create at least two to give customers something to work toward.",
+    "col": {
+      "order": "Order",
+      "name": "Name",
+      "minPoints": "Min points",
+      "qualifying": "Qualifying",
+      "grace": "Grace"
+    },
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "qualifying": {
+      "periodic": "Last {days} days",
+      "lifetime": "Lifetime"
+    },
+    "graceDays": "{days} days",
+    "delete": {
+      "confirmTitle": "Delete tier?",
+      "confirmMessage": "\"{name}\" will be removed. This cannot be undone.",
+      "done": "Tier \"{name}\" deleted",
+      "hasAccounts": "This tier has customer accounts assigned to it.",
+      "programActive": "The program must be inactive before its tiers can be deleted."
+    },
+    "form": {
+      "newHeading": "New tier",
+      "editHeading": "Edit tier",
+      "create": "Create",
+      "name": "Name (slug)",
+      "namePlaceholder": "gold",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "Gold",
+      "minPoints": "Minimum qualifying points",
+      "qualifyingModel": "Qualifying model",
+      "periodic": "Periodic",
+      "periodicHint": "Points reset after a rolling window",
+      "lifetime": "Lifetime",
+      "lifetimeHint": "Points never reset",
+      "modelLocked": "Cannot be changed once customer accounts are assigned to this tier.",
+      "periodDays": "Qualifying period (days)",
+      "graceDays": "Grace period (days)",
+      "errors": {
+        "nameRequired": "Enter a name.",
+        "displayNameRequired": "Enter a display name.",
+        "tooLong": "Use at most {max} characters.",
+        "minPoints": "Enter a number of points of 0 or more (up to 4 decimal places).",
+        "periodDays": "Enter a whole number of days greater than 0.",
+        "graceDays": "Enter a whole number of days (0 or more)."
+      }
+    }
+  },
+  "conditions": {
+    "field": "Field",
+    "operator": "Operator",
+    "value": "Value",
+    "fieldPlaceholder": "payload field path",
+    "undeclared": "Not a declared field of this event — check the spelling.",
+    "present": "present",
+    "absent": "absent",
+    "noValue": "no value needed",
+    "csv": "comma-separated values",
+    "min": "min",
+    "max": "max",
+    "add": "Add condition",
+    "remove": "Remove condition",
+    "tree": {
+      "heading": "Conditions (optional)",
+      "joinGroups": "Join groups with",
+      "group": "Group {n}",
+      "match": "match",
+      "removeGroup": "Remove group",
+      "addGroup": "Add group",
+      "help": "A condition always lives in a group. Groups are joined by the operator above; conditions inside a group are joined by that group's own operator."
+    },
+    "leaves": {
+      "heading": "Additional conditions (optional)",
+      "intro": "Extra leaves matched with AND alongside the structured fields above. An escape hatch for anything the form above doesn't cover."
+    },
+    "clauses": {
+      "heading": "Conditions (optional, all must match)",
+      "fieldPlaceholder": "field, e.g. order.category",
+      "afterEvent": "after event",
+      "hours": "hours"
+    }
+  },
+  "cardBuckets": {
+    "heading": "Card Buckets",
+    "add": "New bucket",
+    "empty": "No card buckets yet",
+    "emptyHint": "Create one to reward specific spend patterns.",
+    "activate": "Activate bucket",
+    "disable": "Disable bucket",
+    "activated": "Bucket activated",
+    "disabled": "Bucket disabled",
+    "created": "Bucket created",
+    "saved": "Bucket saved",
+    "col": {
+      "name": "Name",
+      "mcc": "MCC",
+      "amount": "Amount range",
+      "status": "Status"
+    },
+    "delete": {
+      "title": "Delete bucket",
+      "message": "Delete \"{name}\"? This cannot be undone.",
+      "done": "Bucket deleted"
+    },
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "form": {
+      "newHeading": "New card bucket",
+      "editHeading": "Edit card bucket",
+      "newCrumb": "New",
+      "editCrumb": "Edit",
+      "notFound": "This card bucket doesn't exist any more.",
+      "basics": "Basics",
+      "match": "Match on card transactions",
+      "name": "Name",
+      "rewardAccount": "Reward account",
+      "selectAccount": "Select an account…",
+      "rewardAmount": "Reward amount",
+      "activeFrom": "Active from",
+      "activeTo": "Active to",
+      "mccCodes": "MCC codes (comma-separated, any match)",
+      "mccPlaceholder": "5411, 5541",
+      "amountMin": "Amount min",
+      "amountMax": "Amount max",
+      "geo": "Geo",
+      "countryIn": "Only these countries",
+      "countryNotIn": "Exclude these countries",
+      "countries": "Countries (ISO codes, comma-separated)",
+      "countriesPlaceholder": "SA, AE",
+      "requireCaptured": "Only captured transactions (excludes pre-auth)",
+      "hourFrom": "Hour from (UTC, 0–23)",
+      "hourTo": "Hour to (UTC, 0–23)",
+      "daysOfWeek": "Days of week",
+      "perCustomerPerDay": "Max reward per customer per day",
+      "perCustomerTotal": "Max reward per customer total",
+      "fixFields": "Please fix the highlighted fields.",
+      "errors": {
+        "nameRequired": "Name is required.",
+        "tooLong": "Must be {max} characters or fewer.",
+        "required": "Choose one.",
+        "positiveDecimal": "Enter a number greater than 0, with up to 4 decimals.",
+        "decimal": "Enter a number with up to 4 decimals.",
+        "amountMax": "Amount max must be greater than or equal to amount min.",
+        "hour": "Enter a whole hour from 0 to 23."
+      }
+    }
+  },
+  "streaks": {
+    "heading": "Streak Campaigns",
+    "add": "New campaign",
+    "empty": "No streak campaigns yet",
+    "emptyHint": "Create one to start rewarding consecutive activity.",
+    "activate": "Activate campaign",
+    "disable": "Disable campaign",
+    "activated": "Campaign activated",
+    "disabled": "Campaign disabled",
+    "created": "Campaign created",
+    "saved": "Campaign saved",
+    "col": {
+      "name": "Name",
+      "trigger": "Trigger",
+      "period": "Period",
+      "targetPeriods": "Target periods",
+      "status": "Status"
+    },
+    "delete": {
+      "title": "Delete campaign",
+      "message": "Delete \"{name}\"? This cannot be undone.",
+      "done": "Campaign deleted"
+    },
+    "period": {
+      "day": "day",
+      "week": "week",
+      "month": "month"
+    },
+    "metric": {
+      "sum": "sum",
+      "count": "count"
+    },
+    "onComplete": {
+      "restart": "restart",
+      "stop": "stop"
+    },
+    "form": {
+      "newHeading": "New streak campaign",
+      "editHeading": "Edit streak campaign",
+      "newCrumb": "New",
+      "editCrumb": "Edit",
+      "notFound": "This streak campaign doesn't exist any more.",
+      "basics": "Basics",
+      "name": "Name",
+      "trigger": "Trigger event",
+      "selectTrigger": "Select a trigger…",
+      "targetAccount": "Target account",
+      "selectAccount": "Select an account…",
+      "activeFrom": "Active from",
+      "activeTo": "Active to",
+      "streak": "Streak",
+      "period": "Period",
+      "targetPeriods": "Target periods",
+      "weekStart": "Week starts",
+      "metric": "Aggregate metric",
+      "threshold": "Threshold per period",
+      "timezone": "Timezone",
+      "onComplete": "On complete",
+      "reward": "Reward",
+      "fixedBonus": "Fixed bonus (on target account)",
+      "rewardDefinition": "Reward definition",
+      "bonusAmount": "Bonus amount",
+      "rewardDefinitionLabel": "Reward",
+      "selectReward": "Select a reward…",
+      "noRewards": "No active, approved streak-completion reward yet — create one under Rewards.",
+      "fixFields": "Please fix the highlighted fields.",
+      "errors": {
+        "nameRequired": "Name is required.",
+        "tooLong": "Must be {max} characters or fewer.",
+        "required": "Choose one.",
+        "whole": "Enter a whole number.",
+        "decimal": "Enter a number with up to 4 decimals."
+      }
+    }
+  },
+  "dashboard": {
+    "subtitle": "Tenant-wide overview across every program.",
+    "program": "Program",
+    "allPrograms": "All programs",
+    "from": "From",
+    "to": "To",
+    "clear": "Clear filters",
+    "tiles": {
+      "programs": "Programs",
+      "tiers": "Tiers",
+      "customerAccounts": "Customer accounts",
+      "totalBalance": "Total balance",
+      "redemptions": "Redemptions",
+      "activeStreaks": "Active streaks",
+      "streaksCompleted": "Streaks completed"
+    }
+  },
+  "platform": {
+    "heading": "Tenants",
+    "subtitle": "Every tenant on the platform",
+    "tenants": {
+      "new": "New tenant",
+      "caption": "Tenants",
+      "empty": "No tenants yet.",
+      "col": {
+        "name": "Name",
+        "id": "Id",
+        "status": "Status",
+        "created": "Created"
+      },
+      "created": "Tenant \"{name}\" created",
+      "form": {
+        "heading": "New tenant",
+        "id": "Tenant id",
+        "idPlaceholder": "novapay",
+        "idHint": "Lowercase letters, digits, underscores. Cannot be changed later.",
+        "idPattern": "1-50 lowercase letters, digits, or underscores.",
+        "name": "Display name",
+        "nameRequired": "Display name is required.",
+        "tooLong": "At most {max} characters.",
+        "submit": "Create tenant"
+      }
+    },
+    "status": {
+      "active": "active",
+      "suspended": "suspended"
+    },
+    "overview": {
+      "suspend": "Suspend",
+      "reactivate": "Reactivate",
+      "suspended": "Tenant suspended",
+      "reactivated": "Tenant reactivated",
+      "status": "Status",
+      "tenantId": "Tenant id",
+      "created": "Created",
+      "manage": "Manage",
+      "notFound": "Tenant not found",
+      "notFoundBody": "It may have been removed, or the id is wrong.",
+      "cards": {
+        "apiKeys": {
+          "label": "API Keys",
+          "description": "Server-to-server event credentials"
+        },
+        "admins": {
+          "label": "Tenant Admins",
+          "description": "Who can sign in and manage this tenant"
+        }
+      }
+    },
+    "apiKeys": {
+      "heading": "API Keys",
+      "new": "New key",
+      "caption": "API keys",
+      "empty": "No API keys yet — create one to let this tenant send events.",
+      "col": {
+        "prefix": "Prefix",
+        "created": "Created",
+        "lastUsed": "Last used",
+        "actions": "Actions"
+      },
+      "prefixValue": "{prefix}…",
+      "neverUsed": "Never used",
+      "revoked": "revoked",
+      "revokeKey": "Revoke key",
+      "revoke": {
+        "title": "Revoke API key",
+        "message": "Revoke key {prefix}…? Any client still using it will start getting 401s immediately.",
+        "confirm": "Revoke",
+        "done": "API key revoked"
+      },
+      "created": {
+        "heading": "API key created",
+        "warning": "Copy this key now — it will not be shown again.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "prefix": "Prefix {prefix} — use this to identify the key in the list below.",
+        "done": "Done"
+      }
+    },
+    "admins": {
+      "heading": "Tenant Admins",
+      "new": "New admin",
+      "caption": "Tenant admins",
+      "emptyHeading": "No tenant admins yet",
+      "emptyBody": "Create one so someone can sign in and manage this tenant.",
+      "col": {
+        "email": "Email",
+        "status": "Status",
+        "created": "Created"
+      },
+      "created": "Admin \"{email}\" created",
+      "form": {
+        "heading": "New tenant admin",
+        "grants": "Grants sign-in access to {tenant}.",
+        "email": "Email",
+        "emailInvalid": "Enter a valid email address.",
+        "tooLong": "At most {max} characters.",
+        "password": "Temporary password",
+        "passwordHint": "At least 12 characters. Share it with the tenant admin out of band.",
+        "passwordMin": "At least {min} characters.",
+        "submit": "Create admin"
+      }
+    }
+  }
+}

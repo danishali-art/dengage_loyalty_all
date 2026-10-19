@@ -6,7 +6,8 @@ paths:
 # Frontend rules — Loyalty Admin Portal (`web/`, Angular 22)
 
 `web/CLAUDE.md` holds the architecture overview and commands. These are the rules to apply
-when editing.
+when editing. They cover the Angular portal only; the Vue 3 rewrite in `webVue3/` follows
+`frontend-vue.md`.
 
 ## Angular idioms (required)
 - Standalone components only, **zoneless**, signals first. Never add an `NgModule`, zone.js,
