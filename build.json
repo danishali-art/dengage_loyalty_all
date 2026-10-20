@@ -1,0 +1,14 @@
+{
+  "SolutionName": "dEngage.Loyalty",
+  "DeploymentProjectSettingsList": [
+    {
+      "Name": "dEngage.Loyalty.Api",
+      "DockerImageName": "dengage.loyalty.api"
+    },
+    {
+      "Name": "dEngage.Loyalty.Consumer",
+      "DockerImageName": "dengage.loyalty.consumer"
+    }
+  ],
+  "NugetPackageSettingsList": []
+}

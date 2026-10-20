@@ -6,11 +6,14 @@ namespace dEngage.Loyalty.Shared.Security;
 
 /// <summary>
 /// AES-256-GCM encryption for ENC(base64) tokens in config values.
-/// Payload layout: nonce(12) || tag(16) || ciphertext. Key: LOYALTY_MASTER_KEY (base64, 32 bytes).
+/// Payload layout: nonce(12) || tag(16) || ciphertext. Key: base64, 32 bytes, read from the file
+/// named by LOYALTY_MASTER_KEY_FILE (a mounted secret — deployed environments), else from
+/// LOYALTY_MASTER_KEY (local development).
 /// </summary>
 public static class SecretCrypto
 {
     public const string KeyEnvVar = "LOYALTY_MASTER_KEY";
+    public const string KeyFileEnvVar = "LOYALTY_MASTER_KEY_FILE";
     private const int NonceSize = 12;
     private const int TagSize = 16;
 
@@ -19,14 +22,29 @@ public static class SecretCrypto
     public static string GenerateKey() =>
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
+    // The file wins over the variable: a key in an environment variable shows up in process
+    // listings and orchestrator manifests, a mounted secret file doesn't (platform alignment D3).
     public static byte[] LoadKeyFromEnv()
     {
+        var keyFile = Environment.GetEnvironmentVariable(KeyFileEnvVar);
+        if (!string.IsNullOrWhiteSpace(keyFile))
+        {
+            if (!File.Exists(keyFile))
+                throw new InvalidOperationException($"{KeyFileEnvVar} points to '{keyFile}', which does not exist.");
+            return ParseKey(File.ReadAllText(keyFile), KeyFileEnvVar);
+        }
+
         var raw = Environment.GetEnvironmentVariable(KeyEnvVar);
         if (string.IsNullOrWhiteSpace(raw))
             throw new InvalidOperationException(
-                $"{KeyEnvVar} is not set — ENC(...) values in the config cannot be decrypted. " +
-                "Generate a key with CryptoCli 'genkey' and export it.");
+                $"Neither {KeyFileEnvVar} nor {KeyEnvVar} is set — ENC(...) values in the config cannot be decrypted. " +
+                "Generate a key with CryptoCli 'genkey' and provide it as a mounted file or an environment variable.");
 
+        return ParseKey(raw, KeyEnvVar);
+    }
+
+    private static byte[] ParseKey(string raw, string source)
+    {
         byte[] key;
         try
         {
@@ -34,12 +52,12 @@ public static class SecretCrypto
         }
         catch (FormatException)
         {
-            throw new InvalidOperationException($"{KeyEnvVar} is not valid base64.");
+            throw new InvalidOperationException($"The key from {source} is not valid base64.");
         }
 
         if (key.Length != 32)
             throw new InvalidOperationException(
-                $"{KeyEnvVar} must be a 32-byte AES-256 key (decoded to {key.Length} bytes).");
+                $"The key from {source} must be a 32-byte AES-256 key (decoded to {key.Length} bytes).");
 
         return key;
     }

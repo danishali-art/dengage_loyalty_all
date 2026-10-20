@@ -18,8 +18,43 @@ using dEngage.Loyalty.Api.Tiers;
 using dEngage.Loyalty.RuleEngine.Cache;
 using dEngage.Loyalty.RuleEngine.Campaigns;
 using dEngage.Loyalty.Shared.Security;
+using dEngage.Common.Hosting;
+using dEngage.Common.Shared.Constants;
+using dEngage.Common.Utilities.Settings;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using NLog;
+using NLog.Web;
 
-var builder = WebApplication.CreateBuilder(args);
+// DengageWebApplicationBuilder reads the environment from WEB_APPLICATION_ENVIRONMENT only and
+// falls back to Production. Resolve it the standard .NET way first (--environment, then
+// ASPNETCORE_/DOTNET_ENVIRONMENT) so launch profiles, containers and WebApplicationFactory's
+// UseEnvironment (passed in as --environment) keep selecting Development/Staging/Testing.
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WEB_APPLICATION_ENVIRONMENT")))
+    Environment.SetEnvironmentVariable("WEB_APPLICATION_ENVIRONMENT", new ConfigurationBuilder()
+        .AddEnvironmentVariables("DOTNET_")
+        .AddEnvironmentVariables("ASPNETCORE_")
+        .AddCommandLine(args)
+        .Build()["environment"]);
+
+// Platform hosting (alignment D1): deployed environments mount their appsettings*.json into
+// CONFIG_PATH (and may point NLOG_CONFIG_PATH elsewhere); locally both are unset and the files
+// next to the binary are used.
+var appLocation = AppContext.BaseDirectory;
+var configPath = Environment.GetEnvironmentVariable("CONFIG_PATH");
+var bootLogger = LogManager.Setup()
+    .LoadConfigurationFromAppSettings(Environment.GetEnvironmentVariable("NLOG_CONFIG_PATH") ?? configPath ?? appLocation, "logging")
+    .GetCurrentClassLogger();
+
+var builder = DengageWebApplicationBuilder.CreateBuilder(args, bootLogger, currentLocation: appLocation, configLocation: configPath);
+
+// The platform's startup filter (/health-check, /restart, debug-view) needs IAppSettings.
+builder.Services.TryAddSingleton<IAppSettings, AppSettings>();
+
+// This API is reached from browsers and client systems. Outside Development, switch off the
+// platform's internal endpoints: /restart would let any caller stop the process and debug-view
+// prints the configuration (same rule as dEngage.Common.AspNetCore's external-API defaults).
+if (!builder.Environment.IsDevelopment())
+    CommonConstants.MarkAsExternal();
 
 // Same ENC(...) config-secret resolution pass as Consumer's Program.cs (see dEngage.Loyalty.Shared.Security.SecretCrypto)
 var encryptedEntries = builder.Configuration.AsEnumerable()
@@ -95,6 +130,14 @@ if (!app.Environment.IsDevelopment())
 app.MapHealthChecks();
 app.UseLoyaltyApiFramework();
 
-app.Run();
+try
+{
+    app.Run();
+}
+finally
+{
+    // Flush buffered NLog targets (Seq/Graylog batch) before the process exits.
+    LogManager.Shutdown();
+}
 
 public partial class Program;

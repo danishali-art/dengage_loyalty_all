@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Moq;
 using StackExchange.Redis;
 
@@ -19,7 +20,9 @@ namespace dEngage.Loyalty.IntegrationTests.Fixtures;
 //
 // LoyaltyDbContext is registered upstream via a factory-based AddDbContext (options resolve
 // ApiOptions at configure-time), which also registers a non-generic DbContextOptions service;
-// both must be removed before re-adding the Sqlite-backed registration.
+// both must be removed before re-adding the Sqlite-backed registration. Since EF Core 9 the
+// upstream UseNpgsql(...) action is also kept as an IDbContextOptionsConfiguration<T>, which
+// must go too — otherwise both providers end up configured and EF refuses to start.
 public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
@@ -48,6 +51,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<DbContextOptions<LoyaltyDbContext>>();
             services.RemoveAll<DbContextOptions>();
+            services.RemoveAll<IDbContextOptionsConfiguration<LoyaltyDbContext>>();
             services.AddDbContext<LoyaltyDbContext>(options => options.UseSqlite(_connection));
 
             services.RemoveAll<IEventPublisher>();

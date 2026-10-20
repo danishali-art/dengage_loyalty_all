@@ -1,0 +1,30 @@
+# Images are built with the repo root as context (Dockerfiles COPY . . so NuGet.Config is
+# available). Keep everything that isn't backend source out of the build context.
+
+# Local credentials and developer-only settings must never be baked into an image.
+**/.env
+**/*.env.local
+**/appsettings.Development.json
+**/Properties/launchSettings.json
+
+# Build output and tooling state
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/.idea/
+.git/
+.github/
+.claude/
+
+# Front-ends are built and hosted separately
+web/
+webVue3/
+**/node_modules/
+
+# Docs, scripts, data dumps and local infra
+docs/
+scripts/
+*.md
+docker-compose*.yml
+run.ps1

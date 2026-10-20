@@ -1,0 +1,11 @@
+image: alpine/curl
+
+pipelines:
+  pull-requests:
+    "**":
+      - step:
+          name: "Run shared pipeline"
+          clone: 
+            enabled: false
+          script:
+            - curl -sSL -u"$BB_USERNAME:$BB_PASSWORD" "https://api.bitbucket.org/2.0/repositories/dengage/dengage.pipeline/src/main/shared.sh" | sh

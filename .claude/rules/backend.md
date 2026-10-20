@@ -15,12 +15,45 @@ Per-project rules are in their own files and load when you touch that project:
 `backend-engine-framework.md`, `backend-ledger.md`, `backend-schema-shared.md`, `backend-tests.md`.
 
 ## Stack (don't swap without a Scope Change Request)
-- .NET 8 across all 12 projects. Nancy 2 (hosted in ASP.NET Core) for HTTP. EF Core 8 + Npgsql
+- .NET 9 across all 12 projects. Nancy 2 (hosted in ASP.NET Core) for HTTP. EF Core 9 + Npgsql 9
   (Postgres). StackExchange.Redis. RabbitMQ.Client 6. FluentValidation 11.
-  UUIDNext for database-friendly Guids.
+  UUIDNext for database-friendly Guids. The Api and Consumer run on the dEngage platform host
+  (`dEngage.Common.Hosting`, see "Hosting and configuration" below).
 - Tests use xUnit, FluentAssertions, Moq, Testcontainers and `Microsoft.AspNetCore.Mvc.Testing`.
 - Don't add NuGet packages or change versions without being asked. Match the versions already
-  pinned in the other csprojs.
+  pinned in the other csprojs (Microsoft.* 9.0.13, Npgsql 9.0.4, dEngage.Common.* 6.43.0).
+- `NuGet.Config` adds the private feed `nugetint.dengage.com`, which only resolves on the dEngage
+  VPN. Off the VPN (or if Windows asks the home router before the VPN DNS), restore with
+  `dotnet restore dEngage.Loyalty.sln --ignore-failed-sources`; the dEngage packages then come
+  from the local NuGet cache.
+
+## Hosting and configuration (platform alignment Phase 1)
+- **Hosts:** the Api uses `DengageWebApplicationBuilder`, the Consumer `DengageHostBuilder`. Both
+  read every `appsettings*.json` from the folder in `CONFIG_PATH` (deployed environments mount
+  their files there) or, when unset, from next to the binary. Files: `appsettings.json`,
+  `appsettings.{Environment}.json`, `appsettings.logging.json` (NLog), `appsettings.metrics.json`
+  (required by the host). Environment variables override files.
+- **Environment:** the platform builder only reads `WEB_APPLICATION_ENVIRONMENT`; `Program.cs`
+  fills it from `--environment` / `ASPNETCORE_ENVIRONMENT` / `DOTNET_ENVIRONMENT`. Keep that
+  bridge, or `WebApplicationFactory`'s `UseEnvironment("Testing")` silently becomes Production.
+- **Platform endpoints:** the host adds `/health-check`, `/restart` and debug-view. The Api calls
+  `CommonConstants.MarkAsExternal()` outside Development, which switches `/restart` and
+  debug-view off (guarded by `PlatformHostingTests`). The Consumer listens on `:5174` for health
+  and metrics only; keep that port cluster-internal.
+- **Fail fast:** no hard-coded connection defaults. `ApiOptions`/`ConsumerConfig.FromConfiguration`
+  reject missing `ConnectionString`, `RedisConnectionString` (Consumer still accepts the legacy
+  `Redis` key) and RabbitMQ host/user/password at startup. Connection values live only in
+  `appsettings.Development.json` (local) or the mounted files, never in the base `appsettings.json`.
+- **Secrets:** deployed environments mount secrets as config files under `CONFIG_PATH`. `ENC(...)`
+  values still work; the key comes from the file in `LOYALTY_MASTER_KEY_FILE` (mounted secret),
+  else from `LOYALTY_MASTER_KEY` (local development).
+- **Dependency boundary (D13):** core projects may depend only on `dEngage.Common.*` packages.
+  `dEngage.Framework`, `Parameters`, `Models`, `DbManager`/`ConManager` and other platform
+  libraries are allowed only in the future dEngage connector projects. `CoreDependencyBoundaryTests`
+  checks the resolved dependency closure.
+- **Images:** `src/dEngage.Loyalty.{Api,Consumer}/Dockerfile`, built with the repo root as context
+  (`.dockerignore` keeps `.env`, `appsettings.Development.json`, launch settings and the portals
+  out). `build.json` + `bitbucket-pipelines.yml` hook into the shared dEngage pipeline.
 
 ## Project reference graph (actual — keep it acyclic)
 ```

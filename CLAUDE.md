@@ -48,7 +48,15 @@ The process for a scope change:
 
 Infra (local): Postgres, Redis, RabbitMQ via `docker-compose.yml`. `.\run.ps1` boots infra +
 Api (`http://localhost:5173/swagger`) + Consumer + web (`http://localhost:4200`) each in their
-own window.
+own window. The Consumer also listens on `http://localhost:5174` (platform `/health-check` and
+metrics only).
+
+Runtime: .NET 9 on the dEngage platform host (`dEngage.Common.Hosting`): `CONFIG_PATH` config
+layering, NLog, Prometheus metrics. Images: `src/dEngage.Loyalty.{Api,Consumer}/Dockerfile`
+(repo root as build context), CI via `build.json` + `bitbucket-pipelines.yml`. Conventions and
+pitfalls (environment bridge, `MarkAsExternal`, fail-fast config, the D13 dependency boundary,
+restoring off the VPN) are in `.claude/rules/backend.md` → "Hosting and configuration". The
+decisions behind this are recorded in `docs/platform-alignment/`.
 
 ## Secrets
 
@@ -57,6 +65,12 @@ documents the required keys with empty values. Likewise `src/dEngage.Loyalty.Api
 (plaintext JWT signing key and connection strings) is gitignored: on a fresh clone, copy
 `appsettings.Development.example.json` next to it and fill in the values. Rotate `ANTHROPIC_API_KEY` if it was ever
 committed anywhere before this repo was git-initialized.
+
+Deployed environments don't use any committed settings with secrets: they mount their
+`appsettings*.json` (including connection strings and the JWT key) into `CONFIG_PATH`, and if a
+value uses `ENC(...)` they provide the key as a mounted file named by `LOYALTY_MASTER_KEY_FILE`.
+The base `appsettings.json` files carry no connection values, so a missing mounted value stops
+the service at startup instead of falling back to localhost.
 
 ## Related docs
 

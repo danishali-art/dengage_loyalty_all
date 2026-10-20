@@ -4,6 +4,7 @@ using dEngage.Loyalty.Schema;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -39,6 +40,8 @@ public sealed class PostgresWebApplicationFactory(string connectionString) : Web
         {
             services.RemoveAll<DbContextOptions<LoyaltyDbContext>>();
             services.RemoveAll<DbContextOptions>();
+            // See CustomWebApplicationFactory — EF Core 9 also keeps the upstream options action.
+            services.RemoveAll<IDbContextOptionsConfiguration<LoyaltyDbContext>>();
             services.AddDbContext<LoyaltyDbContext>(options => options.UseNpgsql(connectionString));
 
             services.RemoveAll<IEventPublisher>();
