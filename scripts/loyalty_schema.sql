@@ -6,7 +6,6 @@
 
 START TRANSACTION;
 
-
 DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260630013228_InitialCreate') THEN
@@ -235,13 +234,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260630013228_InitialCreate') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260630013228_InitialCreate', '8.0.0');
+    VALUES ('20260630013228_InitialCreate', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -384,13 +379,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260701184514_TierSystem') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260701184514_TierSystem', '8.0.0');
+    VALUES ('20260701184514_TierSystem', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -403,13 +394,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260701210128_TierUpgradeLogSourceEventUnique') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260701210128_TierUpgradeLogSourceEventUnique', '8.0.0');
+    VALUES ('20260701210128_TierUpgradeLogSourceEventUnique', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -444,13 +431,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260702024651_RulesSoftDeleteTrigger') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260702024651_RulesSoftDeleteTrigger', '8.0.0');
+    VALUES ('20260702024651_RulesSoftDeleteTrigger', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -463,13 +446,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705202945_RewardLogSourceEventUnique') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260705202945_RewardLogSourceEventUnique', '8.0.0');
+    VALUES ('20260705202945_RewardLogSourceEventUnique', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -562,13 +541,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705235304_RewardDefinitions') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260705235304_RewardDefinitions', '8.0.0');
+    VALUES ('20260705235304_RewardDefinitions', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -616,13 +591,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260706003307_OutboxEvents') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260706003307_OutboxEvents', '8.0.0');
+    VALUES ('20260706003307_OutboxEvents', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -635,13 +606,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260706070750_ProgramWarningDays') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260706070750_ProgramWarningDays', '8.0.0');
+    VALUES ('20260706070750_ProgramWarningDays', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -668,13 +635,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260829230559_EventLog') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260829230559_EventLog', '8.0.0');
+    VALUES ('20260829230559_EventLog', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -704,13 +667,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260829232413_RuleConditionsDsl') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260829232413_RuleConditionsDsl', '8.0.0');
+    VALUES ('20260829232413_RuleConditionsDsl', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -727,13 +686,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260829232444_RuleActiveWindowTimestamptz') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260829232444_RuleActiveWindowTimestamptz', '8.0.0');
+    VALUES ('20260829232444_RuleActiveWindowTimestamptz', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -827,13 +782,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260829235815_Streak') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260829235815_Streak', '8.0.0');
+    VALUES ('20260829235815_Streak', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -928,13 +879,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260902122303_MultitenantAdminSchema') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260902122303_MultitenantAdminSchema', '8.0.0');
+    VALUES ('20260902122303_MultitenantAdminSchema', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -947,13 +894,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260902171315_WidenApiKeyPrefixColumn') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260902171315_WidenApiKeyPrefixColumn', '8.0.0');
+    VALUES ('20260902171315_WidenApiKeyPrefixColumn', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -993,13 +936,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260903122313_AddRuleFireAudit') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260903122313_AddRuleFireAudit', '8.0.0');
+    VALUES ('20260903122313_AddRuleFireAudit', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1114,13 +1053,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260903170930_AddStreakCampaigns') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260903170930_AddStreakCampaigns', '8.0.0');
+    VALUES ('20260903170930_AddStreakCampaigns', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1133,13 +1068,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260903184551_AddRuleTemplate') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260903184551_AddRuleTemplate', '8.0.0');
+    VALUES ('20260903184551_AddRuleTemplate', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1308,13 +1239,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260903193446_TenantGuidSurrogateKey') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260903193446_TenantGuidSurrogateKey', '8.0.0');
+    VALUES ('20260903193446_TenantGuidSurrogateKey', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1521,13 +1448,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260903200505_TenantIdGuidForeignKeys') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260903200505_TenantIdGuidForeignKeys', '8.0.0');
+    VALUES ('20260903200505_TenantIdGuidForeignKeys', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1666,13 +1589,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260903201852_RestoreTenantScopedIndexes') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260903201852_RestoreTenantScopedIndexes', '8.0.0');
+    VALUES ('20260903201852_RestoreTenantScopedIndexes', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1788,37 +1707,25 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260905184214_AddConfigVersions') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260905184214_AddConfigVersions', '8.0.0');
+    VALUES ('20260905184214_AddConfigVersions', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260905184227_AddComplaints') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260905184227_AddComplaints', '8.0.0');
+    VALUES ('20260905184227_AddComplaints', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260905184233_AddTierStatus') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260905184233_AddTierStatus', '8.0.0');
+    VALUES ('20260905184233_AddTierStatus', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1852,13 +1759,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260905184245_AddProgramsSoftDeleteTrigger') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260905184245_AddProgramsSoftDeleteTrigger', '8.0.0');
+    VALUES ('20260905184245_AddProgramsSoftDeleteTrigger', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1892,13 +1795,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260905184251_AddTiersSoftDeleteTrigger') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260905184251_AddTiersSoftDeleteTrigger', '8.0.0');
+    VALUES ('20260905184251_AddTiersSoftDeleteTrigger', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1932,13 +1831,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260917103823_RewardTypeTaxonomy') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260917103823_RewardTypeTaxonomy', '8.0.0');
+    VALUES ('20260917103823_RewardTypeTaxonomy', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1965,13 +1860,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260921102134_RuleTypeExpansionCr02') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260921102134_RuleTypeExpansionCr02', '8.0.0');
+    VALUES ('20260921102134_RuleTypeExpansionCr02', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -1991,13 +1882,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260921102638_CashApprovalGateCr04') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260921102638_CashApprovalGateCr04', '8.0.0');
+    VALUES ('20260921102638_CashApprovalGateCr04', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2036,13 +1923,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260921111821_StackingResolutionCr06') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260921111821_StackingResolutionCr06', '8.0.0');
+    VALUES ('20260921111821_StackingResolutionCr06', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2092,13 +1975,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260921120111_RuleConfigurationCr08') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260921120111_RuleConfigurationCr08', '8.0.0');
+    VALUES ('20260921120111_RuleConfigurationCr08', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2184,13 +2063,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260921122237_EngineGuaranteesCr09') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260921122237_EngineGuaranteesCr09', '8.0.0');
+    VALUES ('20260921122237_EngineGuaranteesCr09', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2225,13 +2100,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260921161222_CustomerBirthdayCr10') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260921161222_CustomerBirthdayCr10', '8.0.0');
+    VALUES ('20260921161222_CustomerBirthdayCr10', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2288,13 +2159,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260928185345_AccountTypeConfigCl13') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260928185345_AccountTypeConfigCl13', '8.0.0');
+    VALUES ('20260928185345_AccountTypeConfigCl13', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2330,13 +2197,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260928190845_RuleStackingRetirementCl13') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260928190845_RuleStackingRetirementCl13', '8.0.0');
+    VALUES ('20260928190845_RuleStackingRetirementCl13', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2377,13 +2240,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260928191319_ProgramPublicationCl13') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260928191319_ProgramPublicationCl13', '8.0.0');
+    VALUES ('20260928191319_ProgramPublicationCl13', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2415,13 +2274,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001083819_BurnTriggerRuleTypesCr0930') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261001083819_BurnTriggerRuleTypesCr0930', '8.0.0');
+    VALUES ('20261001083819_BurnTriggerRuleTypesCr0930', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2542,13 +2397,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261001090316_RewardCatalogFulfilmentCr0930') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261001090316_RewardCatalogFulfilmentCr0930', '8.0.0');
+    VALUES ('20261001090316_RewardCatalogFulfilmentCr0930', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2603,13 +2454,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261002162724_CustomerViewCr1002') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261002162724_CustomerViewCr1002', '8.0.0');
+    VALUES ('20261002162724_CustomerViewCr1002', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2622,13 +2469,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005140753_RemoveComplaintsCr1005') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261005140753_RemoveComplaintsCr1005', '8.0.0');
+    VALUES ('20261005140753_RemoveComplaintsCr1005', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2699,13 +2542,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005141326_RetireStampsAndExpiryRuleCr1005') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261005141326_RetireStampsAndExpiryRuleCr1005', '8.0.0');
+    VALUES ('20261005141326_RetireStampsAndExpiryRuleCr1005', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2733,13 +2572,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005180559_DisableLegacyBurnRulesCr1005') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261005180559_DisableLegacyBurnRulesCr1005', '8.0.0');
+    VALUES ('20261005180559_DisableLegacyBurnRulesCr1005', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2783,13 +2618,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261006082544_RemoveBirthdayBonusCr1006') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261006082544_RemoveBirthdayBonusCr1006', '8.0.0');
+    VALUES ('20261006082544_RemoveBirthdayBonusCr1006', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2831,13 +2662,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101744_HeldPostingRefundsCr1006') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261008101744_HeldPostingRefundsCr1006', '8.0.0');
+    VALUES ('20261008101744_HeldPostingRefundsCr1006', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2867,13 +2694,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008101801_DisableReversalRulesOnOrderRefundedCr1006') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261008101801_DisableReversalRulesOnOrderRefundedCr1006', '8.0.0');
+    VALUES ('20261008101801_DisableReversalRulesOnOrderRefundedCr1006', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2903,13 +2726,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008120415_DisableTestModeEarnRulesCr1006') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261008120415_DisableTestModeEarnRulesCr1006', '8.0.0');
+    VALUES ('20261008120415_DisableTestModeEarnRulesCr1006', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2922,13 +2741,9 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008130056_ProgramDefaultRoundingCr1006') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261008130056_ProgramDefaultRoundingCr1006', '8.0.0');
+    VALUES ('20261008130056_ProgramDefaultRoundingCr1006', '9.0.13');
     END IF;
 END $EF$;
-COMMIT;
-
-START TRANSACTION;
-
 
 DO $EF$
 BEGIN
@@ -2941,7 +2756,49 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008162920_LedgerExpiresAtCr1006') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20261008162920_LedgerExpiresAtCr1006', '8.0.0');
+    VALUES ('20261008162920_LedgerExpiresAtCr1006', '9.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020135214_LoyaltyConfigAlignD4') THEN
+    CREATE TABLE loyalty_config (
+        id bigint GENERATED BY DEFAULT AS IDENTITY,
+        module_name character varying(100) NOT NULL,
+        parameter_name character varying(200) NOT NULL,
+        tenant_id uuid,
+        value text,
+        value_json jsonb,
+        is_secret boolean NOT NULL DEFAULT FALSE,
+        description character varying(500),
+        updated_at timestamp with time zone NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+        updated_by character varying(255),
+        CONSTRAINT "PK_loyalty_config" PRIMARY KEY (id),
+        CONSTRAINT "FK_loyalty_config_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES tenants (id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020135214_LoyaltyConfigAlignD4') THEN
+    CREATE UNIQUE INDEX ux_loyalty_config_global ON loyalty_config (module_name, parameter_name) WHERE tenant_id IS NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020135214_LoyaltyConfigAlignD4') THEN
+    CREATE UNIQUE INDEX ux_loyalty_config_tenant ON loyalty_config (tenant_id, module_name, parameter_name) WHERE tenant_id IS NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020135214_LoyaltyConfigAlignD4') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261020135214_LoyaltyConfigAlignD4', '9.0.13');
     END IF;
 END $EF$;
 COMMIT;

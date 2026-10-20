@@ -83,7 +83,7 @@ public sealed class SpendDecimalsCl13Tests : IDisposable
         var redis = new Mock<IConnectionMultiplexer>();
         redis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(Mock.Of<IDatabase>());
         var cache = new RuleCacheService(redis.Object, _harness.Db,
-            new TenantSlugResolver(_harness.Db, new TenantSlugCache()), NullLogger<RuleCacheService>.Instance);
+            new TenantSlugResolver(_harness.Db, new TenantSlugCache()), new dEngage.Loyalty.IntegrationTests.Fixtures.DefaultLoyaltyConfig(), NullLogger<RuleCacheService>.Instance);
 
         var rules = await cache.LoadFromDbAsync(RuleEngineTestHarness.TenantSlug, _programId);
 

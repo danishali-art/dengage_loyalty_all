@@ -31,6 +31,7 @@ public class LoyaltyDbContext(DbContextOptions<LoyaltyDbContext> options) : DbCo
     public DbSet<TenantApiKey> TenantApiKeys => Set<TenantApiKey>();
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
     public DbSet<ConfigVersion> ConfigVersions => Set<ConfigVersion>();
+    public DbSet<LoyaltyConfigEntry> LoyaltyConfig => Set<LoyaltyConfigEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

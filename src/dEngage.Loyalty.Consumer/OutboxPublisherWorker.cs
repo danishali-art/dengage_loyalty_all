@@ -12,17 +12,11 @@ public class OutboxPublisherWorker(
     ILogger<OutboxPublisherWorker> logger) : BackgroundService
 {
     private const string Exchange = MessagingTopology.OutboundExchange;
-    private const int BatchSize = 100;
-    private const int MaxAttempts = 8;
 
-    private static readonly TimeSpan[] Backoff =
-    [
-        TimeSpan.FromMinutes(1),
-        TimeSpan.FromMinutes(5),
-        TimeSpan.FromMinutes(30),
-        TimeSpan.FromHours(2),
-        TimeSpan.FromHours(12)
-    ];
+    // Defaults; loyalty_config (loyalty.jobs/Outbox.*) can change them, read per batch (alignment D4).
+    private const int DefaultBatchSize = 100;
+    private const int DefaultMaxAttempts = 8;
+    private static readonly int[] DefaultBackoffMinutes = [1, 5, 30, 120, 720];
 
     private DateOnly _lastPurgeDate = DateOnly.MinValue;
 
@@ -98,6 +92,16 @@ public class OutboxPublisherWorker(
     {
         using var scope = serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LoyaltyDbContext>();
+        var loyaltyConfig = scope.ServiceProvider.GetRequiredService<ILoyaltyConfig>();
+        var batchSize = await loyaltyConfig.GetAsync(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxBatchSize, DefaultBatchSize, null, ct);
+        var maxAttempts = await loyaltyConfig.GetAsync(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxMaxAttempts, DefaultMaxAttempts, null, ct);
+        var backoffMinutes = await loyaltyConfig.GetAsync(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxBackoffMinutes, DefaultBackoffMinutes, null, ct);
+        if (batchSize <= 0 || maxAttempts <= 0 || backoffMinutes.Length == 0 || backoffMinutes.Any(m => m <= 0))
+            throw new InvalidOperationException(
+                "loyalty_config_invalid: loyalty.jobs/Outbox.* must be positive and Outbox.BackoffMinutes non-empty.");
 
         // SKIP LOCKED: keeps multiple Consumer instances from grabbing the same row.
         // The lock is held for the whole tx; the publish outcome (published/backoff) is written in the same tx.
@@ -108,7 +112,7 @@ public class OutboxPublisherWorker(
                 SELECT * FROM outbox_events
                 WHERE status = 'pending' AND next_attempt_at <= now()
                 ORDER BY id
-                LIMIT {BatchSize}
+                LIMIT {batchSize}
                 FOR UPDATE SKIP LOCKED
                 """)
             .ToListAsync(ct);
@@ -158,7 +162,7 @@ public class OutboxPublisherWorker(
             foreach (var evt in batch)
             {
                 evt.Attempts += 1;
-                if (evt.Attempts >= MaxAttempts)
+                if (evt.Attempts >= maxAttempts)
                 {
                     evt.Status = OutboxStatus.Failed;
                     logger.LogError("Outbox event permanently failed: id={Id} type={Type} tenant={Tenant}",
@@ -166,7 +170,7 @@ public class OutboxPublisherWorker(
                 }
                 else
                 {
-                    evt.NextAttemptAt = now + Backoff[Math.Min(evt.Attempts - 1, Backoff.Length - 1)];
+                    evt.NextAttemptAt = now + TimeSpan.FromMinutes(backoffMinutes[Math.Min(evt.Attempts - 1, backoffMinutes.Length - 1)]);
                 }
             }
         }

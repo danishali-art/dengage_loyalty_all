@@ -9,8 +9,8 @@
 
 | Item | Status |
 |---|---|
-| D12 tenant fairness (isolated tenant lanes) | ✅ Done and tested (§1). Not committed |
-| D4 `loyalty_config` table + reader, cross-pod cache invalidation, `ISecretProtector` for secret rows | ⏳ To do |
+| D12 tenant fairness (isolated tenant lanes) | ✅ Done and tested (§1). Committed `84427e7` |
+| D4 `loyalty_config` table + reader + `ISecretProtector` for secret rows | ✅ Done and tested (§2) |
 | Publish `dEngage.Loyalty.Contract` (inbound/outbound event types, messaging topology, public API DTOs) | ⏳ To do |
 | D15 webhooks | ❌ Dropped (2026-10-20) |
 | D18 loyalty emits events, doesn't send email/SMS | ✅ Nothing to build. With D15 dropped, notifications go through dEngage only |
@@ -68,3 +68,89 @@
 | `docs/platform-alignment/phase-2.md` | new | This record |
 
 The assessment itself (*Loyalty Platform Alignment Assessment*, kept outside the repo) was updated on 2026-10-20 for the D15 decision: D3, D15, D18, §5.2–5.3, §6.2, §7.1–7.7, §8 and §9.
+
+## 2. D4 — runtime settings table `loyalty_config` (done)
+
+### 2.1 What was built
+- **Table `loyalty_config`** (migration `20261020135214_LoyaltyConfigAlignD4`): `module_name`, `parameter_name`, optional `tenant_id`, `value` / `value_json` (jsonb), `is_secret`, `description`, `updated_at`, `updated_by`. Same shape as the platform's `sys.global_config`, plus the tenant override.
+- **Uniqueness:** one global row and at most one row per tenant for each setting, enforced by two partial unique indexes (`ux_loyalty_config_global`, `ux_loyalty_config_tenant`). This works on PostgreSQL 14, which the dEngage platform runs; a single index would need PostgreSQL 15's `NULLS NOT DISTINCT`.
+- **Reader** `ILoyaltyConfig.GetAsync(module, parameter, default, tenantId, ct)` (`Schema/LoyaltyConfig.cs`, same pattern as `TenantSlugResolver`): tenant row → global row → the caller's default. Loads a whole module and caches it for 1 minute (`LoyaltyConfigCache`, singleton). A value that can't be read as the requested type throws `loyalty_config_invalid` rather than silently using the default.
+- **`ISecretProtector`** (`Shared/Security`, D3): rows with `is_secret` hold an `ENC(...)` value and are decrypted on load (same key and format as config values; key from `LOYALTY_MASTER_KEY_FILE` / `LOYALTY_MASTER_KEY`, only needed once a secret row exists). A row marked secret but stored in plain text is refused (`secret_not_encrypted`).
+- **Names:** `Shared/Constants/LoyaltyConfigKeys.cs`.
+
+### 2.2 Settings now read from the table
+Every call site keeps today's value as its default, so **behaviour is unchanged until a row is added**.
+
+| Module / parameter | Type | Default | Tenant override | Read in |
+|---|---|---|---|---|
+| `loyalty.api` / `RateLimit.EventIngestionPerMinute` | int | appsettings `RateLimit:EventIngestionPerMinutePerTenant` (600 / 300 / 120) | yes | `EventsAppService` |
+| `loyalty.api` / `Pii.ExtraMaskedFields` | string[] | none | yes | `CustomersAppService` → `CustomerPayloadMasker` (additive: can't un-mask built-in fields) |
+| `loyalty.api` / `Customer360.MessageWindowBeforeMinutes`, `…AfterMinutes` | int | 1 / 60 | yes | `CustomersAppService` |
+| `loyalty.engine` / `RuleCache.TtlMinutes`, `CampaignConfigCache.TtlMinutes` | int | 60 / 60 | no | `RuleCacheService`, `CampaignConfigCacheService` |
+| `loyalty.jobs` / `Outbox.BatchSize`, `Outbox.MaxAttempts`, `Outbox.BackoffMinutes` | int, int, int[] | 100, 8, [1,5,30,120,720] | no | `OutboxPublisherWorker` (read per batch) |
+| `loyalty.jobs` / `DelayedPosting.BatchSize` | int | 500 | no | `DelayedPostingPromotionJob` |
+| `loyalty.jobs` / `EventLogRetention.BatchSize` | int | 10 000 | no | `EventLogRetentionJob` |
+
+Example (raise one tenant's ingestion limit):
+```sql
+INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, description, updated_by)
+SELECT 'loyalty.api', 'RateLimit.EventIngestionPerMinute', id, '2000', 'Black Friday', 'ops@dengage.com'
+FROM tenants WHERE slug = 'starbucks';
+```
+
+### 2.3 Deliberately not moved (yet), and why
+| Setting (assessment §5.2) | Why not now |
+|---|---|
+| Job run times, job intervals, RuleSync intervals | The event-throughput change owns the background jobs (single-runner redesign, its Phase 1 / Q10); moving their schedules now would conflict with that rewrite |
+| Event retention (12 months), max streak periods, max condition window | They are tied together (the retention must cover the longest streak window); changing one safely needs cross-checks against existing streak and rule configurations, i.e. a product decision |
+| Supported currencies / default currency | Validated statically in several API validators and listed in the portals; a cross-stack change (backend, both portals, `LoyaltySaaSApi.md`) |
+| Generic event types, JWT expiry, CORS | Startup or topology values (queue bindings, token options); they stay in appsettings |
+| Cross-pod cache invalidation | There is no application write path (rows are changed with SQL, like `sys.global_config`), so the 1-minute cache is the propagation mechanism. Add a broadcast when an admin screen or API starts writing rows |
+| Admin API / portal screen for settings | New capability; not in the assessment's D4 |
+
+### 2.4 Deployment note
+The Api reads `loyalty_config` on every event ingestion. **Apply the migration before deploying this code** (`dotnet ef database update -p src/dEngage.Loyalty.Schema`, or `scripts/loyalty_schema.sql` for a new database), otherwise ingestion fails on the missing table. This includes local development databases.
+
+### 2.5 Verification
+| Check | Result |
+|---|---|
+| `dotnet build dEngage.Loyalty.sln` | ✅ 0 errors, 0 warnings |
+| `dotnet test src/dEngage.Loyalty.Engine.Tests` | ✅ 146/146 |
+| `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker) | ✅ 336/336 (8 new) |
+| New: `LoyaltyConfigE2ETests` (real Postgres via the migration) | tenant → global → default precedence; typed values (int, bool, string, string[], int[]); unreadable value throws; secret row decrypted, plaintext secret refused; change seen only after the 1-minute TTL; both uniqueness rules |
+| New: `LoyaltyConfigApiTests` | a tenant row sets that tenant's ingestion limit (42) while another tenant keeps the default (600); a tenant's extra masked field is masked for it only, built-in masking unchanged |
+| Migration review | Creates only `loyalty_config` and its two indexes; `Down` drops only that table; the model snapshot was in sync before |
+| `scripts/loyalty_schema.sql` regenerated (`dotnet ef migrations script --idempotent`) | ✅ Applied to an empty PostgreSQL 16 container (48 migrations, table + indexes present) and re-applied idempotently. Besides the new table, EF 9 now wraps the script in one transaction and stamps 9.0.13 in the history inserts |
+| Not covered by a dedicated test | The outbox, cache-TTL and job batch-size wiring (they read the defaults in the existing tests, which all pass) |
+
+### 2.6 Files
+| File | Change | Why |
+|---|---|---|
+| `src/dEngage.Loyalty.Shared/Constants/LoyaltyConfigKeys.cs` | new | Module and parameter names |
+| `src/dEngage.Loyalty.Shared/Security/ISecretProtector.cs` | new | `ISecretProtector` + `SecretCryptoProtector` (D3) |
+| `src/dEngage.Loyalty.Schema/Entities/LoyaltyConfigEntry.cs` | new | Entity |
+| `src/dEngage.Loyalty.Schema/Configurations/LoyaltyConfigEntryConfiguration.cs` | new | Mapping, partial unique indexes |
+| `src/dEngage.Loyalty.Schema/LoyaltyConfig.cs` | new | `ILoyaltyConfig`, `LoyaltyConfigCache`, `LoyaltyConfigReader` |
+| `src/dEngage.Loyalty.Schema/LoyaltyDbContext.cs` | changed | `LoyaltyConfig` set |
+| `src/dEngage.Loyalty.Schema/Migrations/20261020135214_LoyaltyConfigAlignD4.cs` (+ `.Designer.cs`) | new (generated) | Migration |
+| `src/dEngage.Loyalty.Schema/Migrations/LoyaltyDbContextModelSnapshot.cs` | changed (generated) | New table; EF product version 9.0.13 |
+| `src/dEngage.Loyalty.Api.Framework/Bootstrap/ServiceCollectionExtensions.cs` | changed | Register cache, protector, reader (Api) |
+| `src/dEngage.Loyalty.Consumer/Program.cs` | changed | Same registrations (Consumer) |
+| `src/dEngage.Loyalty.Api/Events/EventsAppService.cs` | changed | Per-tenant ingestion limit |
+| `src/dEngage.Loyalty.Api/Customers/CustomersAppService.cs` | changed | Extra masked fields; message window |
+| `src/dEngage.Loyalty.Api/Customers/CustomerPayloadMasker.cs` | changed | Additive extra field names |
+| `src/dEngage.Loyalty.RuleEngine/Cache/RuleCacheService.cs` | changed | Cache TTL |
+| `src/dEngage.Loyalty.RuleEngine/Campaigns/CampaignConfigCacheService.cs` | changed | Cache TTL |
+| `src/dEngage.Loyalty.RuleEngine/Processing/DelayedPostingPromotionJob.cs` | changed | Batch size |
+| `src/dEngage.Loyalty.Ledger/EventLogRetentionJob.cs` | changed | Batch size |
+| `src/dEngage.Loyalty.Consumer/OutboxPublisherWorker.cs` | changed | Batch size, attempts, backoff |
+| `src/dEngage.Loyalty.IntegrationTests/Fixtures/DefaultLoyaltyConfig.cs` | new | Test double: every setting at its default |
+| `src/dEngage.Loyalty.IntegrationTests/Fixtures/FakeRateLimiter.cs` | changed | Records the limit it was asked to apply |
+| `src/dEngage.Loyalty.IntegrationTests/E2E/LoyaltyConfigE2ETests.cs` | new | Reader and table tests (real Postgres) |
+| `src/dEngage.Loyalty.IntegrationTests/Api/LoyaltyConfigApiTests.cs` | new | Wiring tests through the Api |
+| `src/dEngage.Loyalty.IntegrationTests/E2E/RefundPathsCr1006E2ETests.cs`, `Engine/ExpiryOverridePostingCr1006Tests.cs`, `Engine/RuleConfigurationTests.cs`, `Engine/SpendDecimalsCl13Tests.cs` | changed | Pass `DefaultLoyaltyConfig` to the constructors that gained a parameter |
+| `scripts/loyalty_schema.sql` | regenerated | New installs get `loyalty_config` |
+| `scripts/loyalty_schema_reference.md` | changed | `loyalty_config` section (Turkish), latest migration id |
+| `docs/SCOPE_BASELINE.md` | changed | Schema and Shared rows |
+| `.claude/rules/backend.md` | changed | How to add a runtime setting |
+| `docs/platform-alignment/phase-2.md` | changed | This section |

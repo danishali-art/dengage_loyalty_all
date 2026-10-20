@@ -5,6 +5,7 @@ using dEngage.Loyalty.Api.Framework.Options;
 using dEngage.Loyalty.Api.Framework.RateLimiting;
 using dEngage.Loyalty.Api.Framework.Tenancy;
 using dEngage.Loyalty.Schema;
+using dEngage.Loyalty.Shared.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +43,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<TenantSlugCache>();
         services.AddScoped<ITenantSlugResolver, TenantSlugResolver>();
+
+        // loyalty_config (platform alignment D4) and the protector for its secret rows (D3).
+        services.AddSingleton(new LoyaltyConfigCache());
+        services.AddSingleton<ISecretProtector, SecretCryptoProtector>();
+        services.AddScoped<ILoyaltyConfig, LoyaltyConfigReader>();
 
         services.AddSingleton<IRateLimiter, RedisRateLimiter>();
         services.AddSingleton<ITenantContextAccessor, TenantContextAccessor>();

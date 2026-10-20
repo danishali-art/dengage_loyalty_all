@@ -67,6 +67,11 @@ var host = DengageHostBuilder.CreateHostBuilder(bootLogger, appLocation, configP
         services.AddSingleton<TenantSlugCache>();
         services.AddScoped<ITenantSlugResolver, TenantSlugResolver>();
 
+        // loyalty_config (platform alignment D4) and the protector for its secret rows (D3).
+        services.AddSingleton(new LoyaltyConfigCache());
+        services.AddSingleton<ISecretProtector, SecretCryptoProtector>();
+        services.AddScoped<ILoyaltyConfig, LoyaltyConfigReader>();
+
         // Redis
         services.AddSingleton<IConnectionMultiplexer>(
             ConnectionMultiplexer.Connect(config.RedisConnectionString));

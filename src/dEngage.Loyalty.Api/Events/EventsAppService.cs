@@ -3,6 +3,7 @@ using dEngage.Loyalty.Api.Framework.Messaging;
 using dEngage.Loyalty.Api.Framework.Options;
 using dEngage.Loyalty.Api.Framework.RateLimiting;
 using dEngage.Loyalty.Schema;
+using dEngage.Loyalty.Shared;
 using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -23,12 +24,21 @@ public sealed class EventsAppService(
     LoyaltyDbContext db,
     IRateLimiter rateLimiter,
     IOptions<RateLimitOptions> rateLimitOptions,
-    IOptions<RabbitMqOptions> rabbitMqOptions) : IEventsAppService
+    IOptions<RabbitMqOptions> rabbitMqOptions,
+    ITenantSlugResolver tenantSlugResolver,
+    ILoyaltyConfig loyaltyConfig) : IEventsAppService
 {
     public async Task<EventAcceptedResponse> PublishAsync<TData>(
         string tenantId, string eventType, TData data, string? idempotencyKey, CancellationToken ct)
     {
-        if (!await rateLimiter.TryAcquireAsync("events", tenantId, rateLimitOptions.Value.EventIngestionPerMinutePerTenant, ct))
+        // Per-tenant limit from loyalty_config (alignment D4); the deployment's RateLimit setting
+        // stays the default for tenants without a row.
+        var limitPerMinute = await loyaltyConfig.GetAsync(
+            LoyaltyConfigKeys.Api.Module, LoyaltyConfigKeys.Api.RateLimitEventIngestionPerMinute,
+            rateLimitOptions.Value.EventIngestionPerMinutePerTenant,
+            await tenantSlugResolver.ResolveAsync(tenantId, ct), ct);
+
+        if (!await rateLimiter.TryAcquireAsync("events", tenantId, limitPerMinute, ct))
             throw new TooManyRequestsApiException($"Ingestion rate limit exceeded for tenant '{tenantId}'.");
 
         if (!EventTypes.IsBuiltIn(eventType) && !rabbitMqOptions.Value.GenericEventTypes.Contains(eventType))

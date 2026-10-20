@@ -3,6 +3,7 @@ using System.Text.Json;
 using dEngage.Loyalty.Ledger;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Schema;
+using dEngage.Loyalty.Shared;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
@@ -32,15 +33,22 @@ public sealed class DelayedPostingPromotionJob(
     ILedgerService ledger,
     IOutboxService outbox,
     ITierEvaluationService tierEval,
+    ILoyaltyConfig loyaltyConfig,
     ILogger<DelayedPostingPromotionJob> logger)
 {
     public async Task<int> RunAsync(CancellationToken ct = default)
     {
+        // 500 unless loyalty_config says otherwise (alignment D4).
+        var batchSize = await loyaltyConfig.GetAsync(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.DelayedPostingBatchSize, 500, null, ct);
+        if (batchSize <= 0)
+            throw new InvalidOperationException("loyalty_config_invalid: loyalty.jobs/DelayedPosting.BatchSize must be positive.");
+
         var now = DateTime.UtcNow;
         var due = await db.HeldPostings
             .Where(x => x.PostedAt == null && x.CancelledAt == null && x.HoldUntil <= now)
             .OrderBy(x => x.CreatedAt)
-            .Take(500) // bounded batch per run — the next hourly tick picks up the rest
+            .Take(batchSize) // bounded batch per run — the next hourly tick picks up the rest
             .Select(x => new { x.Id, x.TenantId })
             .ToListAsync(ct);
 

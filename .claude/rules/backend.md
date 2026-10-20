@@ -47,6 +47,13 @@ Per-project rules are in their own files and load when you touch that project:
 - **Secrets:** deployed environments mount secrets as config files under `CONFIG_PATH`. `ENC(...)`
   values still work; the key comes from the file in `LOYALTY_MASTER_KEY_FILE` (mounted secret),
   else from `LOYALTY_MASTER_KEY` (local development).
+- **Runtime settings (`loyalty_config`, D4):** a tunable that may differ per deployment or per tenant
+  is read with `ILoyaltyConfig.GetAsync(module, parameter, <current default>, tenantGuid|null, ct)`,
+  with the names in `Shared/Constants/LoyaltyConfigKeys.cs`. Keep today's value as the default, so
+  nothing changes until a row is added; validate the value at the call site (positive sizes, etc.).
+  Rows are managed with SQL and cached for 1 minute per module. Startup/infrastructure values
+  (connections, keys, topology) stay in appsettings. Tests that construct services by hand pass
+  `DefaultLoyaltyConfig` (IntegrationTests/Fixtures).
 - **Dependency boundary (D13):** core projects may depend only on `dEngage.Common.*` packages.
   `dEngage.Framework`, `Parameters`, `Models`, `DbManager`/`ConManager` and other platform
   libraries are allowed only in the future dEngage connector projects. `CoreDependencyBoundaryTests`

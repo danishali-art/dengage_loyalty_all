@@ -39,7 +39,7 @@ public interface ICustomersAppService
 // Read-only throughout (RegisterBirthdayAsync was removed by CR 2026-10-05 addendum A) — never calls the mutating
 // TierEvaluationService/LedgerService, only replicates their read-side "what tier is next"
 // logic (plan §7, CustomersModule note).
-public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver tenantSlugResolver) : ICustomersAppService
+public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver tenantSlugResolver, ILoyaltyConfig loyaltyConfig) : ICustomersAppService
 {
     // No standalone Customer entity — a "customer" only exists implicitly via the CustomerAccount
     // rows a contact key has accrued, so the list groups by contact_key rather than querying a
@@ -475,9 +475,11 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         if (inbox is not null)
         {
             var (occurredAt, data) = ReadEnvelope(inbox.Payload);
+            var extraMaskedFields = await loyaltyConfig.GetAsync<string[]>(
+                LoyaltyConfigKeys.Api.Module, LoyaltyConfigKeys.Api.PiiExtraMaskedFields, [], tenantGuid, ct);
             inbound = new InboundEventResponse(inbox.EventId, inbox.EventType, occurredAt, inbox.ReceivedAt,
                 inbox.ProcessedAt, inbox.Status, inbox.Error,
-                data is { } d ? CustomerPayloadMasker.Mask(d) : null);
+                data is { } d ? CustomerPayloadMasker.Mask(d, extraMaskedFields) : null);
         }
 
         return new CustomerEventDetailResponse(
@@ -923,8 +925,12 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         if (anchors.Count == 0)
             return [];
 
-        var windowStart = anchors.Min() - MessageWindowBefore;
-        var windowEnd = anchors.Max() + MessageWindowAfter;
+        var windowBefore = TimeSpan.FromMinutes(await loyaltyConfig.GetAsync(LoyaltyConfigKeys.Api.Module,
+            LoyaltyConfigKeys.Api.Customer360MessageWindowBeforeMinutes, DefaultMessageWindowBeforeMinutes, tenantGuid, ct));
+        var windowAfter = TimeSpan.FromMinutes(await loyaltyConfig.GetAsync(LoyaltyConfigKeys.Api.Module,
+            LoyaltyConfigKeys.Api.Customer360MessageWindowAfterMinutes, DefaultMessageWindowAfterMinutes, tenantGuid, ct));
+        var windowStart = anchors.Min() - windowBefore;
+        var windowEnd = anchors.Max() + windowAfter;
         var candidates = await db.OutboxEvents.AsNoTracking()
             .Where(o => o.TenantId == tenantGuid && o.ContactKey == contactKey
                 && o.CreatedAt >= windowStart && o.CreatedAt <= windowEnd)
@@ -943,8 +949,9 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
             .ToList();
     }
 
-    private static readonly TimeSpan MessageWindowBefore = TimeSpan.FromMinutes(1);
-    private static readonly TimeSpan MessageWindowAfter = TimeSpan.FromHours(1);
+    // Defaults; loyalty_config can change them (alignment D4).
+    private const int DefaultMessageWindowBeforeMinutes = 1;
+    private const int DefaultMessageWindowAfterMinutes = 60;
 
     private static readonly string[] InboxStatuses = [InboxStatus.Pending, InboxStatus.Processed, InboxStatus.Failed];
 

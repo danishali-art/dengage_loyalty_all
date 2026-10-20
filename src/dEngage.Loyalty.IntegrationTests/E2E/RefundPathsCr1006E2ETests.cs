@@ -256,7 +256,7 @@ public sealed class RefundPathsCr1006E2ETests : IAsyncLifetime
         _db.ChangeTracker.Clear();
         var resolver = Resolver();
         return await new DelayedPostingPromotionJob(_db, new LedgerService(_db, resolver), new OutboxService(_db, resolver),
-                TierEval.Object, NullLogger<DelayedPostingPromotionJob>.Instance)
+                TierEval.Object, new dEngage.Loyalty.IntegrationTests.Fixtures.DefaultLoyaltyConfig(), NullLogger<DelayedPostingPromotionJob>.Instance)
             .RunAsync(CancellationToken.None);
     }
 

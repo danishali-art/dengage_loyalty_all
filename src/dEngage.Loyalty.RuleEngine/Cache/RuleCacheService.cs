@@ -13,6 +13,7 @@ public class RuleCacheService(
     IConnectionMultiplexer redis,
     LoyaltyDbContext db,
     ITenantSlugResolver tenantSlugResolver,
+    ILoyaltyConfig loyaltyConfig,
     ILogger<RuleCacheService> logger) : IRuleCacheService
 {
     private readonly IDatabase _cache = redis.GetDatabase();
@@ -128,7 +129,10 @@ public class RuleCacheService(
         var key = RuleKey(tenantId, programId);
         // Flat safety-net TTL — freshness comes from RuleSync (30s delta); active windows
         // are enforced at evaluation time, so midnight-precise expiry is no longer needed.
-        await _cache.StringSetAsync(key, JsonSerializer.Serialize(cached), TimeSpan.FromHours(1));
+        // 60 minutes unless loyalty_config says otherwise (alignment D4).
+        var ttlMinutes = await loyaltyConfig.GetAsync(
+            LoyaltyConfigKeys.Engine.Module, LoyaltyConfigKeys.Engine.RuleCacheTtlMinutes, 60, null, ct);
+        await _cache.StringSetAsync(key, JsonSerializer.Serialize(cached), TimeSpan.FromMinutes(ttlMinutes));
 
         return cached;
     }

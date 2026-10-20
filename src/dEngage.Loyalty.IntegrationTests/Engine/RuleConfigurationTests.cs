@@ -110,7 +110,7 @@ public sealed class RuleConfigurationTests : IDisposable
         var resolver = new dEngage.Loyalty.Schema.TenantSlugResolver(_harness.Db, new dEngage.Loyalty.Schema.TenantSlugCache());
         var job = new DelayedPostingPromotionJob(_harness.Db, new dEngage.Loyalty.Ledger.LedgerService(_harness.Db, resolver),
             new dEngage.Loyalty.Ledger.OutboxService(_harness.Db, resolver), Mock.Of<dEngage.Loyalty.RuleEngine.ITierEvaluationService>(),
-            NullLogger<DelayedPostingPromotionJob>.Instance);
+            new dEngage.Loyalty.IntegrationTests.Fixtures.DefaultLoyaltyConfig(), NullLogger<DelayedPostingPromotionJob>.Instance);
         (await job.RunAsync(CancellationToken.None)).Should().Be(0);
         _harness.GetBalance("c1", _pointsAccountTypeId).Should().Be(0m);
 

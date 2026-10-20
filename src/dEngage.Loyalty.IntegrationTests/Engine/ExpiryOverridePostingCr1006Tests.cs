@@ -90,7 +90,7 @@ public sealed class ExpiryOverridePostingCr1006Tests : IDisposable
         var resolver = new dEngage.Loyalty.Schema.TenantSlugResolver(_harness.Db, new dEngage.Loyalty.Schema.TenantSlugCache());
         await new DelayedPostingPromotionJob(_harness.Db, new dEngage.Loyalty.Ledger.LedgerService(_harness.Db, resolver),
                 new dEngage.Loyalty.Ledger.OutboxService(_harness.Db, resolver), Mock.Of<dEngage.Loyalty.RuleEngine.ITierEvaluationService>(),
-                NullLogger<DelayedPostingPromotionJob>.Instance)
+                new dEngage.Loyalty.IntegrationTests.Fixtures.DefaultLoyaltyConfig(), NullLogger<DelayedPostingPromotionJob>.Instance)
             .RunAsync(CancellationToken.None);
 
         ExpiresAt(rule.Id).Should().BeCloseTo(DateTime.UtcNow.AddDays(30), TimeSpan.FromMinutes(1));
