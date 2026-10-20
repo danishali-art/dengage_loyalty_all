@@ -4,7 +4,6 @@ using dEngage.Loyalty.Consumer.Handlers;
 using dEngage.Loyalty.Engine.Framework.Consumers;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 

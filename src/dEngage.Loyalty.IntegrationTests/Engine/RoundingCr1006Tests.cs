@@ -3,11 +3,11 @@ using System.Text.Json;
 using dEngage.Loyalty.IntegrationTests.Fixtures;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Engine;
 

@@ -1,8 +1,8 @@
 using FluentAssertions;
 using dEngage.Loyalty.RuleEngine.Metadata;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 

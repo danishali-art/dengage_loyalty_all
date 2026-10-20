@@ -10,5 +10,9 @@
       "DockerImageName": "dengage.loyalty.consumer"
     }
   ],
-  "NugetPackageSettingsList": []
+  "NugetPackageSettingsList": [
+    {
+      "Name": "dEngage.Loyalty.Contract"
+    }
+  ]
 }

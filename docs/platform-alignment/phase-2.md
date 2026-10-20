@@ -10,8 +10,8 @@
 | Item | Status |
 |---|---|
 | D12 tenant fairness (isolated tenant lanes) | ✅ Done and tested (§1). Committed `84427e7` |
-| D4 `loyalty_config` table + reader + `ISecretProtector` for secret rows | ✅ Done and tested (§2) |
-| Publish `dEngage.Loyalty.Contract` (inbound/outbound event types, messaging topology, public API DTOs) | ⏳ To do |
+| D4 `loyalty_config` table + reader + `ISecretProtector` for secret rows | ✅ Done and tested (§2). Committed `798356f` |
+| Publish `dEngage.Loyalty.Contract` (event envelope, event types and catalog, outbound event types, outcome reasons, messaging topology) | ✅ Done and tested (§3) |
 | D15 webhooks | ❌ Dropped (2026-10-20) |
 | D18 loyalty emits events, doesn't send email/SMS | ✅ Nothing to build. With D15 dropped, notifications go through dEngage only |
 | NLog + metrics | ✅ Done in Phase 1 |
@@ -154,3 +154,51 @@ The Api reads `loyalty_config` on every event ingestion. **Apply the migration b
 | `docs/SCOPE_BASELINE.md` | changed | Schema and Shared rows |
 | `.claude/rules/backend.md` | changed | How to add a runtime setting |
 | `docs/platform-alignment/phase-2.md` | changed | This section |
+
+## 3. `dEngage.Loyalty.Contract` package (done)
+
+### 3.1 What was built
+- New project `src/dEngage.Loyalty.Contract`, **netstandard2.0** (like the platform's other Contract packages, so .NET 6/8/9 services can reference it), no project references, one package dependency (`System.Text.Json` 9.0.9). Namespace `dEngage.Loyalty.Contract`.
+- Moved into it with `git mv` (history kept), unchanged apart from the namespace: `EventEnvelope`, `EventTypes` (with the event catalog: `EventDefinition`, `EventFieldSchema`, `EventCategory`, `EventSource`, `EventCardinality`, `EventPeriod`, `EventFieldKind`), `OutboundEventTypes`, `OutcomeReasons`, `MessagingTopology`.
+- `IsExternalInit.cs` (internal polyfill) so records and `init` setters compile on netstandard2.0.
+- `dEngage.Loyalty.Shared` now references `Contract` (every project gets it through Shared); `GenericEventValidator` stays in Shared (engine-side validation, not contract).
+- 81 files: `using dEngage.Loyalty.Shared.Events;` replaced by `using dEngage.Loyalty.Contract;` where needed; 7 fully qualified references updated. No logic changes.
+- `build.json` publishes the package (`NugetPackageSettingsList`); `<Version>1.0.0</Version>` in the csproj, as the platform's Contract projects do.
+- Vue 3 portal: the OpenAPI generator also scans `src/dEngage.Loyalty.Contract` (`tools/openapi/build-spec.ts`), because API DTOs use `EventCategory` and `EventFieldKind`; `openapi/overrides.ts` source notes point at the new file.
+
+### 3.2 Not included (and why)
+| Item | Why not now |
+|---|---|
+| Public API request/response DTOs | They live in the Api project next to the Nancy modules; moving them belongs with the Public.Api split and `Api.Client` (Phase 3, D7/D9) |
+| Typed outbound payload classes | Outbound payloads are built as anonymous objects in the engine today; defining typed classes is a contract design task for the dEngage connector (Phase 4) |
+| Moving `Shared/Constants/*` | Statuses, ledger reasons and rule types are DB/engine constants, not what other services consume |
+
+### 3.3 Verification
+| Check | Result |
+|---|---|
+| `dotnet build dEngage.Loyalty.sln` | ✅ 0 errors; only the pre-existing CS1998 warning, plus NU1801 restore warnings while the private feed doesn't resolve on this machine |
+| `dotnet test src/dEngage.Loyalty.Engine.Tests` | ✅ 146/146 (includes the D13 boundary test, which now also covers `Contract`) |
+| `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker) | ✅ 336/336 |
+| `dotnet pack src/dEngage.Loyalty.Contract -c Release` | ✅ `dEngage.Loyalty.Contract.1.0.0.nupkg`: `lib/netstandard2.0/dEngage.Loyalty.Contract.dll`, one dependency (`System.Text.Json` 9.0.9) |
+| Portal: `npm run api:spec`, `npm run api:types`, `npm run api:check` (webVue3) | ✅ identical spec (55 paths, 112 schemas), no content change in the generated files |
+| Portal: `npx vitest run` (webVue3) | ✅ 41 files, 228 tests (a run started in parallel with the Docker test suite reported timeouts; run on its own it is clean) |
+| Shared pipeline publishing the package | ❌ not run (no Bitbucket access here) |
+
+Windows note: `npm run api:check` reports `openapi.json` / `schema.d.ts` as out of date right after a git checkout on Windows, because git checks them out with CRLF and the generator writes LF. Running `npm run api:spec && npm run api:types` fixes it without any content change.
+
+### 3.4 Files
+| File | Change | Why |
+|---|---|---|
+| `src/dEngage.Loyalty.Contract/dEngage.Loyalty.Contract.csproj` | new | netstandard2.0 package project |
+| `src/dEngage.Loyalty.Contract/IsExternalInit.cs` | new | Polyfill for records / `init` |
+| `src/dEngage.Loyalty.Contract/EventEnvelope.cs`, `EventTypes.cs`, `OutboundEventTypes.cs`, `OutcomeReasons.cs`, `MessagingTopology.cs` | moved from `Shared/Events` and `Shared/Constants` | Namespace `dEngage.Loyalty.Contract` |
+| `src/dEngage.Loyalty.Shared/dEngage.Loyalty.Shared.csproj` | changed | References Contract |
+| `dEngage.Loyalty.sln` | changed | New project |
+| 81 `.cs` files across `src/` | changed | `using` / qualified names only |
+| `build.json` | changed | Publish `dEngage.Loyalty.Contract` |
+| `webVue3/tools/openapi/build-spec.ts`, `webVue3/openapi/overrides.ts` | changed | Generator scans Contract; source notes |
+| `.claude/rules/backend.md`, `backend-schema-shared.md`, `backend-api.md`, `CLAUDE.md`, `docs/SCOPE_BASELINE.md` | changed | Project graph, Contract rules, new paths |
+| `docs/platform-alignment/phase-2.md` | changed | This section |
+
+## 4. Phase 2 summary
+All Phase 2 items are done: D12 (tenant lanes), D4 (`loyalty_config` + `ISecretProtector`) and the `Contract` package. D15 webhooks were dropped (2026-10-20); D18 needs no build. Logging and metrics came with Phase 1.

@@ -40,7 +40,7 @@ const RULE_TYPES = [
 
 const EVENT_CATEGORY = {
   values: ['Earn', 'Burn', 'Reverse', 'Adjust'],
-  source: 'Shared/Events/EventTypes.cs (EventCategory, sent with ToString())',
+  source: 'Contract/EventTypes.cs (EventCategory, sent with ToString())',
 };
 
 /** Streak campaigns and card buckets: never pending (only CASH rules wait for approval). */
@@ -197,7 +197,7 @@ export const OVERRIDES: Overrides = {
     },
     'EventFieldMetadata.kind': {
       values: ['Money', 'Number', 'String'],
-      source: 'Shared/Events/EventTypes.cs (EventFieldKind, sent with ToString())',
+      source: 'Contract/EventTypes.cs (EventFieldKind, sent with ToString())',
     },
     'StreakCampaignResponse.status': ENTITY_STATUS,
     'SetStreakCampaignStatusRequest.status': SETTABLE_STATUS,

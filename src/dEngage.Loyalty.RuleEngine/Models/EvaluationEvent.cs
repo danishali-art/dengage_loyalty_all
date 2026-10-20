@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using dEngage.Loyalty.Shared.Events;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.RuleEngine.Models;
 

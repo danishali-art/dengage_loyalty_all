@@ -6,6 +6,7 @@ using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.RuleEngine.Processing;
 
@@ -144,7 +145,7 @@ public sealed class LedgerPoster(
             {
                 await outbox.Enqueue(
                     tenantId,
-                    dEngage.Loyalty.Shared.Events.OutboundEventTypes.RuleAwarded,
+                    dEngage.Loyalty.Contract.OutboundEventTypes.RuleAwarded,
                     evt.ContactKey,
                     new
                     {
@@ -194,7 +195,7 @@ public sealed class LedgerPoster(
 
             await outbox.Enqueue(
                 tenantId,
-                dEngage.Loyalty.Shared.Events.OutboundEventTypes.PointsEarned,
+                dEngage.Loyalty.Contract.OutboundEventTypes.PointsEarned,
                 evt.ContactKey,
                 new
                 {

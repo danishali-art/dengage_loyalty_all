@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The loyalty wire contract (platform alignment Phase 2), published as a NuGet package through
+       build.json for other dEngage services: the event envelope, inbound and outbound event types,
+       the event catalog, outcome reasons and the RabbitMQ topology names. netstandard2.0 like the
+       platform's other Contract packages, so .NET 6/8/9 services can all reference it. No
+       dependencies on other loyalty or dEngage projects. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <Authors>dEngage</Authors>
+    <Description>dEngage Loyalty wire contract: event envelope, event types and catalog, outbound event types, outcome reasons and messaging topology.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="9.0.9" />
+  </ItemGroup>
+
+</Project>

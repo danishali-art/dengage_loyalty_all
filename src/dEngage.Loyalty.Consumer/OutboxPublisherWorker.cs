@@ -3,6 +3,7 @@ using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Consumer;
 

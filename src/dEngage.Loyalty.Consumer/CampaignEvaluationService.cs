@@ -3,8 +3,8 @@ using dEngage.Loyalty.RuleEngine;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Consumer;
 

@@ -3,8 +3,8 @@ using dEngage.Loyalty.RuleEngine.Cache;
 using dEngage.Loyalty.RuleEngine.Calculation;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.Extensions.Logging;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.RuleEngine.Processing;
 

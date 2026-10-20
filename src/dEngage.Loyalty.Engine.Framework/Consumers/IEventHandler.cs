@@ -1,4 +1,4 @@
-using dEngage.Loyalty.Shared.Events;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Framework.Consumers;
 

@@ -2,10 +2,10 @@ using dEngage.Loyalty.Ledger;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using UUIDNext;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.RuleEngine;
 

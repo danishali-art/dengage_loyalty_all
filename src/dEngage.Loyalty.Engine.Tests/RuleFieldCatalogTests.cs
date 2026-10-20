@@ -1,10 +1,10 @@
 using dEngage.Loyalty.RuleEngine.Metadata;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Xunit;
 using F = dEngage.Loyalty.RuleEngine.Metadata.RuleFieldCatalog;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 

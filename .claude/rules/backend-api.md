@@ -77,7 +77,7 @@ such types in the resource folder.
 - The envelope `Data` is serialized with `JsonConventions.EventDataOptions` (**snake_case**).
 - The request's `Idempotency-Key` becomes the `EventId` (a random Guid if absent), which the
   Consumer's `EventInbox` dedupes on. Keep passing it through.
-- New built-in event types need, in the same change: a `Shared/Events/EventTypes` constant, event
+- New built-in event types need, in the same change: a `Contract/EventTypes` constant, event
   metadata, a Consumer handler (see `backend-consumer.md`) and an ingestion route or a
   generic-type config.
 

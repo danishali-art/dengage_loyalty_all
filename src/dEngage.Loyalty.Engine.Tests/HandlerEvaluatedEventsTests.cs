@@ -1,9 +1,9 @@
 using System.Runtime.CompilerServices;
 using dEngage.Loyalty.Consumer;
 using dEngage.Loyalty.Engine.Framework.Consumers;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 

@@ -1,4 +1,4 @@
-namespace dEngage.Loyalty.Shared;
+namespace dEngage.Loyalty.Contract;
 
 // RabbitMQ topology names, previously local consts inside EventConsumerWorker.ExecuteAsync.
 // Centralized so any future consumer of this topology (not just the Consumer project) has

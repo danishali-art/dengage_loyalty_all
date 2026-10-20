@@ -1,4 +1,4 @@
-namespace dEngage.Loyalty.Shared.Events;
+namespace dEngage.Loyalty.Contract;
 
 public static class OutboundEventTypes
 {

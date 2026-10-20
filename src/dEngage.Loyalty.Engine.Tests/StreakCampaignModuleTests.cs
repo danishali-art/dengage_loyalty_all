@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 
@@ -121,7 +122,7 @@ public sealed class StreakCampaignModuleTests : IDisposable
         _ledger.Verify(l => l.AddEntryAsync(
             "t1", account.Id, "c1", 5m, LedgerReason.Earn, "evt-2",
             It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()), Times.Once);
-        _outbox.Verify(o => o.Enqueue("t1", dEngage.Loyalty.Shared.Events.OutboundEventTypes.StreakCompleted,
+        _outbox.Verify(o => o.Enqueue("t1", dEngage.Loyalty.Contract.OutboundEventTypes.StreakCompleted,
             "c1", It.IsAny<object>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

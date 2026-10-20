@@ -64,7 +64,8 @@ Per-project rules are in their own files and load when you touch that project:
 
 ## Project reference graph (actual — keep it acyclic)
 ```
-Shared            → (nothing)
+Contract          → (nothing; netstandard2.0, published as a NuGet package)
+Shared            → Contract
 Schema            → Shared
 Engine.Framework  → Schema, Shared
 Ledger            → Schema, Shared, Engine.Framework
@@ -94,9 +95,10 @@ CryptoCli → Shared · TestCli → Consumer, Ledger, RuleEngine, Schema, Shared
 - **Ids:** `Guid` primary keys. Engine-side new ids use `IIdGenerator` (Postgres-friendly UUIDs).
 - **Tenancy:** the external tenant id is a string **slug**. Tables store an internal `TenantId`
   Guid. Convert with `ITenantSlugResolver`. Every query on tenant-owned data filters by tenant.
-- **Constants:** event types, rule types, statuses, reasons and topology names live in
-  `dEngage.Loyalty.Shared` (`EventTypes`, `RuleTypes`, `LedgerReason`, `MessagingTopology`, ...).
-  Never hard-code those strings anywhere else.
+- **Constants:** wire names (event types, outbound event types, outcome reasons, topology names)
+  live in `dEngage.Loyalty.Contract` (`EventTypes`, `OutboundEventTypes`, `OutcomeReasons`,
+  `MessagingTopology`); engine and DB constants (rule types, statuses, reasons) in
+  `dEngage.Loyalty.Shared` (`RuleTypes`, `LedgerReason`, ...). Never hard-code those strings anywhere else.
 - **Domain errors:** below the API, fail with `InvalidOperationException("snake_case_code: detail")`.
   The API maps the prefix to an HTTP status. Don't throw HTTP types from domain code.
 - **Config and secrets:** config values can carry `ENC(...)` tokens resolved by

@@ -1,4 +1,4 @@
-namespace dEngage.Loyalty.Shared.Events;
+namespace dEngage.Loyalty.Contract;
 
 // CR 2026-10-05: `reason` values on the outbound *_failed events introduced by that CR. The
 // older reasons (insufficient_points, below_minimum, daily_limit_exceeded, ...) are still

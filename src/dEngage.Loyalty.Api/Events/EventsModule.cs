@@ -2,8 +2,8 @@ using FluentValidation;
 using dEngage.Loyalty.Api.Framework.Json;
 using dEngage.Loyalty.Api.Framework.Modules;
 using dEngage.Loyalty.Api.Framework.Validation;
-using dEngage.Loyalty.Shared.Events;
 using HttpStatusCode = System.Net.HttpStatusCode;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Api.Events;
 

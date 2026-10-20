@@ -45,6 +45,7 @@ const TYPE_SOURCE_DIRS = [
   'src/dEngage.Loyalty.Api.Framework',
   'src/dEngage.Loyalty.RuleEngine',
   'src/dEngage.Loyalty.Shared',
+  'src/dEngage.Loyalty.Contract',
   'src/dEngage.Loyalty.Schema',
   'src/dEngage.Loyalty.Ledger',
   'src/dEngage.Loyalty.Engine.Framework',

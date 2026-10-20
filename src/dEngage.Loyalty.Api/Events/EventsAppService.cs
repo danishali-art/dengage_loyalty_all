@@ -4,9 +4,9 @@ using dEngage.Loyalty.Api.Framework.Options;
 using dEngage.Loyalty.Api.Framework.RateLimiting;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Api.Events;
 

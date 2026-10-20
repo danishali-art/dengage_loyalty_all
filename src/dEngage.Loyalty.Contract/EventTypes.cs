@@ -1,4 +1,4 @@
-namespace dEngage.Loyalty.Shared.Events;
+namespace dEngage.Loyalty.Contract;
 
 // CR-01 (docs/scope-change-rules): every event declares category/source/cardinality, which
 // drives rule-type filtering (RuleEngine.Metadata / CR-03) and posting sign. This is the single

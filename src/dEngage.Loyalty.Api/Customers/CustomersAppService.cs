@@ -9,8 +9,8 @@ using dEngage.Loyalty.RuleEngine.Processing;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Api.Customers;
 

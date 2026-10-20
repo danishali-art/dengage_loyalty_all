@@ -1,6 +1,7 @@
 using dEngage.Loyalty.Shared;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Consumer;
 

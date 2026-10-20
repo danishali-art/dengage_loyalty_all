@@ -10,4 +10,8 @@
     <PackageReference Include="UUIDNext" Version="4.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\dEngage.Loyalty.Contract\dEngage.Loyalty.Contract.csproj" />
+  </ItemGroup>
+
 </Project>

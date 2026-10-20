@@ -1,6 +1,6 @@
 using System.Text.Json;
 using dEngage.Loyalty.Api.Framework.Json;
-using dEngage.Loyalty.Shared.Events;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Api.Framework.Messaging;
 

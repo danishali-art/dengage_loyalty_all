@@ -5,10 +5,10 @@ using dEngage.Loyalty.RuleEngine.Calculation;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.RuleEngine.Processing;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 

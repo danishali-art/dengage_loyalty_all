@@ -41,7 +41,10 @@ The process for a scope change:
   ledger posting (`Processing/`).
 - `src/dEngage.Loyalty.Ledger` — append-only balance ledger.
 - `src/dEngage.Loyalty.Schema` — EF Core entities, configurations, migrations (Postgres).
-- `src/dEngage.Loyalty.Shared` — constants, shared events, security/crypto helpers.
+- `src/dEngage.Loyalty.Contract` — the wire contract published as a NuGet package for other dEngage
+  services: event envelope, event types and catalog, outbound event types, outcome reasons,
+  messaging topology (netstandard2.0).
+- `src/dEngage.Loyalty.Shared` — engine/DB constants, generic event validation, security/crypto helpers.
 - `src/dEngage.Loyalty.CryptoCli`, `TestCli` — operational/dev CLIs.
 - Tests: `dEngage.Loyalty.Engine.Tests` (unit), `dEngage.Loyalty.IntegrationTests` (API/E2E,
   see `Fixtures/`).

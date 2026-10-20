@@ -12,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Consumer;
 

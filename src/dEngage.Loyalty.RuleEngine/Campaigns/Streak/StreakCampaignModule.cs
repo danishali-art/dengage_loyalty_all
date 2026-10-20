@@ -7,6 +7,7 @@ using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.RuleEngine.Campaigns.Streak;
 
@@ -214,7 +215,7 @@ public class StreakCampaignModule(
 
                 await outbox.Enqueue(
                     tenantSlug,
-                    dEngage.Loyalty.Shared.Events.OutboundEventTypes.RewardEarned,
+                    dEngage.Loyalty.Contract.OutboundEventTypes.RewardEarned,
                     progress.ContactKey,
                     payload,
                     dedupKey: $"reward_earned:streak:{config.Id}:{progress.ContactKey}:{completionNo}");
@@ -247,7 +248,7 @@ public class StreakCampaignModule(
 
         await outbox.Enqueue(
             tenantSlug,
-            dEngage.Loyalty.Shared.Events.OutboundEventTypes.StreakCompleted,
+            dEngage.Loyalty.Contract.OutboundEventTypes.StreakCompleted,
             progress.ContactKey,
             new
             {
