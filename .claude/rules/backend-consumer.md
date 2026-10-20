@@ -5,7 +5,8 @@ paths:
 
 # dEngage.Loyalty.Consumer — event worker and scheduled jobs host
 
-A generic-host process (`Host.CreateApplicationBuilder`). It consumes RabbitMQ events, runs them
+A host process on the dEngage platform host (`DengageHostBuilder`, see `backend.md` → "Hosting and
+configuration"; startup config is read by `ConsumerConfig.FromConfiguration`, which fails fast). It consumes RabbitMQ events, runs them
 through handlers and the rule engine, and hosts the nightly and periodic jobs. **It moves money.
 Every path must be idempotent and safe to retry.**
 
@@ -13,6 +14,13 @@ Every path must be idempotent and safe to retry.**
 1. One durable queue (`MessagingTopology.Queue`) bound to every `EventTypes.All` plus the
    configured `RabbitMq:GenericEventTypes`. `BasicQos(0,1)` processes **sequentially** to keep
    per-customer ordering. Don't raise the prefetch or parallelize without an architecture decision.
+   **Tenant lanes (platform alignment D12):** tenants listed in `RabbitMq:IsolatedTenants` get their
+   own queue `q.loyalty.tenant.<slug>` and sequential worker (`TenantLanes`). The q.loyalty worker
+   moves their events there in arrival order (confirmed publish, then ack) instead of processing
+   them, so one tenant's burst doesn't delay the others. Lanes of different tenants run in
+   parallel, which is safe only because all processing state is keyed by tenant — never add
+   shared, cross-tenant mutable state to the event path. Before removing a tenant from the list,
+   its lane queue must be empty, or its leftover events run after newer ones.
 2. **Idempotency:** the `EventInbox` row keyed by `(tenant, event_id)` → a processed duplicate is
    skipped. Status is `Pending` → `Processed` or `Failed`.
 3. Non-built-in types → `GenericEventValidator.Validate`. Then an idempotent `event_log` insert

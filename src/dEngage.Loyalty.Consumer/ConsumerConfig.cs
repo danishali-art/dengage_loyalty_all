@@ -13,6 +13,12 @@ public class ConsumerConfig
     // routing key is dropped silently — new generic types require config + restart.
     public string[] GenericEventTypes { get; set; } = Array.Empty<string>();
 
+    // Tenant slugs whose events are processed on their own queue (see TenantLanes, alignment D12).
+    public string[] IsolatedTenants { get; set; } = Array.Empty<string>();
+
+    // Same rule as tenant ids at creation (PlatformAppService). The slug becomes part of a queue name.
+    private static readonly System.Text.RegularExpressions.Regex TenantSlugPattern = new("^[a-z0-9_]{1,50}$");
+
     // Fail fast at startup. The Consumer used to fall back to localhost and postgres/guest
     // credentials when a value was missing, so a deployment with an incomplete mounted config
     // started "fine" against the wrong database (platform alignment, Phase 1). Key names match
@@ -39,8 +45,14 @@ public class ConsumerConfig
             RabbitMqHost = Required("RabbitMq:Host"),
             RabbitMqUser = Required("RabbitMq:User"),
             RabbitMqPassword = Required("RabbitMq:Password"),
-            GenericEventTypes = configuration.GetSection("RabbitMq:GenericEventTypes").Get<string[]>() ?? Array.Empty<string>()
+            GenericEventTypes = configuration.GetSection("RabbitMq:GenericEventTypes").Get<string[]>() ?? Array.Empty<string>(),
+            IsolatedTenants = (configuration.GetSection("RabbitMq:IsolatedTenants").Get<string[]>() ?? Array.Empty<string>())
+                .Distinct(StringComparer.Ordinal).ToArray()
         };
+
+        var invalidSlugs = config.IsolatedTenants.Where(s => !TenantSlugPattern.IsMatch(s)).ToList();
+        if (invalidSlugs.Count > 0)
+            missing.Add($"RabbitMq:IsolatedTenants (not tenant slugs: {string.Join(", ", invalidSlugs)})");
 
         var portValue = configuration["RabbitMq:Port"];
         if (!string.IsNullOrWhiteSpace(portValue))
@@ -53,7 +65,7 @@ public class ConsumerConfig
 
         if (missing.Count > 0)
             throw new InvalidOperationException(
-                "Consumer configuration is incomplete. Set: " + string.Join(", ", missing) + ".");
+                "Consumer configuration is incomplete or invalid. Fix: " + string.Join(", ", missing) + ".");
 
         return config;
     }

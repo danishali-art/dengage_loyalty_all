@@ -59,6 +59,34 @@ public sealed class ConsumerConfigTests
         ConsumerConfig.FromConfiguration(Config(values)).RedisConnectionString.Should().Be("legacy-redis:6379");
     }
 
+    // D12: isolated tenants become queue names (q.loyalty.tenant.<slug>), so only real slugs pass.
+    [Fact]
+    public void Isolated_tenants_are_read_once_each_and_default_to_none()
+    {
+        ConsumerConfig.FromConfiguration(Config(Complete())).IsolatedTenants.Should().BeEmpty();
+
+        var values = Complete();
+        values["RabbitMq:IsolatedTenants:0"] = "starbucks";
+        values["RabbitMq:IsolatedTenants:1"] = "big_tenant_2";
+        values["RabbitMq:IsolatedTenants:2"] = "starbucks";
+
+        ConsumerConfig.FromConfiguration(Config(values)).IsolatedTenants.Should().Equal("starbucks", "big_tenant_2");
+    }
+
+    [Theory]
+    [InlineData("Starbucks")]
+    [InlineData("star.bucks")]
+    [InlineData("star bucks")]
+    public void An_isolated_tenant_that_is_not_a_slug_fails(string slug)
+    {
+        var values = Complete();
+        values["RabbitMq:IsolatedTenants:0"] = slug;
+
+        var act = () => ConsumerConfig.FromConfiguration(Config(values));
+
+        act.Should().Throw<InvalidOperationException>().WithMessage($"*RabbitMq:IsolatedTenants*{slug}*");
+    }
+
     [Fact]
     public void The_port_defaults_to_5672_but_an_invalid_port_fails()
     {

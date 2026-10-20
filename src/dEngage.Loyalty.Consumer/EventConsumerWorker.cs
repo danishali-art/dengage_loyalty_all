@@ -78,35 +78,77 @@ public class EventConsumerWorker(
 
         channel.BasicQos(0, 1, false); // sequential processing
 
-        var consumer = new AsyncEventingBasicConsumer(channel);
-        consumer.Received += async (_, ea) =>
+        // D12 tenant lanes (see TenantLanes). Each isolated tenant gets its own channel (a channel
+        // isn't thread-safe), queue and sequential worker. Lanes are declared and consuming before
+        // q.loyalty starts, so a forwarded event always has a queue to land in.
+        var isolatedTenants = new HashSet<string>(config.IsolatedTenants, StringComparer.Ordinal);
+        using var forwardChannel = connection.CreateModel();
+        forwardChannel.ConfirmSelect();
+        var laneChannels = new List<IModel>();
+        try
         {
-            try
+            foreach (var tenant in isolatedTenants)
             {
-                var body = Encoding.UTF8.GetString(ea.Body.ToArray());
-                var envelope = JsonSerializer.Deserialize<EventEnvelope>(body,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (envelope is null)
-                {
-                    channel.BasicNack(ea.DeliveryTag, false, false);
-                    return;
-                }
-
-                await ProcessAsync(envelope, ct);
-                channel.BasicAck(ea.DeliveryTag, false);
+                var laneChannel = connection.CreateModel();
+                laneChannels.Add(laneChannel);
+                var laneQueue = TenantLanes.Declare(laneChannel, tenant);
+                laneChannel.BasicQos(0, 1, false); // sequential within the tenant
+                var laneConsumer = new AsyncEventingBasicConsumer(laneChannel);
+                laneConsumer.Received += (_, ea) => HandleDeliveryAsync(laneChannel, ea, forward: null, ct);
+                laneChannel.BasicConsume(laneQueue, autoAck: false, consumer: laneConsumer);
+                logger.LogInformation("Consumer: tenant {Tenant} is isolated, listening on {Queue}", tenant, laneQueue);
             }
-            catch (Exception ex)
+
+            var forward = isolatedTenants.Count > 0 ? (isolatedTenants, forwardChannel) : default((HashSet<string>, IModel)?);
+            var consumer = new AsyncEventingBasicConsumer(channel);
+            consumer.Received += (_, ea) => HandleDeliveryAsync(channel, ea, forward, ct);
+
+            channel.BasicConsume(Queue, autoAck: false, consumer: consumer);
+            logger.LogInformation("Consumer: listening on {Queue}", Queue);
+
+            await Task.Delay(Timeout.Infinite, ct);
+        }
+        finally
+        {
+            foreach (var laneChannel in laneChannels)
+                laneChannel.Dispose();
+        }
+    }
+
+    // One delivery from q.loyalty or a tenant lane. `forward` is set only for q.loyalty: events of
+    // an isolated tenant are moved to that tenant's queue instead of being processed here.
+    private async Task HandleDeliveryAsync(IModel channel, BasicDeliverEventArgs ea,
+        (HashSet<string> Tenants, IModel ConfirmChannel)? forward, CancellationToken ct)
+    {
+        try
+        {
+            var body = Encoding.UTF8.GetString(ea.Body.ToArray());
+            var envelope = JsonSerializer.Deserialize<EventEnvelope>(body,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (envelope is null)
             {
-                logger.LogError(ex, "Consumer: failed to process message");
                 channel.BasicNack(ea.DeliveryTag, false, false);
+                return;
             }
-        };
 
-        channel.BasicConsume(Queue, autoAck: false, consumer: consumer);
-        logger.LogInformation("Consumer: listening on {Queue}", Queue);
+            if (forward is { } lane && lane.Tenants.Contains(envelope.Tenant))
+            {
+                // Ack only after the broker confirmed the copy (TenantLanes.Forward).
+                TenantLanes.Forward(lane.ConfirmChannel, ea, envelope.Tenant);
+                channel.BasicAck(ea.DeliveryTag, false);
+                logger.LogDebug("Consumer: moved {EventId} to the lane of tenant {Tenant}", envelope.EventId, envelope.Tenant);
+                return;
+            }
 
-        await Task.Delay(Timeout.Infinite, ct);
+            await ProcessAsync(envelope, ct);
+            channel.BasicAck(ea.DeliveryTag, false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Consumer: failed to process message");
+            channel.BasicNack(ea.DeliveryTag, false, false);
+        }
     }
 
     // internal for Engine.Tests (one engine run per delivery, CR 2026-10-06 D18 / R15).
