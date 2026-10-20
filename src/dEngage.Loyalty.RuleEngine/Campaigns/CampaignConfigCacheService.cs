@@ -89,9 +89,11 @@ public class CampaignConfigCacheService(
         }
 
         var key = CampaignKey(tenantId, programId);
-        // 60 minutes unless loyalty_config says otherwise (alignment D4).
-        var ttlMinutes = await loyaltyConfig.GetAsync(
-            LoyaltyConfigKeys.Engine.Module, LoyaltyConfigKeys.Engine.CampaignConfigCacheTtlMinutes, 60, null, ct);
+        // From loyalty_config (alignment D4).
+        var ttlMinutes = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Engine.Module, LoyaltyConfigKeys.Engine.CampaignConfigCacheTtlMinutes, ct);
+        if (ttlMinutes <= 0)
+            throw new InvalidOperationException("loyalty_config_invalid: loyalty.engine/CampaignConfigCache.TtlMinutes must be positive.");
         await _cache.StringSetAsync(key, JsonSerializer.Serialize(configs), TimeSpan.FromMinutes(ttlMinutes));
 
         return configs;

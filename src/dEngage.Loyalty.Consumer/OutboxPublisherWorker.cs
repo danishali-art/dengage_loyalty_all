@@ -14,10 +14,6 @@ public class OutboxPublisherWorker(
 {
     private const string Exchange = MessagingTopology.OutboundExchange;
 
-    // Defaults; loyalty_config (loyalty.jobs/Outbox.*) can change them, read per batch (alignment D4).
-    private const int DefaultBatchSize = 100;
-    private const int DefaultMaxAttempts = 8;
-    private static readonly int[] DefaultBackoffMinutes = [1, 5, 30, 120, 720];
 
     private DateOnly _lastPurgeDate = DateOnly.MinValue;
 
@@ -94,12 +90,13 @@ public class OutboxPublisherWorker(
         using var scope = serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LoyaltyDbContext>();
         var loyaltyConfig = scope.ServiceProvider.GetRequiredService<ILoyaltyConfig>();
-        var batchSize = await loyaltyConfig.GetAsync(
-            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxBatchSize, DefaultBatchSize, null, ct);
-        var maxAttempts = await loyaltyConfig.GetAsync(
-            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxMaxAttempts, DefaultMaxAttempts, null, ct);
-        var backoffMinutes = await loyaltyConfig.GetAsync(
-            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxBackoffMinutes, DefaultBackoffMinutes, null, ct);
+        // loyalty_config (loyalty.jobs/Outbox.*), read per batch (alignment D4).
+        var batchSize = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxBatchSize, ct);
+        var maxAttempts = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxMaxAttempts, ct);
+        var backoffMinutes = await loyaltyConfig.GetAsync<int[]>(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxBackoffMinutes, ct);
         if (batchSize <= 0 || maxAttempts <= 0 || backoffMinutes.Length == 0 || backoffMinutes.Any(m => m <= 0))
             throw new InvalidOperationException(
                 "loyalty_config_invalid: loyalty.jobs/Outbox.* must be positive and Outbox.BackoffMinutes non-empty.");

@@ -47,12 +47,21 @@ Per-project rules are in their own files and load when you touch that project:
 - **Secrets:** deployed environments mount secrets as config files under `CONFIG_PATH`. `ENC(...)`
   values still work; the key comes from the file in `LOYALTY_MASTER_KEY_FILE` (mounted secret),
   else from `LOYALTY_MASTER_KEY` (local development).
-- **Runtime settings (`loyalty_config`, D4):** a tunable that may differ per deployment or per tenant
-  is read with `ILoyaltyConfig.GetAsync(module, parameter, <current default>, tenantGuid|null, ct)`,
-  with the names in `Shared/Constants/LoyaltyConfigKeys.cs`. Keep today's value as the default, so
-  nothing changes until a row is added; validate the value at the call site (positive sizes, etc.).
-  Rows are managed with SQL and cached for 1 minute per module. Startup/infrastructure values
-  (connections, keys, topology) stay in appsettings. Tests that construct services by hand pass
+- **Runtime settings (D4):** the tables are the **only** source — no defaults in code or
+  appsettings — and the two kinds never mix (CHECK constraints in both tables):
+  - *global* settings: one row in `loyalty_config`, read with `ILoyaltyConfig.GetAsync<T>(module, parameter, ct)`;
+  - *tenant* settings (`LoyaltyConfigKeys.TenantSettings`): one row per tenant in
+    `loyalty_tenant_config`, read with `GetForTenantAsync<T>(module, parameter, tenantGuid, ct)`.
+    There is **no global fallback**; `PlatformAppService.CreateTenantAsync` writes a new tenant's rows
+    (`LoyaltyConfigDefaults.NewTenant`) in the tenant's transaction.
+  A missing row fails with `loyalty_config_missing`. Adding a setting needs, in the same change:
+  the key in `LoyaltyConfigKeys`, an entry in `LoyaltyConfigDefaults` (`Global` or `NewTenant`), and
+  a migration — a seed row for a global setting (copy `LoyaltyConfigDefaultsAlignD4`), or the
+  `TenantSettings` list change plus a backfill of existing tenants for a tenant setting (copy
+  `LoyaltyTenantConfigAlignD4`). Validate values at the call site. Rows are managed with SQL and
+  cached for 1 minute. Startup/infrastructure values (connections, keys, topology) stay in
+  appsettings. Tests: Sqlite hosts seed global rows with `LoyaltyConfigDefaults.EnsureSeededAsync`
+  and give tenants their rows through `TenantSettingsSeedingInterceptor`; hand-built services get
   `DefaultLoyaltyConfig` (IntegrationTests/Fixtures).
 - **Dependency boundary (D13):** core projects may depend only on `dEngage.Common.*` packages.
   `dEngage.Framework`, `Parameters`, `Models`, `DbManager`/`ConManager` and other platform

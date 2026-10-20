@@ -9,13 +9,13 @@ public class EventLogRetentionJob(LoyaltyDbContext db, ILoyaltyConfig loyaltyCon
 {
     // occurred_within windows are capped at 8760h (ConditionDsl.MaxWindowHours),
     // so nothing older than 12 months can ever satisfy a rule.
-    private const int DefaultBatchSize = 10_000; // loyalty_config can change it (alignment D4)
 
     public async Task<long> RunAsync(CancellationToken ct = default)
     {
         logger.LogInformation("EventLogRetention: started");
-        var batchSize = await loyaltyConfig.GetAsync(
-            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.EventLogRetentionBatchSize, DefaultBatchSize, null, ct);
+        // From loyalty_config (alignment D4).
+        var batchSize = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.EventLogRetentionBatchSize, ct);
         if (batchSize <= 0)
             throw new InvalidOperationException("loyalty_config_invalid: loyalty.jobs/EventLogRetention.BatchSize must be positive.");
 

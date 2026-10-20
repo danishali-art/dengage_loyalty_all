@@ -42,7 +42,8 @@ public sealed class PostgresWebApplicationFactory(string connectionString) : Web
             services.RemoveAll<DbContextOptions>();
             // See CustomWebApplicationFactory — EF Core 9 also keeps the upstream options action.
             services.RemoveAll<IDbContextOptionsConfiguration<LoyaltyDbContext>>();
-            services.AddDbContext<LoyaltyDbContext>(options => options.UseNpgsql(connectionString));
+            services.AddDbContext<LoyaltyDbContext>(options => options.UseNpgsql(connectionString)
+                .AddInterceptors(new TenantSettingsSeedingInterceptor()));
 
             services.RemoveAll<IEventPublisher>();
             services.AddSingleton<IEventPublisher>(EventPublisher);

@@ -24,7 +24,6 @@ public static class ServiceCollectionExtensions
         services.AddOptions<ApiOptions>().Bind(configuration).ValidateOnStart();
         services.AddOptions<JwtOptions>().Bind(configuration.GetSection("Jwt")).ValidateOnStart();
         services.AddOptions<RabbitMqOptions>().Bind(configuration.GetSection("RabbitMq")).ValidateOnStart();
-        services.AddOptions<RateLimitOptions>().Bind(configuration.GetSection("RateLimit")).ValidateOnStart();
         services.AddSingleton<IValidateOptions<ApiOptions>, ApiOptionsValidator>();
         services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
         services.AddSingleton<IValidateOptions<RabbitMqOptions>, RabbitMqOptionsValidator>();

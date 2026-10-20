@@ -129,9 +129,11 @@ public class RuleCacheService(
         var key = RuleKey(tenantId, programId);
         // Flat safety-net TTL — freshness comes from RuleSync (30s delta); active windows
         // are enforced at evaluation time, so midnight-precise expiry is no longer needed.
-        // 60 minutes unless loyalty_config says otherwise (alignment D4).
-        var ttlMinutes = await loyaltyConfig.GetAsync(
-            LoyaltyConfigKeys.Engine.Module, LoyaltyConfigKeys.Engine.RuleCacheTtlMinutes, 60, null, ct);
+        // From loyalty_config (alignment D4).
+        var ttlMinutes = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Engine.Module, LoyaltyConfigKeys.Engine.RuleCacheTtlMinutes, ct);
+        if (ttlMinutes <= 0)
+            throw new InvalidOperationException("loyalty_config_invalid: loyalty.engine/RuleCache.TtlMinutes must be positive.");
         await _cache.StringSetAsync(key, JsonSerializer.Serialize(cached), TimeSpan.FromMinutes(ttlMinutes));
 
         return cached;

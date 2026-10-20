@@ -475,8 +475,8 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         if (inbox is not null)
         {
             var (occurredAt, data) = ReadEnvelope(inbox.Payload);
-            var extraMaskedFields = await loyaltyConfig.GetAsync<string[]>(
-                LoyaltyConfigKeys.Api.Module, LoyaltyConfigKeys.Api.PiiExtraMaskedFields, [], tenantGuid, ct);
+            var extraMaskedFields = await loyaltyConfig.GetForTenantAsync<string[]>(
+                LoyaltyConfigKeys.Api.Module, LoyaltyConfigKeys.Api.PiiExtraMaskedFields, tenantGuid, ct);
             inbound = new InboundEventResponse(inbox.EventId, inbox.EventType, occurredAt, inbox.ReceivedAt,
                 inbox.ProcessedAt, inbox.Status, inbox.Error,
                 data is { } d ? CustomerPayloadMasker.Mask(d, extraMaskedFields) : null);
@@ -925,10 +925,12 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
         if (anchors.Count == 0)
             return [];
 
-        var windowBefore = TimeSpan.FromMinutes(await loyaltyConfig.GetAsync(LoyaltyConfigKeys.Api.Module,
-            LoyaltyConfigKeys.Api.Customer360MessageWindowBeforeMinutes, DefaultMessageWindowBeforeMinutes, tenantGuid, ct));
-        var windowAfter = TimeSpan.FromMinutes(await loyaltyConfig.GetAsync(LoyaltyConfigKeys.Api.Module,
-            LoyaltyConfigKeys.Api.Customer360MessageWindowAfterMinutes, DefaultMessageWindowAfterMinutes, tenantGuid, ct));
+        var windowBefore = TimeSpan.FromMinutes(await loyaltyConfig.GetAsync<int>(LoyaltyConfigKeys.Api.Module,
+            LoyaltyConfigKeys.Api.Customer360MessageWindowBeforeMinutes, ct));
+        var windowAfter = TimeSpan.FromMinutes(await loyaltyConfig.GetAsync<int>(LoyaltyConfigKeys.Api.Module,
+            LoyaltyConfigKeys.Api.Customer360MessageWindowAfterMinutes, ct));
+        if (windowBefore < TimeSpan.Zero || windowAfter < TimeSpan.Zero)
+            throw new InvalidOperationException("loyalty_config_invalid: loyalty.api/Customer360.MessageWindow* must not be negative.");
         var windowStart = anchors.Min() - windowBefore;
         var windowEnd = anchors.Max() + windowAfter;
         var candidates = await db.OutboxEvents.AsNoTracking()
@@ -949,9 +951,6 @@ public sealed class CustomersAppService(LoyaltyDbContext db, ITenantSlugResolver
             .ToList();
     }
 
-    // Defaults; loyalty_config can change them (alignment D4).
-    private const int DefaultMessageWindowBeforeMinutes = 1;
-    private const int DefaultMessageWindowAfterMinutes = 60;
 
     private static readonly string[] InboxStatuses = [InboxStatus.Pending, InboxStatus.Processed, InboxStatus.Failed];
 

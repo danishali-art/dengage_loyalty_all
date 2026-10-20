@@ -38,9 +38,9 @@ public sealed class DelayedPostingPromotionJob(
 {
     public async Task<int> RunAsync(CancellationToken ct = default)
     {
-        // 500 unless loyalty_config says otherwise (alignment D4).
-        var batchSize = await loyaltyConfig.GetAsync(
-            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.DelayedPostingBatchSize, 500, null, ct);
+        // From loyalty_config (alignment D4).
+        var batchSize = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.DelayedPostingBatchSize, ct);
         if (batchSize <= 0)
             throw new InvalidOperationException("loyalty_config_invalid: loyalty.jobs/DelayedPosting.BatchSize must be positive.");
 

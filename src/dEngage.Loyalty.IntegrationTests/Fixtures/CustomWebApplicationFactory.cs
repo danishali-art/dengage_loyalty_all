@@ -52,7 +52,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<LoyaltyDbContext>>();
             services.RemoveAll<DbContextOptions>();
             services.RemoveAll<IDbContextOptionsConfiguration<LoyaltyDbContext>>();
-            services.AddDbContext<LoyaltyDbContext>(options => options.UseSqlite(_connection));
+            services.AddDbContext<LoyaltyDbContext>(options => options.UseSqlite(_connection)
+                .AddInterceptors(new TenantSettingsSeedingInterceptor()));
 
             services.RemoveAll<IEventPublisher>();
             services.AddSingleton<IEventPublisher>(EventPublisher);
@@ -83,6 +84,9 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         await using var scope = Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<LoyaltyDbContext>();
         await db.Database.EnsureCreatedAsync();
+        // EnsureCreated doesn't run migrations, so seed loyalty_config here: the app has no
+        // defaults of its own and fails on a missing setting (alignment D4).
+        await LoyaltyConfigDefaults.EnsureSeededAsync(db);
     }
 
     protected override void Dispose(bool disposing)

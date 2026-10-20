@@ -1,20 +1,27 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using dEngage.Loyalty.Shared;
 using dEngage.Loyalty.Shared.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace dEngage.Loyalty.Schema;
 
-// Reads loyalty_config (platform alignment D4). Resolution order: the tenant's row, then the
-// global row, then the default passed by the caller (the value that used to be hard-coded), so
-// behaviour only changes once a row exists. Same access shape as the dEngage platform's
-// GlobalConfig.GetValueFromModuleCache: a whole module is loaded at once and cached briefly.
+// Reads the loyalty settings (platform alignment D4). The tables are the only source — no
+// defaults in code or appsettings — and the two kinds never mix:
+//   - GetAsync: a global setting, from loyalty_config;
+//   - GetForTenantAsync: a tenant setting (LoyaltyConfigKeys.TenantSettings), from the tenant's own
+//     row in loyalty_tenant_config. There is no global fallback.
+// A missing or blank row fails with loyalty_config_missing. Same access shape as the dEngage
+// platform's GlobalConfig.GetValueFromModuleCache: a whole module is loaded and cached briefly.
 public interface ILoyaltyConfig
 {
     // T: string, a number, bool, or anything JSON can bind (e.g. string[], int[]). The row's
-    // value_json is used when set, otherwise its value. A row that can't be read as T throws
-    // loyalty_config_invalid instead of silently falling back to the default.
-    Task<T> GetAsync<T>(string module, string parameter, T defaultValue, Guid? tenantId, CancellationToken ct);
+    // value_json is used when set, otherwise its value. A row that can't be read as T fails with
+    // loyalty_config_invalid. Asking for a tenant setting here is a programming error.
+    Task<T> GetAsync<T>(string module, string parameter, CancellationToken ct);
+
+    // Same, for a tenant setting of one tenant. Asking for a global setting here is a programming error.
+    Task<T> GetForTenantAsync<T>(string module, string parameter, Guid tenantId, CancellationToken ct);
 }
 
 // Singleton, DbContext-free — holds the last load of each module for `Ttl`. Rows are changed with
@@ -24,23 +31,22 @@ public sealed class LoyaltyConfigCache(TimeProvider clock)
 {
     public static readonly TimeSpan Ttl = TimeSpan.FromMinutes(1);
 
+    // Key: the module for global settings, "<tenant id>|<module>" for one tenant's settings.
     private readonly ConcurrentDictionary<string, ModuleSnapshot> _modules = new();
 
     public LoyaltyConfigCache() : this(TimeProvider.System) { }
 
-    internal bool TryGet(string module, out ModuleSnapshot snapshot) =>
-        _modules.TryGetValue(module, out snapshot!) && clock.GetUtcNow() - snapshot.LoadedAt < Ttl;
+    internal bool TryGet(string key, out ModuleSnapshot snapshot) =>
+        _modules.TryGetValue(key, out snapshot!) && clock.GetUtcNow() - snapshot.LoadedAt < Ttl;
 
-    internal ModuleSnapshot Set(string module, IReadOnlyDictionary<(string Parameter, Guid? TenantId), string?> values)
+    internal ModuleSnapshot Set(string key, IReadOnlyDictionary<string, string?> values)
     {
         var snapshot = new ModuleSnapshot(clock.GetUtcNow(), values);
-        _modules[module] = snapshot;
+        _modules[key] = snapshot;
         return snapshot;
     }
 
-    internal sealed record ModuleSnapshot(
-        DateTimeOffset LoadedAt,
-        IReadOnlyDictionary<(string Parameter, Guid? TenantId), string?> Values);
+    internal sealed record ModuleSnapshot(DateTimeOffset LoadedAt, IReadOnlyDictionary<string, string?> Values);
 }
 
 // Scoped (same lifetime as LoyaltyDbContext) — the cache it fills is the singleton above.
@@ -49,47 +55,70 @@ public sealed class LoyaltyConfigReader(LoyaltyDbContext db, LoyaltyConfigCache 
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public async Task<T> GetAsync<T>(string module, string parameter, T defaultValue, Guid? tenantId, CancellationToken ct)
+    public async Task<T> GetAsync<T>(string module, string parameter, CancellationToken ct)
     {
+        if (LoyaltyConfigKeys.IsTenantSetting(module, parameter))
+            throw new InvalidOperationException($"{module}/{parameter} is a tenant setting; read it with GetForTenantAsync.");
+
         if (!cache.TryGet(module, out var snapshot))
-            snapshot = cache.Set(module, await LoadModuleAsync(module, ct));
+            snapshot = cache.Set(module, await LoadAsync(db.LoyaltyConfig.AsNoTracking()
+                .Where(x => x.ModuleName == module)
+                .Select(x => new Row(x.ParameterName, x.Value, x.ValueJson, x.IsSecret)), ct));
 
-        string? raw = null;
-        var found = tenantId is { } t && snapshot.Values.TryGetValue((parameter, t), out raw);
-        if (!found)
-            found = snapshot.Values.TryGetValue((parameter, null), out raw);
-        if (!found || string.IsNullOrWhiteSpace(raw))
-            return defaultValue;
+        if (!snapshot.Values.TryGetValue(parameter, out var raw) || string.IsNullOrWhiteSpace(raw))
+            throw new InvalidOperationException(
+                $"loyalty_config_missing: no value for {module}/{parameter} in loyalty_config. " +
+                "Every global setting must have a row (seeded by migration, see LoyaltyConfigDefaults.Global).");
 
+        return Parse<T>(module, parameter, raw);
+    }
+
+    public async Task<T> GetForTenantAsync<T>(string module, string parameter, Guid tenantId, CancellationToken ct)
+    {
+        if (!LoyaltyConfigKeys.IsTenantSetting(module, parameter))
+            throw new InvalidOperationException($"{module}/{parameter} is a global setting; read it with GetAsync.");
+
+        var key = $"{tenantId}|{module}";
+        if (!cache.TryGet(key, out var snapshot))
+            snapshot = cache.Set(key, await LoadAsync(db.LoyaltyTenantConfig.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.ModuleName == module)
+                .Select(x => new Row(x.ParameterName, x.Value, x.ValueJson, x.IsSecret)), ct));
+
+        if (!snapshot.Values.TryGetValue(parameter, out var raw) || string.IsNullOrWhiteSpace(raw))
+            throw new InvalidOperationException(
+                $"loyalty_config_missing: no value for {module}/{parameter} for tenant {tenantId} in loyalty_tenant_config. " +
+                "Every tenant needs a row for each tenant setting (written when the tenant is created, see LoyaltyConfigDefaults.NewTenant).");
+
+        return Parse<T>(module, parameter, raw);
+    }
+
+    private static T Parse<T>(string module, string parameter, string raw)
+    {
         try
         {
             if (typeof(T) == typeof(string) && !LooksLikeJsonString(raw))
                 return (T)(object)raw;
-            return JsonSerializer.Deserialize<T>(raw, JsonOptions) ?? defaultValue;
+            return JsonSerializer.Deserialize<T>(raw, JsonOptions)
+                ?? throw new JsonException("The value is JSON null.");
         }
         catch (JsonException ex)
         {
             throw new InvalidOperationException(
-                $"loyalty_config_invalid: {module}/{parameter} ({(tenantId is null ? "global" : $"tenant {tenantId}")}) " +
-                $"can't be read as {typeof(T).Name}.", ex);
+                $"loyalty_config_invalid: {module}/{parameter} can't be read as {typeof(T).Name}.", ex);
         }
     }
 
-    private async Task<IReadOnlyDictionary<(string, Guid?), string?>> LoadModuleAsync(string module, CancellationToken ct)
-    {
-        var rows = await db.LoyaltyConfig.AsNoTracking()
-            .Where(x => x.ModuleName == module)
-            .Select(x => new { x.ParameterName, x.TenantId, x.Value, x.ValueJson, x.IsSecret })
-            .ToListAsync(ct);
+    private sealed record Row(string ParameterName, string? Value, string? ValueJson, bool IsSecret);
 
-        var values = new Dictionary<(string, Guid?), string?>();
-        foreach (var row in rows)
+    private async Task<IReadOnlyDictionary<string, string?>> LoadAsync(IQueryable<Row> query, CancellationToken ct)
+    {
+        var values = new Dictionary<string, string?>();
+        foreach (var row in await query.ToListAsync(ct))
         {
             // value_json wins (structured values); secrets are scalar ENC(...) values.
-            var raw = row.IsSecret
+            values[row.ParameterName] = row.IsSecret
                 ? (row.Value is null ? null : secrets.Unprotect(row.Value))
                 : row.ValueJson ?? row.Value;
-            values[(row.ParameterName, row.TenantId)] = raw;
         }
         return values;
     }

@@ -23,7 +23,6 @@ public sealed class EventsAppService(
     IEventPublisher publisher,
     LoyaltyDbContext db,
     IRateLimiter rateLimiter,
-    IOptions<RateLimitOptions> rateLimitOptions,
     IOptions<RabbitMqOptions> rabbitMqOptions,
     ITenantSlugResolver tenantSlugResolver,
     ILoyaltyConfig loyaltyConfig) : IEventsAppService
@@ -31,12 +30,12 @@ public sealed class EventsAppService(
     public async Task<EventAcceptedResponse> PublishAsync<TData>(
         string tenantId, string eventType, TData data, string? idempotencyKey, CancellationToken ct)
     {
-        // Per-tenant limit from loyalty_config (alignment D4); the deployment's RateLimit setting
-        // stays the default for tenants without a row.
-        var limitPerMinute = await loyaltyConfig.GetAsync(
+        // The tenant's own limit from loyalty_tenant_config (alignment D4); no global fallback.
+        var limitPerMinute = await loyaltyConfig.GetForTenantAsync<int>(
             LoyaltyConfigKeys.Api.Module, LoyaltyConfigKeys.Api.RateLimitEventIngestionPerMinute,
-            rateLimitOptions.Value.EventIngestionPerMinutePerTenant,
             await tenantSlugResolver.ResolveAsync(tenantId, ct), ct);
+        if (limitPerMinute <= 0)
+            throw new InvalidOperationException("loyalty_config_invalid: loyalty.api/RateLimit.EventIngestionPerMinute must be positive.");
 
         if (!await rateLimiter.TryAcquireAsync("events", tenantId, limitPerMinute, ct))
             throw new TooManyRequestsApiException($"Ingestion rate limit exceeded for tenant '{tenantId}'.");

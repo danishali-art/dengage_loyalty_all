@@ -2801,5 +2801,233 @@ BEGIN
     VALUES ('20261020135214_LoyaltyConfigAlignD4', '9.0.13');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.api', 'Pii.ExtraMaskedFields', NULL, NULL, '[]'::jsonb, false, 'Extra field names masked in Customer 360 event data, on top of the built-in list (additive). Usually set per tenant.', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.api', 'Customer360.MessageWindowBeforeMinutes', NULL, '1', NULL, false, 'Minutes before an event in which its sent messages are looked up (Customer 360).', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.api', 'Customer360.MessageWindowAfterMinutes', NULL, '60', NULL, false, 'Minutes after an event in which its sent messages are looked up (Customer 360).', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.engine', 'RuleCache.TtlMinutes', NULL, '60', NULL, false, 'Redis safety-net TTL of the rule cache, in minutes. Freshness comes from RuleSync.', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.engine', 'CampaignConfigCache.TtlMinutes', NULL, '60', NULL, false, 'Redis safety-net TTL of the campaign config cache, in minutes.', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.jobs', 'Outbox.BatchSize', NULL, '100', NULL, false, 'Outbox rows published per batch.', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.jobs', 'Outbox.MaxAttempts', NULL, '8', NULL, false, 'Publish attempts before an outbox row is marked failed.', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.jobs', 'Outbox.BackoffMinutes', NULL, NULL, '[1, 5, 30, 120, 720]'::jsonb, false, 'Minutes to wait before each retry of an outbox row; the last value repeats.', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.jobs', 'DelayedPosting.BatchSize', NULL, '500', NULL, false, 'Held postings promoted per hourly run; the next run picks up the rest.', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, tenant_id, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.jobs', 'EventLogRetention.BatchSize', NULL, '10000', NULL, false, 'event_log rows deleted per batch by the nightly retention job.', now(), 'migration:20261020142338_LoyaltyConfigDefaultsAlignD4')
+    ON CONFLICT (module_name, parameter_name) WHERE tenant_id IS NULL DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020142338_LoyaltyConfigDefaultsAlignD4') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261020142338_LoyaltyConfigDefaultsAlignD4', '9.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020143545_LoyaltyConfigGlobalOnlyAlignD4') THEN
+    DELETE FROM loyalty_config WHERE tenant_id IS NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020143545_LoyaltyConfigGlobalOnlyAlignD4') THEN
+    ALTER TABLE loyalty_config DROP CONSTRAINT "FK_loyalty_config_tenants_tenant_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020143545_LoyaltyConfigGlobalOnlyAlignD4') THEN
+    DROP INDEX ux_loyalty_config_global;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020143545_LoyaltyConfigGlobalOnlyAlignD4') THEN
+    DROP INDEX ux_loyalty_config_tenant;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020143545_LoyaltyConfigGlobalOnlyAlignD4') THEN
+    ALTER TABLE loyalty_config DROP COLUMN tenant_id;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020143545_LoyaltyConfigGlobalOnlyAlignD4') THEN
+    CREATE UNIQUE INDEX ux_loyalty_config_key ON loyalty_config (module_name, parameter_name);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020143545_LoyaltyConfigGlobalOnlyAlignD4') THEN
+    INSERT INTO loyalty_config (module_name, parameter_name, value, value_json, is_secret, description, updated_at, updated_by)
+    VALUES ('loyalty.api', 'RateLimit.EventIngestionPerMinute', '120', NULL, false,
+            'Events accepted per minute per tenant (the same limit applies to every tenant).', now(), 'migration:20261020143545_LoyaltyConfigGlobalOnlyAlignD4')
+    ON CONFLICT (module_name, parameter_name) DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020143545_LoyaltyConfigGlobalOnlyAlignD4') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261020143545_LoyaltyConfigGlobalOnlyAlignD4', '9.0.13');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020150844_LoyaltyTenantConfigAlignD4') THEN
+    CREATE TABLE loyalty_tenant_config (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        module_name character varying(100) NOT NULL,
+        parameter_name character varying(200) NOT NULL,
+        value text,
+        value_json jsonb,
+        is_secret boolean NOT NULL DEFAULT FALSE,
+        description character varying(500),
+        updated_at timestamp with time zone NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+        updated_by character varying(255),
+        CONSTRAINT "PK_loyalty_tenant_config" PRIMARY KEY (id),
+        CONSTRAINT ck_loyalty_tenant_config_tenant_settings CHECK ((module_name = 'loyalty.api' AND parameter_name = 'RateLimit.EventIngestionPerMinute') OR (module_name = 'loyalty.api' AND parameter_name = 'Pii.ExtraMaskedFields')),
+        CONSTRAINT "FK_loyalty_tenant_config_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES tenants (id) ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020150844_LoyaltyTenantConfigAlignD4') THEN
+    CREATE UNIQUE INDEX ux_loyalty_tenant_config_key ON loyalty_tenant_config (tenant_id, module_name, parameter_name);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020150844_LoyaltyTenantConfigAlignD4') THEN
+    INSERT INTO loyalty_tenant_config (id, tenant_id, module_name, parameter_name, value, value_json, is_secret, description, updated_at, updated_by)
+    SELECT gen_random_uuid(), t.id, k.module_name, k.parameter_name,
+           CASE WHEN g.id IS NULL THEN k.value ELSE g.value END,
+           CASE WHEN g.id IS NULL THEN k.value_json ELSE g.value_json END,
+           COALESCE(g.is_secret, false), k.description, now(), 'migration:20261020150844_LoyaltyTenantConfigAlignD4'
+    FROM tenants t
+    CROSS JOIN (VALUES
+        ('loyalty.api', 'RateLimit.EventIngestionPerMinute', '120', NULL::jsonb,
+         'Events accepted per minute for this tenant.'),
+        ('loyalty.api', 'Pii.ExtraMaskedFields', NULL, '[]'::jsonb,
+         'Extra field names masked in Customer 360 event data for this tenant, on top of the built-in list (additive).')
+    ) AS k(module_name, parameter_name, value, value_json, description)
+    LEFT JOIN loyalty_config g ON g.module_name = k.module_name AND g.parameter_name = k.parameter_name
+    ON CONFLICT (tenant_id, module_name, parameter_name) DO NOTHING;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020150844_LoyaltyTenantConfigAlignD4') THEN
+    DELETE FROM loyalty_config WHERE (module_name = 'loyalty.api' AND parameter_name = 'RateLimit.EventIngestionPerMinute') OR (module_name = 'loyalty.api' AND parameter_name = 'Pii.ExtraMaskedFields');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020150844_LoyaltyTenantConfigAlignD4') THEN
+    ALTER TABLE loyalty_config ADD CONSTRAINT ck_loyalty_config_global_settings CHECK (NOT ((module_name = 'loyalty.api' AND parameter_name = 'RateLimit.EventIngestionPerMinute') OR (module_name = 'loyalty.api' AND parameter_name = 'Pii.ExtraMaskedFields')));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261020150844_LoyaltyTenantConfigAlignD4') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261020150844_LoyaltyTenantConfigAlignD4', '9.0.13');
+    END IF;
+END $EF$;
 COMMIT;
 

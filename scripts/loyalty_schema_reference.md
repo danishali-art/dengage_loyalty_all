@@ -2,7 +2,7 @@
 
 Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları ve kolonları açıklar.
 
-- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261020135214_LoyaltyConfigAlignD4`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
+- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261020150844_LoyaltyTenantConfigAlignD4`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
 - **Kurulum:** boş bir PostgreSQL veritabanına `psql -d loyalty_dev -f loyalty_schema.sql`. Ardından **her tenant için** [`provision_tenant.sql`](provision_tenant.sql) (partition oluşturur) ve tenant'ın seed script'i (örn. [`starbucks_loyalty.sql`](starbucks_loyalty.sql)) çalıştırılır.
 - Tüm parasal/puan kolonları `numeric(20,4)`'tür; tüm zaman kolonları `timestamptz` (UTC) tutulur.
 - Event/mesaj davranışlarının detayı için: `docsv2/01_inbound_events.md`, `docsv2/02_outbound_events.md`.
@@ -31,7 +31,8 @@ Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları
 | [`streak_progress`](#streak_progress) | — |
 | [`admin_users`](#admin_users) | — |
 | [`config_versions`](#config_versions) | — |
-| [`loyalty_config`](#loyalty_config) | Çalışma zamanı ayarları (rate limit, batch boyutları, cache süreleri…) — global satır + tenant bazlı override (platform uyumu D4) |
+| [`loyalty_config`](#loyalty_config) | Global çalışma zamanı ayarları (batch boyutları, cache süreleri…) — tek kaynak (platform uyumu D4) |
+| [`loyalty_tenant_config`](#loyalty_tenant_config) | Tenant bazlı ayarlar (rate limit, ek maskelenen alanlar) — her tenant'ın kendi satırı, global karşılığı yok (platform uyumu D4) |
 | [`event_log`](#event_log) | — |
 | [`streak_applied_event`](#streak_applied_event) | — |
 | [`streak_campaigns`](#streak_campaigns) | — |
@@ -725,16 +726,15 @@ Transactional outbox: dışarı gidecek bildirimler, iş verisiyle **aynı trans
 
 ## loyalty_config
 
-Daha önce kodda sabit olan çalışma zamanı ayarları (platform uyumu D4). dEngage platformundaki `sys.global_config` ile aynı yapı (`module_name` + `parameter_name`, skaler `value` veya JSON `value_json`), ek olarak opsiyonel `tenant_id`: tenant satırı, o tenant için global satırı (`tenant_id` NULL) ezer. Satır yoksa koddaki varsayılan geçerlidir. Satırlar SQL ile yönetilir; uygulama `ILoyaltyConfig` ile okur ve modülü 1 dakika cache'ler. Modül/parametre adları: `Shared/Constants/LoyaltyConfigKeys.cs`.
+Global çalışma zamanı ayarları (platform uyumu D4): daha önce kodda / appsettings'te sabit olan değerler. dEngage platformundaki `sys.global_config` ile aynı yapı (`module_name` + `parameter_name`, skaler `value` veya JSON `value_json`). **Tek kaynak**: kodda ya da appsettings'te varsayılan değer yoktur; satırı olmayan ya da boş olan ayar `loyalty_config_missing` hatası verir. **Tenant ayarları burada tutulmaz** (`ck_loyalty_config_global_settings`), onlar [`loyalty_tenant_config`](#loyalty_tenant_config) tablosundadır. Satırlar SQL ile yönetilir; uygulama `ILoyaltyConfig.GetAsync` ile okur ve modülü 1 dakika cache'ler. Adlar: `Shared/Constants/LoyaltyConfigKeys.cs`; başlangıç değerleri: `Schema/LoyaltyConfigDefaults.cs` (`Global`).
 
 | Kolon | Tip | Null | Varsayılan | Açıklama |
 |-------|-----|------|------------|----------|
 | `id` | bigint (identity) | ✗ |  | — |
 | `module_name` | varchar(100) | ✗ |  | Modül, örn. `loyalty.api`, `loyalty.engine`, `loyalty.jobs` |
-| `parameter_name` | varchar(200) | ✗ |  | Parametre, örn. `RateLimit.EventIngestionPerMinute` |
-| `tenant_id` | uuid | ✓ |  | NULL = global satır; dolu = o tenant için override |
+| `parameter_name` | varchar(200) | ✗ |  | Parametre, örn. `Outbox.BatchSize` |
 | `value` | text | ✓ |  | Skaler değer (sayı, bool, metin). `is_secret` ise `ENC(...)` token'ı |
-| `value_json` | jsonb | ✓ |  | Yapısal değer (örn. `["a","b"]`). Doluysa `value` yerine okunur |
+| `value_json` | jsonb | ✓ |  | Yapısal değer (örn. `[1, 5, 30]`). Doluysa `value` yerine okunur |
 | `is_secret` | boolean | ✗ | `false` | `value` şifreli (`ENC(...)`); `ISecretProtector` ile çözülür. Şifresiz değer reddedilir |
 | `description` | varchar(500) | ✓ |  | Serbest açıklama |
 | `updated_at` | timestamptz | ✗ | `CURRENT_TIMESTAMP` | Son değişiklik zamanı |
@@ -742,12 +742,42 @@ Daha önce kodda sabit olan çalışma zamanı ayarları (platform uyumu D4). dE
 
 **PK:** `PK_loyalty_config (id)`.
 
-**FK:** `tenant_id` → `tenants.id` (NO ACTION).
+**Check:** `ck_loyalty_config_global_settings` — tenant ayarları (`RateLimit.EventIngestionPerMinute`, `Pii.ExtraMaskedFields`) bu tabloya yazılamaz.
 
 **Index:**
 
-- `ux_loyalty_config_global (module_name, parameter_name)` UNIQUE `WHERE tenant_id IS NULL` — her ayar için tek global satır
-- `ux_loyalty_config_tenant (tenant_id, module_name, parameter_name)` UNIQUE `WHERE tenant_id IS NOT NULL` — her ayar için tenant başına tek satır
+- `ux_loyalty_config_key (module_name, parameter_name)` UNIQUE — her ayar için tek satır
+
+**Başlangıç satırları (migration ile eklenir, uygulama bunlar olmadan çalışmaz):** 9 satır — `loyalty.api` → `Customer360.MessageWindowBeforeMinutes` (1), `Customer360.MessageWindowAfterMinutes` (60); `loyalty.engine` → `RuleCache.TtlMinutes` (60), `CampaignConfigCache.TtlMinutes` (60); `loyalty.jobs` → `Outbox.BatchSize` (100), `Outbox.MaxAttempts` (8), `Outbox.BackoffMinutes` (`[1, 5, 30, 120, 720]`), `DelayedPosting.BatchSize` (500), `EventLogRetention.BatchSize` (10000). Ortamda zaten değer varsa korunur (`ON CONFLICT DO NOTHING`); `Down` yalnızca hâlâ ilk haliyle duran satırları siler. Migration geçmişi: `20261020135214_LoyaltyConfigAlignD4` (tablo), `20261020142338_LoyaltyConfigDefaultsAlignD4` (başlangıç satırları), `20261020143545_LoyaltyConfigGlobalOnlyAlignD4` (`tenant_id` kaldırıldı), `20261020150844_LoyaltyTenantConfigAlignD4` (tenant ayarları `loyalty_tenant_config`'e taşındı).
+
+---
+
+## loyalty_tenant_config
+
+Tenant bazlı ayarlar (platform uyumu D4), dEngage platformundaki `sys.config_account_*` tablolarının karşılığı. Yalnızca `LoyaltyConfigKeys.TenantSettings` listesindeki ayarlar yazılabilir (`ck_loyalty_tenant_config_tenant_settings`): `loyalty.api` → `RateLimit.EventIngestionPerMinute` ve `Pii.ExtraMaskedFields`. **Global karşılığı yoktur**: her tenant'ın her tenant ayarı için kendi satırı olmalıdır, yoksa `loyalty_config_missing` hatası verir. Satırlar tenant oluşturulurken (`PlatformAppService.CreateTenantAsync`, aynı transaction içinde) `LoyaltyConfigDefaults.NewTenant` değerleriyle yazılır (rate limit 120, ek maskelenen alanlar `[]`); mevcut tenant'lar `20261020150844_LoyaltyTenantConfigAlignD4` migration'ı ile, o andaki global değer taşınarak doldurulmuştur. Uygulama `ILoyaltyConfig.GetForTenantAsync` ile okur ve tenant + modül bazında 1 dakika cache'ler.
+
+| Kolon | Tip | Null | Varsayılan | Açıklama |
+|-------|-----|------|------------|----------|
+| `id` | uuid | ✗ |  | — |
+| `tenant_id` | uuid | ✗ |  | Tenant (`tenants.id`) |
+| `module_name` | varchar(100) | ✗ |  | Modül (`loyalty.api`) |
+| `parameter_name` | varchar(200) | ✗ |  | Parametre, örn. `RateLimit.EventIngestionPerMinute` |
+| `value` | text | ✓ |  | Skaler değer. `is_secret` ise `ENC(...)` token'ı |
+| `value_json` | jsonb | ✓ |  | Yapısal değer (örn. `["iqama_no"]`). Doluysa `value` yerine okunur |
+| `is_secret` | boolean | ✗ | `false` | `value` şifreli (`ENC(...)`); şifresiz değer reddedilir |
+| `description` | varchar(500) | ✓ |  | Serbest açıklama |
+| `updated_at` | timestamptz | ✗ | `CURRENT_TIMESTAMP` | Son değişiklik zamanı |
+| `updated_by` | varchar(255) | ✓ |  | Değiştiren kişi |
+
+**PK:** `PK_loyalty_tenant_config (id)`.
+
+**FK:** `tenant_id` → `tenants.id` (CASCADE — tenant silinince ayarları da silinir).
+
+**Check:** `ck_loyalty_tenant_config_tenant_settings` — yalnızca tenant ayarları.
+
+**Index:**
+
+- `ux_loyalty_tenant_config_key (tenant_id, module_name, parameter_name)` UNIQUE — tenant başına her ayar için tek satır
 
 ---
 
