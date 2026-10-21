@@ -10,6 +10,7 @@ namespace dEngage.Loyalty.Consumer;
 public class OutboxPublisherWorker(
     IServiceProvider serviceProvider,
     ConsumerConfig config,
+    ConsumerTelemetry telemetry,
     ILogger<OutboxPublisherWorker> logger) : BackgroundService
 {
     private const string Exchange = MessagingTopology.OutboundExchange;
@@ -151,20 +152,24 @@ public class OutboxPublisherWorker(
             // All of them fall back to retry; at-least-once, the consumer dedups by eventId.
             publishError = ex;
             var now = DateTime.UtcNow;
+            int retried = 0, failed = 0;
             foreach (var evt in batch)
             {
                 evt.Attempts += 1;
                 if (evt.Attempts >= maxAttempts)
                 {
                     evt.Status = OutboxStatus.Failed;
+                    failed++;
                     logger.LogError("Outbox event permanently failed: id={Id} type={Type} tenant={Tenant}",
                         evt.Id, evt.EventType, evt.TenantId);
                 }
                 else
                 {
                     evt.NextAttemptAt = now + TimeSpan.FromMinutes(backoffMinutes[Math.Min(evt.Attempts - 1, backoffMinutes.Length - 1)]);
+                    retried++;
                 }
             }
+            telemetry.RecordOutboxFailure(retried, failed, ex);
         }
 
         await db.SaveChangesAsync(ct);
@@ -176,6 +181,7 @@ public class OutboxPublisherWorker(
             throw new InvalidOperationException("Outbox publish/confirm failed", publishError);
         }
 
+        telemetry.RecordOutboxPublished(batch.Select(e => e.EventType));
         logger.LogInformation("Outbox: {Count} events published", batch.Count);
         return batch.Count;
     }

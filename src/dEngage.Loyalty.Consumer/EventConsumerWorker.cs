@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using dEngage.Common.Utilities.LogEvent;
 using dEngage.Loyalty.Engine.Framework.Consumers;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Schema.Entities;
@@ -19,6 +20,7 @@ namespace dEngage.Loyalty.Consumer;
 public class EventConsumerWorker(
     IServiceScopeFactory scopeFactory,
     RuleSyncService ruleSync,
+    ConsumerTelemetry telemetry,
     ILogger<EventConsumerWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -88,14 +90,14 @@ public class EventConsumerWorker(
                 var laneQueue = TenantLanes.Declare(laneChannel, tenant);
                 laneChannel.BasicQos(0, 1, false); // sequential within the tenant
                 var laneConsumer = new AsyncEventingBasicConsumer(laneChannel);
-                laneConsumer.Received += (_, ea) => HandleDeliveryAsync(laneChannel, ea, forward: null, ct);
+                laneConsumer.Received += (_, ea) => HandleDeliveryAsync(laneChannel, laneQueue, ea, forward: null, ct);
                 laneChannel.BasicConsume(laneQueue, autoAck: false, consumer: laneConsumer);
                 logger.LogInformation("Consumer: tenant {Tenant} is isolated, listening on {Queue}", tenant, laneQueue);
             }
 
             var forward = isolatedTenants.Count > 0 ? (isolatedTenants, forwardChannel) : default((HashSet<string>, IModel)?);
             var consumer = new AsyncEventingBasicConsumer(channel);
-            consumer.Received += (_, ea) => HandleDeliveryAsync(channel, ea, forward, ct);
+            consumer.Received += (_, ea) => HandleDeliveryAsync(channel, Queue, ea, forward, ct);
 
             channel.BasicConsume(Queue, autoAck: false, consumer: consumer);
             logger.LogInformation("Consumer: listening on {Queue}", Queue);
@@ -111,42 +113,97 @@ public class EventConsumerWorker(
 
     // One delivery from q.loyalty or a tenant lane. `forward` is set only for q.loyalty: events of
     // an isolated tenant are moved to that tenant's queue instead of being processed here.
-    private async Task HandleDeliveryAsync(IModel channel, BasicDeliverEventArgs ea,
+    // Every delivery ends in one log event and one ConsumerTelemetry record, whatever happens to it.
+    private async Task HandleDeliveryAsync(IModel channel, string queue, BasicDeliverEventArgs ea,
         (HashSet<string> Tenants, IModel ConfirmChannel)? forward, CancellationToken ct)
     {
+        var started = Stopwatch.GetTimestamp();
+        EventEnvelope? envelope = null;
+        DeliveryOutcome outcome;
+        Exception? error = null;
         try
         {
-            var body = Encoding.UTF8.GetString(ea.Body.ToArray());
-            var envelope = JsonSerializer.Deserialize<EventEnvelope>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            try
+            {
+                var body = Encoding.UTF8.GetString(ea.Body.ToArray());
+                envelope = JsonSerializer.Deserialize<EventEnvelope>(body,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (JsonException ex)
+            {
+                error = ex;
+            }
 
             if (envelope is null)
             {
                 channel.BasicNack(ea.DeliveryTag, false, false);
-                return;
+                outcome = DeliveryOutcome.Unreadable;
             }
-
-            if (forward is { } lane && lane.Tenants.Contains(envelope.Tenant))
+            else if (forward is { } lane && lane.Tenants.Contains(envelope.Tenant))
             {
                 // Ack only after the broker confirmed the copy (TenantLanes.Forward).
                 TenantLanes.Forward(lane.ConfirmChannel, ea, envelope.Tenant);
                 channel.BasicAck(ea.DeliveryTag, false);
-                logger.LogDebug("Consumer: moved {EventId} to the lane of tenant {Tenant}", envelope.EventId, envelope.Tenant);
-                return;
+                outcome = DeliveryOutcome.MovedToLane;
             }
-
-            await ProcessAsync(envelope, ct);
-            channel.BasicAck(ea.DeliveryTag, false);
+            else
+            {
+                outcome = await ProcessAsync(envelope, ct);
+                channel.BasicAck(ea.DeliveryTag, false);
+            }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Consumer: failed to process message");
+            error = ex;
+            outcome = DeliveryOutcome.Failed;
             channel.BasicNack(ea.DeliveryTag, false, false);
+        }
+
+        var delivery = new DeliveryRecord(queue, outcome, envelope?.EventType, envelope?.Tenant, envelope?.EventId,
+            ea.Redelivered, Stopwatch.GetElapsedTime(started), error);
+        telemetry.Record(delivery);
+        WriteLogEvent(delivery);
+    }
+
+    // The platform's log-event shape (its message consumers write one per message), so Graylog/Seq
+    // dashboards and alerts work the same for loyalty. Deliberately without the event data: it can
+    // carry customer details, and the inbox keeps the payload anyway.
+    private void WriteLogEvent(DeliveryRecord delivery)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var logEvent = scope.ServiceProvider.GetService<ILogEvent>();
+        if (logEvent is null)
+        {
+            // A host without the platform utilities (some tests): a plain log line instead.
+            logger.Log(delivery.Error is null ? LogLevel.Information : LogLevel.Error, delivery.Error,
+                "Consumer: {Outcome} {EventType} [{EventId}] on {Queue} in {Ms}ms",
+                delivery.Outcome, delivery.EventType, delivery.EventId, delivery.Queue, (long)delivery.Duration.TotalMilliseconds);
+            return;
+        }
+
+        logEvent.AddOrUpdate("consumerName", nameof(EventConsumerWorker));
+        logEvent.AddOrUpdate("queueAddress", delivery.Queue);
+        logEvent.AddOrUpdate("messageName", delivery.EventType ?? "unknown");
+        logEvent.AddOrUpdate("messageType", delivery.EventType ?? "unknown");
+        logEvent.AddOrUpdate("messageId", delivery.EventId ?? "unknown");
+        logEvent.AddOrUpdate("tenant", delivery.Tenant ?? "unknown");
+        logEvent.AddOrUpdate("outcome", delivery.Outcome.ToString());
+        logEvent.AddOrUpdate("messageRedelivered", delivery.Redelivered);
+        logEvent.AddOrUpdate("timeSpentOnConsumer", delivery.Duration);
+
+        if (delivery.Error is not null)
+        {
+            logEvent.AddException(delivery.Error);
+            logger.LogError("{@EventData}", logEvent.Data);
+        }
+        else
+        {
+            logger.LogInformation("{@EventData}", logEvent.Data);
         }
     }
 
     // internal for Engine.Tests (one engine run per delivery, CR 2026-10-06 D18 / R15).
-    internal async Task ProcessAsync(EventEnvelope envelope, CancellationToken ct)
+    internal async Task<DeliveryOutcome> ProcessAsync(EventEnvelope envelope, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LoyaltyDbContext>();
@@ -160,7 +217,7 @@ public class EventConsumerWorker(
             if (existing.Status == InboxStatus.Processed)
             {
                 logger.LogDebug("Consumer: skipping duplicate {EventId}", envelope.EventId);
-                return;
+                return DeliveryOutcome.Duplicate;
             }
         }
         else
@@ -179,7 +236,6 @@ public class EventConsumerWorker(
             await db.SaveChangesAsync(ct);
         }
 
-        var sw = Stopwatch.StartNew();
         try
         {
             if (!EventTypes.IsBuiltIn(envelope.EventType))
@@ -200,11 +256,7 @@ public class EventConsumerWorker(
                     .SetProperty(x => x.Status, InboxStatus.Processed)
                     .SetProperty(x => x.ProcessedAt, DateTime.UtcNow), ct);
 
-            sw.Stop();
-            logger.LogInformation("Consumer: ✓ {EventType} [{EventId}] {Ms}ms",
-                envelope.EventType,
-                envelope.EventId.Length > 8 ? envelope.EventId[..8] : envelope.EventId,
-                sw.ElapsedMilliseconds);
+            return DeliveryOutcome.Processed;
         }
         catch (Exception ex)
         {

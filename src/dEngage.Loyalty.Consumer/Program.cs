@@ -15,6 +15,8 @@ using dEngage.Loyalty.Shared.Security;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using dEngage.Common.Hosting;
+using dEngage.Common.Utilities;
+using dEngage.Common.Utilities.DebugView;
 using dEngage.Common.Utilities.Settings;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NLog;
@@ -141,6 +143,13 @@ var host = DengageHostBuilder.CreateHostBuilder(bootLogger, appLocation, configP
         services.AddScoped<IEventHandler, PointsAdjustedHandler>();
         services.AddScoped<IEventHandler, GenericEventHandler>();
         services.AddScoped<IEventHandlerRegistry, EventHandlerRegistry>();
+
+        // Observability the platform way: a log event per delivery (ILogEvent from the platform
+        // utilities), App.Metrics meters/timers and a debug-view section (ConsumerTelemetry).
+        services.AddCommonUtilities();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<ConsumerTelemetry>();
+        services.AddTransient<IDebugViewSectionProvider, ConsumerDebugViewSectionProvider>();
 
         // Background services — RuleSync starts first, Consumer waits for the ready signal
         services.AddSingleton<RuleSyncService>();

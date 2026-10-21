@@ -159,3 +159,33 @@ So the transport stays loyalty's own RabbitMQ.Client code, and only the **config
 | `HostBootSmokeTests` | ✅ new: the Api refuses to start without broker settings |
 | Engine / integration tests | ✅ 163/163, 358/358 |
 | Local run | ✅ Public.Api with `RabbitMQSettings__*` (platform section): `/health/ready` rabbitmq ok; Consumer on the legacy keys of the dev file: outbox publisher connected |
+
+## 5. Consumer observability, the dEngage way (follow-up, 2026-10-21)
+
+From the comparison with `panel-back-end` / `dengage.schedular.api` and the platform's message consumers (`dEngage.Common.MessageBroker`'s `ConsumerEventLoggerFilter`, consumer debug view, consumer meters), item #2 of the "what's needed to be dEngage-style" list.
+
+### 5.1 What was built
+- **`ConsumerTelemetry`** (Consumer, singleton): every delivery from `q.loyalty` or a tenant lane ends in exactly one `DeliveryOutcome` — `Processed`, `Duplicate`, `MovedToLane`, `Failed` (nacked to the DLQ) or `Unreadable` (not an envelope; nacked to the DLQ). It feeds:
+  - **App.Metrics** (Prometheus, exported when `appsettings.metrics.json` enables metrics): meter `loyalty_consumer_events` tagged `outcome`, `event_type`, `tenant`; timer `loyalty_consumer_processing` by `event_type` (deliveries that ran the engine); meter `loyalty_outbox_events` tagged `outcome` (`published` by `event_type`, `retry`, `failed`).
+  - **Debug view** ("Loyalty consumer" section on the platform's `/debug-view`, when `Debug`/`DebugView` is on): counts per outcome with the platform's total/success/error badges, per-queue last delivery, the last error, outbox counts, isolated tenants, generic event types, and the broker host/port/vhost/source (never the password).
+- **One platform log event per delivery** (`ILogEvent`, written as `{@EventData}` like the platform's consumers): `consumerName`, `queueAddress`, `messageName`/`messageType`, `messageId`, `tenant`, `outcome`, `messageRedelivered`, `timeSpentOnConsumer`, and the exception on failure. It replaces the old "✓ event" info line and the separate error line. **Unlike the platform filter, the message body is not logged**: event data can carry customer details, and the inbox keeps the payload.
+- `ProcessAsync` now returns the outcome (`Processed` / `Duplicate`); the Consumer registers the platform utilities (`AddCommonUtilities`) for `ILogEvent`.
+
+### 5.2 Verification
+| Check | Result |
+|---|---|
+| `ConsumerTelemetryTests` (4) | ✅ meters by outcome / event type / tenant, timer only for engine runs, per-queue summary and last error, outbox counts, debug-view badges and content without the broker password |
+| `ConsumerEvaluatesOnceCr1006Tests` | ✅ extended: first delivery `Processed`, redelivery `Duplicate` |
+| Engine / integration tests | ✅ 167/167, 361/361 |
+| Local run (real RabbitMQ; one already-processed event re-published, so no data change) | ✅ log event written with `outcome: Duplicate`; `/debug-view` shows the "Loyalty consumer" section with the duplicate, no password |
+| Prometheus endpoint locally | ⚠️ `/metrics` and `/metrics-text` return 404 on **both** the Consumer and the admin Api with metrics enabled — the platform host's endpoint exposure, not this change. Meter values are verified in-process (tests). How Prometheus scrapes dEngage services in the cluster should be confirmed with DevOps |
+
+### 5.3 Files
+| File | Change | Purpose |
+|---|---|---|
+| `src/dEngage.Loyalty.Consumer/ConsumerTelemetry.cs` | new | `DeliveryOutcome`, `ConsumerTelemetry`, `ConsumerDebugViewSectionProvider` |
+| `src/dEngage.Loyalty.Consumer/EventConsumerWorker.cs` | changed | Outcome per delivery, telemetry, log event |
+| `src/dEngage.Loyalty.Consumer/OutboxPublisherWorker.cs` | changed | Outbox meters / summary |
+| `src/dEngage.Loyalty.Consumer/Program.cs` | changed | `AddCommonUtilities`, telemetry, debug-view section |
+| `src/dEngage.Loyalty.Engine.Tests/ConsumerTelemetryTests.cs`, `ConsumerEvaluatesOnceCr1006Tests.cs` | new / changed | Tests |
+| `.claude/rules/backend-consumer.md` | changed | Pipeline step 7 |

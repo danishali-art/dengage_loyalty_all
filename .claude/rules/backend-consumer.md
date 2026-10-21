@@ -34,6 +34,14 @@ Every path must be idempotent and safe to retry.**
    failure is never lost and never retried in a hot loop. A `Failed` event replayed from the DLQ
    is processed again from step 3, so every step must tolerate a rerun; the rule engine skips rules
    an earlier delivery already posted (CR 2026-10-06 R15).
+7. **Observability (platform style):** every delivery ends in one `DeliveryOutcome` (Processed,
+   Duplicate, MovedToLane, Failed, Unreadable), recorded in `ConsumerTelemetry` (App.Metrics meter
+   `loyalty_consumer_events` tagged outcome/event_type/tenant, timer `loyalty_consumer_processing`,
+   the "Loyalty consumer" debug-view section) and written as **one platform log event**
+   (`ILogEvent`, `{@EventData}`) instead of ad-hoc log lines. The outbox publisher feeds
+   `loyalty_outbox_events`. Never put event data, contact keys or credentials into a log event,
+   metric tag or the debug view: they go to Graylog/Seq and Prometheus. A new exit path in
+   `HandleDeliveryAsync` must still produce exactly one record.
 
 ## Adding an event handler
 - `public class <Name>Handler(...) : IEventHandler` in `Handlers/`, with
