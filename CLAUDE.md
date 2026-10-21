@@ -31,9 +31,13 @@ The process for a scope change:
 
 - `src/dEngage.Loyalty.Api` — HTTP API (ASP.NET Core controllers), one folder per resource:
   AccountTypes, Auth, CardBuckets, ConfigVersions, Customers, Dashboard, Events,
-  Platform, Programs, Rewards, Rules, StreakCampaigns, Tiers.
-- `src/dEngage.Loyalty.Api.Framework` — cross-cutting API concerns: auth, tenancy, rate
-  limiting, pagination, validation, error handling.
+  Platform, Programs, Rewards, Rules, StreakCampaigns, Tiers. Used by the portals (JWT).
+- `src/dEngage.Loyalty.Public.Api` — event ingestion from client systems (`X-Api-Key` only, no
+  JWT), on the same `/api/v1/tenants/{tenantId}/events/...` paths the Api used to serve.
+- `src/dEngage.Loyalty.Api.Framework` — shared by both HTTP hosts: auth, tenancy, rate
+  limiting, pagination, validation, error handling, and the event ingestion service (`Events/`).
+- `src/dEngage.Loyalty.Contract` — wire contract (netstandard2.0 NuGet package): event envelope
+  and types, topology names, and the public event API request/response bodies.
 - `src/dEngage.Loyalty.Consumer` — background worker consuming events off RabbitMQ.
 - `src/dEngage.Loyalty.Engine.Framework` — shared engine abstractions/bootstrap/consumers.
 - `src/dEngage.Loyalty.RuleEngine` — the core evaluation engine: rule matching/calculation
@@ -50,7 +54,7 @@ The process for a scope change:
   see `Fixtures/`).
 
 Infra (local): Postgres, Redis, RabbitMQ via `docker-compose.yml`. `.\run.ps1` boots infra +
-Api (`http://localhost:5173/swagger`) + Consumer + web (`http://localhost:4200`) each in their
+Api (`http://localhost:5173`) + Public.Api (`http://localhost:5175`) + Consumer + web (`http://localhost:4200`) each in their
 own window. The Consumer also listens on `http://localhost:5174` (platform `/health-check` and
 metrics only).
 

@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using dEngage.Loyalty.Api.Events;
 using dEngage.Loyalty.Api.Framework.Auth;
 using dEngage.Loyalty.Api.Framework.Json;
 using dEngage.Loyalty.Api.Platform;
@@ -31,7 +30,8 @@ public sealed class PointsTransferRouteApiTests : IClassFixture<CustomWebApplica
     public PointsTransferRouteApiTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        // Ingestion is served by Public.Api (platform alignment D9).
+        _client = factory.PublicApi.CreateClient();
     }
 
     public async Task InitializeAsync()

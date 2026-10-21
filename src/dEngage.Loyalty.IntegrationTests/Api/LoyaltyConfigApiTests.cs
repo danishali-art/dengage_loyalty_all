@@ -90,7 +90,8 @@ public sealed class LoyaltyConfigApiTests : IClassFixture<CustomWebApplicationFa
 
     private async Task PostTransferAsync(string tenantSlug)
     {
-        using var client = _factory.CreateClient();
+        // Ingestion is served by Public.Api (platform alignment D9).
+        using var client = _factory.PublicApi.CreateClient();
         client.DefaultRequestHeaders.Add("X-Api-Key", await IssueApiKeyAsync(tenantSlug));
         var body = JsonSerializer.Serialize(new
         {

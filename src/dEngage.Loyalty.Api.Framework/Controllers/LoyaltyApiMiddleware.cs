@@ -71,10 +71,13 @@ public sealed class LoyaltyApiMiddleware(RequestDelegate next, IHostEnvironment 
         var authHeader = httpContext.Request.Headers.Authorization.FirstOrDefault();
         var apiKeyHeader = httpContext.Request.Headers["X-Api-Key"].FirstOrDefault();
 
-        if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        // Only a host that registered JWT (AddLoyaltyJwtAuthentication: the admin Api) accepts a
+        // bearer token; Public.Api ignores one and authenticates by API key alone.
+        var jwt = provider.GetService<IJwtTokenService>();
+        if (jwt is not null && !string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
             var token = authHeader["Bearer ".Length..].Trim();
-            return provider.GetRequiredService<IJwtTokenService>().ValidateToken(token);
+            return jwt.ValidateToken(token);
         }
 
         if (!string.IsNullOrEmpty(apiKeyHeader))

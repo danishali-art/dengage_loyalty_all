@@ -60,6 +60,14 @@ IntegrationTests (`HostBootSmokeTests` at a minimum).
   validator, so a bad config fails at startup, not on the first request. New options follow the
   same pattern.
 
+## Event ingestion (`Events/`)
+- `EventsAppService` and the event request validators are shared by Public.Api (ingestion) and
+  the admin Api (simulate, types, status), so they live here and are registered by
+  `AddLoyaltyApiFramework`. A new event request validator must be added to that list: each host
+  only scans its own assembly for validators.
+- The request/response records are the public contract and live in `dEngage.Loyalty.Contract`.
+- `AddLoyaltyJwtAuthentication` is separate on purpose: Public.Api doesn't call it.
+
 ## Rate limiting and messaging
 - `IRateLimiter` / `RedisRateLimiter` is a fixed-window limiter keyed by `(bucket, tenantId)`. Tests
   use `FakeRateLimiter`.

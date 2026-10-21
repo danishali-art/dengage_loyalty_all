@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using dEngage.Loyalty.Api.Events;
 using dEngage.Loyalty.Api.Framework.Auth;
 using dEngage.Loyalty.Api.Framework.Json;
 using dEngage.Loyalty.Api.Rules;

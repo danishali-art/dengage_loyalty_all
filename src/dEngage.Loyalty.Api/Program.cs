@@ -1,12 +1,10 @@
 using FluentValidation;
-using dEngage.Loyalty.Api;
 using dEngage.Loyalty.Api.AccountTypes;
 using dEngage.Loyalty.Api.Auth;
 using dEngage.Loyalty.Api.CardBuckets;
 using dEngage.Loyalty.Api.ConfigVersions;
 using dEngage.Loyalty.Api.Customers;
 using dEngage.Loyalty.Api.Dashboard;
-using dEngage.Loyalty.Api.Events;
 using dEngage.Loyalty.Api.Framework.Bootstrap;
 using dEngage.Loyalty.Api.Modules;
 using dEngage.Loyalty.Api.Platform;
@@ -69,6 +67,7 @@ if (encryptedEntries.Count > 0)
 }
 
 builder.Services.AddLoyaltyApiFramework(builder.Configuration);
+builder.Services.AddLoyaltyJwtAuthentication(builder.Configuration);
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddScoped<IPlatformAppService, PlatformAppService>();
@@ -83,7 +82,6 @@ builder.Services.AddScoped<IRuleVersioningService, RuleVersioningService>();
 builder.Services.AddScoped<IStreakCampaignsAppService, StreakCampaignsAppService>();
 builder.Services.AddScoped<ICardBucketsAppService, CardBucketsAppService>();
 builder.Services.AddScoped<ICustomersAppService, CustomersAppService>();
-builder.Services.AddScoped<IEventsAppService, EventsAppService>();
 builder.Services.AddScoped<IConfigVersionsAppService, ConfigVersionsAppService>();
 builder.Services.AddSingleton<IConfigVersionService, ConfigVersionService>();
 builder.Services.AddScoped<IDashboardAppService, DashboardAppService>();

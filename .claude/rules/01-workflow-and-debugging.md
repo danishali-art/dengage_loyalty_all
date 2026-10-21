@@ -22,7 +22,7 @@
 | Vue 3 portal (from `webVue3/`) | `npm run api:check` · `npm run type-check` · `npm run lint` · `npm test` · `npm run build` |
 | Vue 3 portal dev server (from `webVue3/`) | `npm run dev` (`:4201`, `/api` → `:5173`; not started by `run.ps1`) |
 | Vue 3 portal e2e (from `webVue3/`) | `npm run e2e` (mocked `/api`, no backend) · `E2E_BACKEND=1 npm run e2e` (also the real-backend ports) |
-| Full local stack | `.\run.ps1` (infra, Api `:5173/swagger`, Consumer, web `:4200`) |
+| Full local stack | `.\run.ps1` (infra, Api `:5173`, Public.Api `:5175`, Consumer, web `:4200`) |
 If you can't run a check (for example Docker is down), say so. Don't skip it silently.
 
 ## Cross-stack changes (API or data shape)

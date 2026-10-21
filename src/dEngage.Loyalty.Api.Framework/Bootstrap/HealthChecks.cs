@@ -1,11 +1,15 @@
 using dEngage.Loyalty.Schema;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
-namespace dEngage.Loyalty.Api;
+namespace dEngage.Loyalty.Api.Framework.Bootstrap;
 
 // Plain ASP.NET Core minimal endpoints, deliberately outside "/api" (and so outside
 // LoyaltyApiMiddleware) — a load balancer / orchestrator probe shouldn't be tenant/auth-scoped.
+// Shared by the admin Api and Public.Api.
 public static class HealthChecks
 {
     public static void MapHealthChecks(this WebApplication app)

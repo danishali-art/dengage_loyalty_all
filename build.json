@@ -6,6 +6,10 @@
       "DockerImageName": "dengage.loyalty.api"
     },
     {
+      "Name": "dEngage.Loyalty.Public.Api",
+      "DockerImageName": "dengage.loyalty.public.api"
+    },
+    {
       "Name": "dEngage.Loyalty.Consumer",
       "DockerImageName": "dengage.loyalty.consumer"
     }

@@ -15,7 +15,7 @@ Per-project rules are in their own files and load when you touch that project:
 `backend-engine-framework.md`, `backend-ledger.md`, `backend-schema-shared.md`, `backend-tests.md`.
 
 ## Stack (don't swap without a Scope Change Request)
-- .NET 9 across all 12 projects. ASP.NET Core controllers for HTTP (Nancy until platform alignment D7). EF Core 9 + Npgsql 9
+- .NET 9 across all projects (the `Contract` package targets netstandard2.0). ASP.NET Core controllers for HTTP (Nancy until platform alignment D7). EF Core 9 + Npgsql 9
   (Postgres). StackExchange.Redis. RabbitMQ.Client 6. FluentValidation 11.
   UUIDNext for database-friendly Guids. The Api and Consumer run on the dEngage platform host
   (`dEngage.Common.Hosting`, see "Hosting and configuration" below).

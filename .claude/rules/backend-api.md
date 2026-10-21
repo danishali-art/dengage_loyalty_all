@@ -1,12 +1,21 @@
 ---
 paths:
   - "src/dEngage.Loyalty.Api/**"
+  - "src/dEngage.Loyalty.Public.Api/**"
 ---
 
-# dEngage.Loyalty.Api — HTTP API host
+# dEngage.Loyalty.Api and Public.Api — HTTP API hosts
 
-Admin/configuration REST API plus event ingestion, as ASP.NET Core controllers
-(`http://localhost:5173`). **Reference slice to copy: `Rewards/`.**
+- **Api** (`http://localhost:5173`): the admin/configuration REST API the portals call (JWT), plus
+  the portal's event routes (`simulate`, `types`, status). **Reference slice to copy: `Rewards/`.**
+- **Public.Api** (`http://localhost:5175`): event ingestion from client systems, `X-Api-Key`
+  only. It never registers JWT (`AddLoyaltyJwtAuthentication`), so a portal token is ignored
+  there. Its request/response bodies live in `dEngage.Loyalty.Contract` (`PublicApiEvents.cs`),
+  because they are the public contract; the ingestion service and validators are shared in
+  `Api.Framework/Events/`. Paths are the same as before the split — deployments route clients to
+  it by host name.
+- Both are ASP.NET Core controllers on the same framework and follow the rules below. A route
+  belongs to exactly one of them; the event status lookup is the one route both serve.
 
 ## One folder per resource, four files
 | File | Contains | Rules |

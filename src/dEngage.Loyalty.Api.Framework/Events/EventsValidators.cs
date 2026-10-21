@@ -1,6 +1,7 @@
 using FluentValidation;
+using dEngage.Loyalty.Contract;
 
-namespace dEngage.Loyalty.Api.Events;
+namespace dEngage.Loyalty.Api.Framework.Events;
 
 public sealed class OrderCreatedRequestValidator : AbstractValidator<OrderCreatedRequest>
 {

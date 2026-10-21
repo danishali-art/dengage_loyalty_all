@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using dEngage.Loyalty.Contract;
 
-namespace dEngage.Loyalty.Api.Events;
+namespace dEngage.Loyalty.Api.Framework.Events;
 
 public interface IEventsAppService
 {
@@ -18,7 +18,7 @@ public interface IEventsAppService
 }
 
 // Thin HTTP -> RabbitMQ translator (plan §7/§4) — never resolves the business outcome itself,
-// only that the event was accepted for processing (202, never 200: see EventsModule).
+// only that the event was accepted for processing (202, never 200: see the Public.Api EventsController).
 public sealed class EventsAppService(
     IEventPublisher publisher,
     LoyaltyDbContext db,

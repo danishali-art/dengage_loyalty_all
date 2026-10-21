@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\dEngage.Loyalty.Api\dEngage.Loyalty.Api.csproj" />
+    <ProjectReference Include="..\dEngage.Loyalty.Public.Api\dEngage.Loyalty.Public.Api.csproj" />
     <ProjectReference Include="..\dEngage.Loyalty.Api.Framework\dEngage.Loyalty.Api.Framework.csproj" />
     <ProjectReference Include="..\dEngage.Loyalty.RuleEngine\dEngage.Loyalty.RuleEngine.csproj" />
     <ProjectReference Include="..\dEngage.Loyalty.Ledger\dEngage.Loyalty.Ledger.csproj" />

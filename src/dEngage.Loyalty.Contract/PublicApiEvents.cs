@@ -1,6 +1,10 @@
 using System.Text.Json;
 
-namespace dEngage.Loyalty.Api.Events;
+namespace dEngage.Loyalty.Contract;
+
+// Request and response bodies of the event routes (Public.Api ingestion, and the admin Api's
+// simulate / types / status). Public API contract: the property names are on the wire (camelCase
+// JSON, decimals as JSON strings), so renaming one is a breaking change for clients.
 
 public sealed record OrderItemDto(string Sku, string Category, decimal Qty, decimal Total);
 public sealed record OrderCreatedRequest(string ContactKey, decimal Amount, string? Channel, string? PaymentMethod, List<OrderItemDto>? Items);

@@ -26,7 +26,16 @@ namespace dEngage.Loyalty.IntegrationTests.Fixtures;
 public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+    private PublicApiWebApplicationFactory? _publicApi;
     public FakeEventPublisher EventPublisher { get; } = new();
+    public FakeRateLimiter RateLimiter { get; } = new();
+
+    // The ingestion routes live in Public.Api (platform alignment D9). This second host shares
+    // this factory's database, event publisher and rate limiter, so a test can issue an API key
+    // through the admin Api and post events with it.
+    public PublicApiWebApplicationFactory PublicApi => _publicApi ??= new PublicApiWebApplicationFactory(this);
+
+    internal SqliteConnection Connection => _connection;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -59,7 +68,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<IEventPublisher>(EventPublisher);
 
             services.RemoveAll<IRateLimiter>();
-            services.AddSingleton<IRateLimiter, FakeRateLimiter>();
+            services.AddSingleton<IRateLimiter>(RateLimiter);
 
             // Several RuleEngine cache services inject IConnectionMultiplexer directly, not just
             // through IRateLimiter, so it must be faked too or the real
@@ -90,6 +99,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void Dispose(bool disposing)
     {
+        if (disposing) _publicApi?.Dispose();
         base.Dispose(disposing);
         if (disposing) _connection.Dispose();
     }

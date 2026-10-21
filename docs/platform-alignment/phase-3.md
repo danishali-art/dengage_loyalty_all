@@ -8,8 +8,8 @@
 
 | Item | Status |
 |---|---|
-| D7 Nancy → ASP.NET Core controllers | ✅ Done and tested (§1) |
-| D9 `Public.Api` split | Not started |
+| D7 Nancy → ASP.NET Core controllers | ✅ Done and tested (§1). Committed `3b2b420` |
+| D9 `Public.Api` split | ✅ Done and tested (§2) |
 | `dEngage.Loyalty.Api.Client` package | Not started |
 | D8 messaging → common broker / outbox library | Not started |
 
@@ -58,3 +58,45 @@ Windows note: the first full test run had 26 end-to-end failures, all `TimeoutEx
 | `webVue3/tools/openapi/{csharp-parse,build-spec,build-spec.spec}.ts`, `webVue3/openapi/overrides.ts` | changed | Generator reads controllers; `excludeControllers` |
 | `webVue3/src/**`, `web/src/app/core/**` | comments | `…Module.cs` → `…Controller.cs`, "Nancy API" → "loyalty API" |
 | `CLAUDE.md`, `.claude/rules/*.md` | changed | How to add a route now |
+
+## 2. D9 — `Public.Api` split (done)
+
+### 2.1 What was built
+- New deployable **`dEngage.Loyalty.Public.Api`**: the 8 API-key ingestion routes (`order-created`, `order-refunded`, `cash-added`, `cash-spent`, `points-redeem`, `points-transfer`, `reward-purchase`, `generic`) and the event status lookup, on the **same paths** as before (`/api/v1/tenants/{tenantId}/events/...`). A deployment sends client systems to it by host name. Platform hosting, NLog/metrics files, health checks (`/health`, `/health/ready`), Dockerfile, `build.json` image `dengage.loyalty.public.api`, local launch profile `http://localhost:5175` (`https` 7143).
+- **API keys only.** JWT registration moved out of `AddLoyaltyApiFramework` into `AddLoyaltyJwtAuthentication`, which only the admin Api calls. Without it the middleware ignores a bearer token, so Public.Api has no JWT signing key and never accepts a portal token. No CORS (server-to-server).
+- **Admin Api** keeps the portal's event routes: `simulate` (admin JWT), `types`, and the status lookup (the simulator polls it). The 8 ingestion routes are gone from it; posting to one there now returns 405 `method_not_allowed`.
+- **Shared code:** `EventsAppService` and the event validators moved to `Api.Framework/Events/` (registered by `AddLoyaltyApiFramework`); the request/response records moved to `dEngage.Loyalty.Contract` (`PublicApiEvents.cs`) as the public contract, ready for the `Api.Client` package. `HealthChecks` moved to `Api.Framework/Bootstrap/` for both hosts.
+- `run.ps1` starts Public.Api too; both portals' opt-in real-backend Playwright specs (`customers.e2e.spec.ts`) post their event to Public.Api (`PUBLIC_API_URL`, default `http://localhost:5175`).
+
+### 2.2 Not done (and why)
+- **Balance / wallet lookup on Public.Api.** The assessment lists it for Public.Api, but no such API-key endpoint exists today, so there was nothing to move. Adding one is new public API surface (which fields, per contact key, rate limits), so it needs its own scope decision. With webhooks dropped (D15), it is how a loyalty-only client would read current state.
+- **`Job.Service`** (the scheduled jobs on a single runner): left to the event-throughput change, as agreed for Phase 1.
+
+### 2.3 Verification
+| Check | Result |
+|---|---|
+| `dotnet build dEngage.Loyalty.sln` | ✅ 0 errors |
+| Integration tests | ✅ 350/350 (345 + 5 new `PublicApiSplitApiTests`: ingestion and status by API key on Public.Api; a portal token is ignored there (401); Public.Api serves no admin routes (404) and no `simulate` (405); the admin Api refuses ingestion (405); Public.Api health) |
+| Engine tests (incl. the D13 boundary test, which covers the new project automatically) | ✅ 155/155 |
+| OpenAPI spec regenerated | ✅ Exactly the 8 ingestion operations and their 8 request schemas removed (47 paths, 104 schemas); every remaining operation byte-identical. `npm run api:check` passes |
+| Portal: `vue-tsc -b`, Vitest | ✅ 0 errors; 228/228 (one run had 2 intermittent failures; three runs since passed) |
+| Local run (`--launch-profile http`, local Postgres/Redis/RabbitMQ) | ✅ `/health/ready` all ok without any JWT configuration; ingestion without a key or with an unknown key 401; `/programs` 404 |
+
+### 2.4 Files
+| File | Change | Purpose |
+|---|---|---|
+| `src/dEngage.Loyalty.Public.Api/**` | new | Host: `Program.cs`, `Events/EventsController.cs`, appsettings (`.json`, `.logging`, `.metrics`, `.Staging`, `.Production`, `.Development.example`), launch profile, Dockerfile |
+| `src/dEngage.Loyalty.Api/Events/EventsController.cs` | changed | Only `simulate`, `types`, status |
+| `src/dEngage.Loyalty.Api/Program.cs` | changed | `AddLoyaltyJwtAuthentication`; events service now registered by the framework |
+| `src/dEngage.Loyalty.Contract/PublicApiEvents.cs` | moved from `Api/Events/EventsDtos.cs` | Public request/response bodies |
+| `src/dEngage.Loyalty.Api.Framework/Events/EventsAppService.cs`, `EventsValidators.cs` | moved from `Api/Events/` | Shared ingestion service |
+| `src/dEngage.Loyalty.Api.Framework/Bootstrap/HealthChecks.cs` | moved from `Api/` | Shared health checks |
+| `src/dEngage.Loyalty.Api.Framework/Bootstrap/ServiceCollectionExtensions.cs` | changed | Events service and validators; `AddLoyaltyJwtAuthentication` split out |
+| `src/dEngage.Loyalty.Api.Framework/Controllers/LoyaltyApiMiddleware.cs` | changed | Bearer token only where JWT is registered |
+| `src/dEngage.Loyalty.IntegrationTests/Fixtures/PublicApiWebApplicationFactory.cs` | new | Public.Api test host sharing the Api factory's DB, publisher and rate limiter (`CustomWebApplicationFactory.PublicApi`) |
+| `src/dEngage.Loyalty.IntegrationTests/Api/PublicApiSplitApiTests.cs` | new | Split tests |
+| `src/dEngage.Loyalty.IntegrationTests/Api/{PointsTransferRoute,LoyaltyConfig}ApiTests.cs` and 2 others | changed | Post through Public.Api; namespaces |
+| `dEngage.Loyalty.sln`, `build.json`, `.gitignore`, `run.ps1` | changed | New project, image, local dev settings file, local stack |
+| `webVue3/openapi/openapi.json`, `webVue3/src/shared/api/generated/schema.d.ts` | regenerated | Ingestion routes no longer on the admin Api |
+| `web/e2e/customers.e2e.spec.ts`, `webVue3/e2e/customers.e2e.spec.ts`, `webVue3/playwright.config.ts` | changed | Event posted to Public.Api |
+| `CLAUDE.md`, `.claude/rules/{backend,backend-api,backend-api-framework,01-workflow-and-debugging}.md` | changed | Two HTTP hosts |
