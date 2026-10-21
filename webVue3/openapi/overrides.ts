@@ -5,8 +5,8 @@
 export interface Overrides {
   /** `Schema.wireName` → the allowed values of a C# `string` member. */
   stringUnions: Record<string, { values: string[]; source: string }>;
-  /** Modules left out of the spec, with the reason. */
-  excludeModules: string[];
+  /** Controllers left out of the spec, with the reason. */
+  excludeControllers: string[];
 }
 
 const ROUNDING = {
@@ -247,9 +247,9 @@ export const OVERRIDES: Overrides = {
     'AdminUserResponse.role': ADMIN_ROLE,
     'CreateAdminUserRequest.role': ADMIN_ROLE,
   },
-  excludeModules: [
+  excludeControllers: [
     // Health checks (`/api/v1/ping`, `/api/v1/ping/db`): they return anonymous objects, and the
     // portal never calls them.
-    'PingModule',
+    'PingController',
   ],
 };

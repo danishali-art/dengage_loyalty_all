@@ -14,7 +14,7 @@ using StackExchange.Redis;
 
 namespace dEngage.Loyalty.IntegrationTests.Fixtures;
 
-// Boots the real Api host (Nancy-on-ASP.NET-Core, per Program.cs) against an in-memory
+// Boots the real Api host (ASP.NET Core controllers, per Program.cs) against an in-memory
 // Sqlite database instead of Postgres, with RabbitMQ publishing and rate limiting swapped
 // for in-process fakes — no external services required to run these tests.
 //
@@ -61,10 +61,9 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IRateLimiter>();
             services.AddSingleton<IRateLimiter, FakeRateLimiter>();
 
-            // Nancy's RouteCache resolves every module (and their app-service dependency
-            // graphs) eagerly at host startup — several RuleEngine cache services inject
-            // IConnectionMultiplexer directly, not just through IRateLimiter, so it must be
-            // faked too or the real ConnectionMultiplexer.Connect(...) call blows up the boot.
+            // Several RuleEngine cache services inject IConnectionMultiplexer directly, not just
+            // through IRateLimiter, so it must be faked too or the real
+            // ConnectionMultiplexer.Connect(...) call fails as soon as a controller needs one.
             // DefaultValue.Mock so GetDatabase() hands back a no-op IDatabase instead of null —
             // app services that refresh a cache after saving (e.g. IRuleCacheService) write to it.
             services.RemoveAll<IConnectionMultiplexer>();

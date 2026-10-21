@@ -18,7 +18,7 @@ using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
-// CR 2026-10-02 (Customer 360) P3 through the real Nancy pipeline: the customer's card buckets
+// CR 2026-10-02 (Customer 360) P3 through the real HTTP pipeline: the customer's card buckets
 // with usage from the ledger, a bucket's postings through the ledger's ruleId filter, and messages
 // sent (no payload, filters, paging) — plus tenant isolation.
 public sealed class CustomerViewCr1002P3ApiTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime

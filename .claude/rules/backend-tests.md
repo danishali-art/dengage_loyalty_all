@@ -28,7 +28,8 @@ say so and explain why before changing it.
 - Integration tests use **Testcontainers** (Postgres, Redis, RabbitMQ). Docker must be running. If
   it isn't, report that. Don't mock the DB out of an integration test to make it pass.
 - Tests must be isolated and parallel-safe: a unique tenant slug and ids per test, no dependence
-  on execution order, no shared mutable static state (see the `NancyModuleTypeRegistry` lock).
+  on execution order, no shared mutable static state (parallel `WebApplicationFactory` hosts run
+  side by side in one process).
 - Money assertions compare `decimal` values exactly (for example `100.0000m`). Never use float tolerance.
 - Time-dependent logic: pass an explicit `DateTime` (as `NextRunAt(now)` does) or use `IClock`.
   Never depend on the real wall clock.

@@ -27,7 +27,7 @@ If you can't run a check (for example Docker is down), say so. Don't skip it sil
 
 ## Cross-stack changes (API or data shape)
 Changing a field, enum value, endpoint or validation rule means updating all of these together:
-1. Backend: `src/dEngage.Loyalty.Api/<Resource>/` — Dtos, Validators, AppService, and the Module
+1. Backend: `src/dEngage.Loyalty.Api/<Resource>/` — Dtos, Validators, AppService, and the Controller
    if the route changes.
 2. Entity, configuration and migration in `src/dEngage.Loyalty.Schema` if it is persisted.
 3. Engine or consumer handlers if the field travels on an event (in **snake_case**).

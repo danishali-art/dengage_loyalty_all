@@ -2,42 +2,23 @@ using dEngage.Loyalty.Api.Framework.Auth;
 using dEngage.Loyalty.Api.Framework.ErrorHandling;
 using dEngage.Loyalty.Api.Framework.Pagination;
 using dEngage.Loyalty.Api.Framework.Tenancy;
-using Nancy;
+using Microsoft.AspNetCore.Mvc;
 
-namespace dEngage.Loyalty.Api.Framework.Modules;
+namespace dEngage.Loyalty.Api.Framework.Controllers;
 
-// Base class for every business Nancy module — thin, deliberately: input validation happens via
-// FluentValidation validators (called explicitly per route), business logic lives in app services,
-// and this class only carries the auth/tenant guard helpers shared by all of them (plan §1, §7).
+// Base class for every business controller (platform alignment D7: Nancy → ASP.NET Core
+// controllers). Thin, deliberately: input validation happens via FluentValidation validators
+// (called explicitly per action), business logic lives in app services, and this class only
+// carries the auth/tenant guard helpers shared by all of them.
 //
-// Map* methods concatenate basePath + relativePath themselves rather than passing basePath to the
-// NancyModule(string) constructor — verified empirically that Nancy's own ModulePath prefixing
-// does not apply to routes registered via the modern Get(path, handler) method form (only the
-// classic Get["/path"] indexer syntax did, in earlier Nancy versions), so relying on it silently
-// produces routes that never match anything.
-public abstract class TenantScopedModule : NancyModule
+// Deliberately not [ApiController] and no model binding: request bodies are read and validated
+// explicitly (ReadValidatedJsonBodyAsync) and route values through RouteParam/RouteGuidParam, so
+// malformed input gets the same ProblemDetails bodies the API has always returned, rather than
+// MVC's automatic 400 responses.
+public abstract class LoyaltyControllerBase : ControllerBase
 {
-    private readonly string _basePath;
-
-    protected TenantScopedModule(string basePath)
-    {
-        _basePath = basePath.TrimEnd('/');
-    }
-
-    protected void MapGet(string relativePath, Func<dynamic, CancellationToken, Task<object>> handler) =>
-        Get(_basePath + relativePath, handler);
-
-    protected void MapPost(string relativePath, Func<dynamic, CancellationToken, Task<object>> handler) =>
-        Post(_basePath + relativePath, handler);
-
-    protected void MapPatch(string relativePath, Func<dynamic, CancellationToken, Task<object>> handler) =>
-        Patch(_basePath + relativePath, handler);
-
-    protected void MapDelete(string relativePath, Func<dynamic, CancellationToken, Task<object>> handler) =>
-        Delete(_basePath + relativePath, handler);
-
     protected TenantContext TenantContext =>
-        (TenantContext)Context.Items["TenantContext"];
+        (TenantContext)HttpContext.Items[LoyaltyApiMiddleware.TenantContextItem]!;
 
     protected AuthenticatedPrincipal RequireAuthenticated()
     {
@@ -77,17 +58,17 @@ public abstract class TenantScopedModule : NancyModule
         return PageRequest.From(page, pageSize);
     }
 
-    protected string RouteParam(dynamic parameters, string name)
+    protected string RouteParam(string name)
     {
-        var value = (string?)parameters[name];
+        var value = RouteData.Values[name] as string;
         if (string.IsNullOrWhiteSpace(value))
             throw new ValidationApiException($"Route parameter '{name}' is required.");
         return value;
     }
 
-    protected Guid RouteGuidParam(dynamic parameters, string name)
+    protected Guid RouteGuidParam(string name)
     {
-        string raw = RouteParam(parameters, name);
+        var raw = RouteParam(name);
         if (!Guid.TryParse(raw, out var value))
             throw new ValidationApiException($"Route parameter '{name}' must be a valid identifier.");
         return value;

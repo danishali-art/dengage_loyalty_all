@@ -1,7 +1,7 @@
 import { apiClient, unwrap, withFlags, type Page } from '@/shared/api';
 import type { CreateTenantRequest, Tenant, UpdateTenantRequest } from '../model/types';
 
-/** `/platform/tenants` (TenantsModule.cs) — platform_admin only. */
+/** `/platform/tenants` (TenantsController.cs) — platform_admin only. */
 export function searchTenants(page: number, pageSize: number, search: string): Promise<Page<Tenant>> {
   return unwrap(
     apiClient().GET('/api/v1/platform/tenants', {

@@ -2,7 +2,7 @@ import { jwtDecode } from 'jwt-decode';
 
 export type UserRole = 'platform_admin' | 'tenant_admin';
 
-/** Claims the Nancy API puts in the access token. */
+/** Claims the loyalty API puts in the access token. */
 export interface JwtClaims {
   sub: string;
   role: UserRole;

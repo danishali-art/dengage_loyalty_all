@@ -1,7 +1,7 @@
 import { apiClient, unwrap, withFlags, type Page } from '@/shared/api';
 import type { CreateRewardRequest, Reward, UpdateRewardRequest } from '../model/types';
 
-/** `/tenants/{tenantId}/programs/{programId}/rewards` (RewardsModule.cs). */
+/** `/tenants/{tenantId}/programs/{programId}/rewards` (RewardsController.cs). */
 export function listRewards(
   tenantId: string,
   programId: string,

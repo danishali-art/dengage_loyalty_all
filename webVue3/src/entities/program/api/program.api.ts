@@ -1,7 +1,7 @@
 import { apiClient, unwrap, withFlags, type Page } from '@/shared/api';
 import type { CreateProgramRequest, Program, UpdateProgramRequest } from '../model/types';
 
-/** Request functions for `/tenants/{tenantId}/programs` (ProgramsModule.cs). Composables call these. */
+/** Request functions for `/tenants/{tenantId}/programs` (ProgramsController.cs). Composables call these. */
 export function listPrograms(tenantId: string, page: number, pageSize: number): Promise<Page<Program>> {
   return unwrap(
     apiClient().GET('/api/v1/tenants/{tenantId}/programs', {

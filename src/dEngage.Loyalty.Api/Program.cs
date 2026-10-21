@@ -94,23 +94,8 @@ builder.Services.AddSingleton<IAccountTypeConfigValidator, PointsAccountTypeConf
 builder.Services.AddSingleton<IAccountTypeConfigValidator, CashAccountTypeConfigValidator>();
 builder.Services.AddSingleton<AccountTypeConfigValidatorSelector>();
 
-builder.Services.AddNancyModule<PingModule>();
-builder.Services.AddNancyModule<TenantsModule>();
-builder.Services.AddNancyModule<AuthModule>();
-builder.Services.AddNancyModule<ProgramsModule>();
-builder.Services.AddNancyModule<AccountTypesModule>();
-builder.Services.AddNancyModule<TiersModule>();
-builder.Services.AddNancyModule<RewardsModule>();
-builder.Services.AddNancyModule<RulesModule>();
-builder.Services.AddNancyModule<StreakCampaignsModule>();
-builder.Services.AddNancyModule<CardBucketsModule>();
-builder.Services.AddNancyModule<CustomersModule>();
-builder.Services.AddNancyModule<EventsModule>();
-builder.Services.AddNancyModule<ConfigVersionsModule>();
-builder.Services.AddNancyModule<DashboardModule>();
-
 // Environment isolation (plan §5): strict CORS outside Development, generic error bodies enforced
-// by CompositionRootNancyBootstrapper's OnError hook via IHostEnvironment.IsDevelopment().
+// by LoyaltyApiMiddleware via IHostEnvironment.IsDevelopment().
 if (!builder.Environment.IsDevelopment())
 {
     builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
@@ -129,6 +114,7 @@ if (!app.Environment.IsDevelopment())
 
 app.MapHealthChecks();
 app.UseLoyaltyApiFramework();
+app.MapControllers();
 
 try
 {

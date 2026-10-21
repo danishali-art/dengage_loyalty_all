@@ -4,9 +4,8 @@ using StackExchange.Redis;
 
 namespace dEngage.Loyalty.Api;
 
-// Plain ASP.NET Core minimal endpoints, deliberately outside the Nancy bridge (only paths under
-// "/api" are routed into Nancy) — a load balancer / orchestrator probe shouldn't depend on the
-// Nancy engine being warmed up, and shouldn't be tenant/auth-scoped.
+// Plain ASP.NET Core minimal endpoints, deliberately outside "/api" (and so outside
+// LoyaltyApiMiddleware) — a load balancer / orchestrator probe shouldn't be tenant/auth-scoped.
 public static class HealthChecks
 {
     public static void MapHealthChecks(this WebApplication app)

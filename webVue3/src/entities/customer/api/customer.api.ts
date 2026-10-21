@@ -19,7 +19,7 @@ import type {
   TierHistoryEntry,
 } from '../model/types';
 
-/** `/tenants/{tenantId}/customers` (CustomersModule.cs). The contact key is a path segment. */
+/** `/tenants/{tenantId}/customers` (CustomersController.cs). The contact key is a path segment. */
 export function listCustomers(
   tenantId: string,
   page: number,

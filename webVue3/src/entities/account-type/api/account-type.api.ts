@@ -4,7 +4,7 @@ import type { AccountType, CreateAccountTypeRequest, UpdateAccountTypeRequest } 
 /** A program rarely has more than a handful of wallets; the API caps a page at 100. */
 const ALL_PAGE_SIZE = 100;
 
-/** `/tenants/{tenantId}/programs/{programId}/account-types` (AccountTypesModule.cs). */
+/** `/tenants/{tenantId}/programs/{programId}/account-types` (AccountTypesController.cs). */
 export function listAccountTypes(
   tenantId: string,
   programId: string,

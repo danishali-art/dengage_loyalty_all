@@ -7,7 +7,7 @@ import type { CreateTierRequest, Tier, UpdateTierRequest } from '../model/types'
  */
 const ALL_PAGE_SIZE = 100;
 
-/** `/tenants/{tenantId}/programs/{programId}/tiers` (TiersModule.cs). */
+/** `/tenants/{tenantId}/programs/{programId}/tiers` (TiersController.cs). */
 export function listTiers(tenantId: string, programId: string): Promise<Page<Tier>> {
   return unwrap(
     apiClient().GET('/api/v1/tenants/{tenantId}/programs/{programId}/tiers', {
