@@ -42,7 +42,7 @@
 - **Automatic isolation** (detecting noisy tenants). Out of scope for a small change.
 
 ### 1.5 Relation to the throughput change
-`docs/scope-changes/2026-10-13-event-throughput-partitioning-and-bulk.md` (revision 2) records D12 (§2.7, §4 row A′) and retires the lanes at its Phase 2 switch-over (§11, decision Q12).
+The event throughput / bulk scope change (per-customer partitioning) is planned to replace the lanes at its Phase 2 switch-over. That change is not implemented yet, and its document was withdrawn on 2026-10-21 until it is, so the lanes are the current isolation mechanism and this record is the reference for them.
 
 ### 1.6 Verification
 | Check | Result |
@@ -64,7 +64,7 @@
 | `src/dEngage.Loyalty.IntegrationTests/E2E/TenantLanesE2ETests.cs` | new | Real-RabbitMQ tests for the lane mechanics |
 | `.claude/rules/backend-consumer.md` | changed | Host description; tenant-lanes rules |
 | `docs/SCOPE_BASELINE.md` | changed | Consumer row mentions the optional per-tenant queues |
-| `docs/scope-changes/2026-10-13-event-throughput-partitioning-and-bulk.md` | changed | Revision 2 (see its §16–§17) |
+| Event throughput / bulk scope-change document | changed | Revision 2 recorded D12; the document was withdrawn on 2026-10-21 (change not implemented yet) |
 | `docs/platform-alignment/phase-2.md` | new | This record |
 
 The assessment itself (*Loyalty Platform Alignment Assessment*, kept outside the repo) was updated on 2026-10-20 for the D15 decision: D3, D15, D18, §5.2–5.3, §6.2, §7.1–7.7, §8 and §9.

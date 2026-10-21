@@ -12,7 +12,7 @@
 | D1 Platform hosting stack | ✅ .NET 9; `dEngage.Common.Hosting` 6.43.0 in Api (`DengageWebApplicationBuilder`) and Consumer (`DengageHostBuilder`); `CONFIG_PATH` / `NLOG_CONFIG_PATH`; split `appsettings.logging.json` (NLog) and `appsettings.metrics.json` | See §2 for the host's defaults we had to handle |
 | D2 Connection resolution | ✅ partly: connection values come only from the environment's config (local `appsettings.Development.json`, deployed mounted files); fail fast when missing | The optional `db_manager_data` provider needs `dEngage.DbManager`, which D13 keeps out of the core. It moves to the dEngage connector (Phase 4) |
 | D3 Secrets | ✅ partly: deployed secrets as mounted config files; `ENC(...)` key from a mounted key file (`LOYALTY_MASTER_KEY_FILE`), env var kept as local fallback | `ENC(...)` support was **kept**, not removed: the committed Consumer development settings use it and every developer's local setup depends on it. `ISecretProtector` for tenant secrets in the DB is added in Phase 2 with its first user (webhooks) |
-| D9 Topology (partial) | ✅ Dockerfiles for the two existing services | The `Job.Service` single-runner split is **left to** `docs/scope-changes/2026-10-13-event-throughput-partitioning-and-bulk.md` (its Phase 1 owns "one instance per nightly job"), as agreed |
+| D9 Topology (partial) | ✅ Dockerfiles for the two existing services | The `Job.Service` single-runner split ("one instance per nightly job") is **left to** the event throughput / bulk scope change, as agreed. That change is not implemented yet, and its document was withdrawn on 2026-10-21 until it is |
 | D10 Repository home | ✅ files only: `build.json`, `bitbucket-pipelines.yml`, `NuGet.Config` | Moving the repository to Bitbucket is an admin action outside this change |
 | D13 Core/connector boundary | ✅ `CoreDependencyBoundaryTests` | Allow-list: only `dEngage.Common.*` (+ `dEngage.SecMan`, transitive via `Common.Shared`) |
 | Other Phase 1 fixes | ✅ Consumer fail-fast config (no localhost/postgres/guest fallbacks); one Redis key name (`RedisConnectionString`, legacy `Redis` still read); `/health/ready` no longer returns exception text | |
@@ -86,4 +86,4 @@ These are properties of `dEngage.Common.Hosting` 6.43.0 that the assessment didn
 | `.env.example` | changed | `CONFIG_PATH`, `NLOG_CONFIG_PATH`, `LOYALTY_MASTER_KEY_FILE`, `LOYALTY_MASTER_KEY` (empty) |
 | `docs/platform-alignment/phase-1.md` | new | This record |
 
-Not touched: the two staged scope-change documents already on `main` (`2026-10-05-rule-config-limits-by-trigger-test-plan.md`, `2026-10-13-event-throughput-partitioning-and-bulk.md`).
+Not touched: the two staged scope-change documents already on `main` (`2026-10-05-rule-config-limits-by-trigger-test-plan.md`, and the event throughput / bulk document, since withdrawn on 2026-10-21 because that change is not implemented yet).
