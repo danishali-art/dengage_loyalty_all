@@ -1,4 +1,4 @@
-# Starts the full loyalty-update stack: infra containers, Api, Consumer, and the Angular web app.
+# Starts the full loyalty-update stack: infra containers, Api, Public.Api, Consumer, and the Angular web app.
 # Each service opens in its own PowerShell window so you can watch its logs live.
 # Run from the repo root:  .\run.ps1
 
@@ -24,6 +24,9 @@ do {
 Write-Host "Starting Api (http://localhost:5173) ..." -ForegroundColor Cyan
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root'; dotnet run --project src\dEngage.Loyalty.Api"
 
+Write-Host "Starting Public.Api (event ingestion, http://localhost:5175) ..." -ForegroundColor Cyan
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root'; dotnet run --project src\dEngage.Loyalty.Public.Api --launch-profile http"
+
 Write-Host "Starting Consumer (background worker) ..." -ForegroundColor Cyan
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root'; dotnet run --project src\dEngage.Loyalty.Consumer"
 
@@ -32,7 +35,8 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\web'; n
 
 Write-Host ""
 Write-Host "All services launching in separate windows:" -ForegroundColor Green
-Write-Host "  Api           -> http://localhost:5173/swagger"
+Write-Host "  Api           -> http://localhost:5173"
+Write-Host "  Public.Api    -> http://localhost:5175  (event ingestion, X-Api-Key)"
 Write-Host "  Web portal    -> http://localhost:4200"
 Write-Host "  RabbitMQ mgmt -> http://localhost:15672  (guest/guest)"
 Write-Host ""

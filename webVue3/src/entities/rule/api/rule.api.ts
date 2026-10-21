@@ -4,7 +4,7 @@ import type { CreateRuleRequest, Rule, RulesMetadata, UpdateRuleRequest } from '
 /** The API's page-size cap (PageRequest clamps to 100). */
 const ALL_PAGE_SIZE = 100;
 
-/** `/tenants/{tenantId}/programs/{programId}/rules` (RulesModule.cs). */
+/** `/tenants/{tenantId}/programs/{programId}/rules` (RulesController.cs). */
 export function listRules(
   tenantId: string,
   programId: string,

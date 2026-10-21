@@ -2,6 +2,7 @@
 paths:
   - "src/dEngage.Loyalty.Schema/**"
   - "src/dEngage.Loyalty.Shared/**"
+  - "src/dEngage.Loyalty.Contract/**"
   - "src/dEngage.Loyalty.CryptoCli/**"
   - "src/dEngage.Loyalty.TestCli/**"
 ---
@@ -48,13 +49,25 @@ References **only Shared**. Everything else depends on it, so changes here rippl
 - `TenantSlugResolver` / `TenantSlugCache` converts a slug to a Guid. It's shared by the Api and
   the Consumer, so keep it cheap and cached.
 
-## dEngage.Loyalty.Shared
-References **nothing**. It holds only constants, event contracts, `Result`, and crypto helpers.
-- `Constants/*` and `Events/EventTypes` / `OutboundEventTypes` are **wire and DB contracts**.
-  Add values freely. Renaming or removing one breaks stored data, queued events and the portal,
-  so that is a scope change.
+## dEngage.Loyalty.Contract (published NuGet package)
+References **nothing** (netstandard2.0 + System.Text.Json). The loyalty wire contract that other
+dEngage services consume, namespace `dEngage.Loyalty.Contract`: `EventEnvelope`, `EventTypes`
+(with the event catalog and its enums), `OutboundEventTypes`, `OutcomeReasons`,
+`MessagingTopology`. Published through `build.json` (platform alignment Phase 2).
+- Everything here is a **public contract**. Add values and optional members freely. Renaming,
+  removing or changing the meaning of anything breaks stored data, queued events, the portal and
+  every service that references the package, so that is a scope change.
 - `EventEnvelope` shape changes are breaking for every producer and consumer. Only add optional
   members.
+- Keep it netstandard2.0-compatible (no APIs newer than netstandard2.0; records and `init` work
+  through the `IsExternalInit` polyfill) so .NET 6/8/9 services can reference it.
+- Bump `<Version>` in the csproj when the contract changes.
+
+## dEngage.Loyalty.Shared
+References **only Contract**. It holds engine-side constants, `Result`, `GenericEventValidator`
+and crypto helpers.
+- `Constants/*` are **DB contracts** (statuses, ledger reasons, rule types). Add values freely.
+  Renaming or removing one breaks stored data and the portal, so that is a scope change.
 - `GenericEventValidator` guards tenant-defined event types. Keep it strict.
 - `Security/SecretCrypto` handles `ENC(...)` config secrets. Never log keys or decrypted values,
   and never weaken the algorithm or key loading.

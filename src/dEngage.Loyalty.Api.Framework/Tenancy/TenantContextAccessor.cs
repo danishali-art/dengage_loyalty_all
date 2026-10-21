@@ -1,7 +1,7 @@
 namespace dEngage.Loyalty.Api.Framework.Tenancy;
 
-// AsyncLocal, not tied to HttpContext: Nancy modules never see HttpContext (the bridge translates
-// requests before handing off), so ambient request state flows through the async call chain instead.
+// AsyncLocal, not tied to HttpContext, so services below the controllers can read the request's
+// tenant context without depending on ASP.NET Core. Set by LoyaltyApiMiddleware.
 public interface ITenantContextAccessor
 {
     TenantContext? Current { get; set; }

@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using dEngage.Loyalty.Api.Framework.Messaging;
-using dEngage.Loyalty.Shared.Events;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Fixtures;
 

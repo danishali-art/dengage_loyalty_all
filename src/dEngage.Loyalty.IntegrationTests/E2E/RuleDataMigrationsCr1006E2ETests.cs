@@ -1,13 +1,13 @@
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Testcontainers.PostgreSql;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.E2E;
 

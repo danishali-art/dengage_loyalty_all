@@ -1,7 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using dEngage.Loyalty.Api.Events;
+using dEngage.Loyalty.Api.Framework.Events;
+using dEngage.Loyalty.Contract;
 using dEngage.Loyalty.Api.Framework.Auth;
 using dEngage.Loyalty.Api.Framework.Json;
 using dEngage.Loyalty.Api.Programs;
@@ -18,7 +19,7 @@ using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
-// CR 2026-09-30 P2–P4 through the real Nancy pipeline: the Acquisition × RewardType matrix and
+// CR 2026-09-30 P2–P4 through the real HTTP pipeline: the Acquisition × RewardType matrix and
 // retired values (A1), cashback wallet/currency checks (A3), second-admin approval (A4), program
 // slug + prefixed reward names (A5), streak reward eligibility and the in-use guards (§3.7),
 // tier ownership and the tier-in-use guard (§3.6), and tenant isolation.

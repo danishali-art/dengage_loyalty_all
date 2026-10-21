@@ -1,10 +1,11 @@
 using System.Text.Json;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Api.Framework.Json;
 
-// Single shared System.Text.Json convention (camelCase) for every response body — Nancy's own
-// content-negotiation/serializer subsystem is intentionally bypassed in favor of writing JSON
-// directly, so there is exactly one place JSON options are defined.
+// Single shared System.Text.Json convention (camelCase) for every response body — MVC's own
+// output formatters are intentionally bypassed in favor of writing JSON directly (JsonResponses),
+// so there is exactly one place JSON options are defined.
 public static class JsonConventions
 {
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)

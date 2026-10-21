@@ -52,6 +52,9 @@ public sealed class PlatformAppService(
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
         db.Tenants.Add(tenant);
+        // Tenant settings have no global fallback, so a tenant starts with its own rows (alignment
+        // D4), in the same transaction: a tenant never exists without them.
+        db.LoyaltyTenantConfig.AddRange(LoyaltyConfigDefaults.NewTenantRows(tenant.Id));
         await db.SaveChangesAsync(ct);
 
         foreach (var table in new[] { "ledger_entries", "event_inbox", "event_log" })

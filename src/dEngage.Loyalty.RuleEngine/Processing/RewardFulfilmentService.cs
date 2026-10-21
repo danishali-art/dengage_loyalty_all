@@ -6,6 +6,7 @@ using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.RuleEngine.Processing;
 
@@ -151,7 +152,7 @@ public sealed class RewardFulfilmentService(
 
             await outbox.Enqueue(
                 tenantSlug,
-                dEngage.Loyalty.Shared.Events.OutboundEventTypes.TierChanged,
+                dEngage.Loyalty.Contract.OutboundEventTypes.TierChanged,
                 contactKey,
                 new
                 {

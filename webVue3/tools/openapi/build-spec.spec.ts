@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildSpec, serializeSpec } from './build-spec';
 
-const NO_OVERRIDES = { stringUnions: {}, excludeModules: [] };
+const NO_OVERRIDES = { stringUnions: {}, excludeControllers: [] };
 
 const FRAMEWORK = {
   'src/dEngage.Loyalty.Api.Framework/Pagination/Pagination.cs': `
@@ -55,30 +55,33 @@ public interface ITiersAppService
     Task<TierResponse> CreateAsync(string tenantId, Guid programId, CreateTierRequest request, CancellationToken ct);
     Task DeleteAsync(string tenantId, Guid programId, Guid tierId, CancellationToken ct);
 }`,
-  'src/dEngage.Loyalty.Api/Tiers/TiersModule.cs': `
+  'src/dEngage.Loyalty.Api/Tiers/TiersController.cs': `
 namespace dEngage.Loyalty.Api.Tiers;
 // /api/v1/tenants/{tenantId}/programs/{programId}/tiers
-public sealed class TiersModule : TenantScopedModule
+[Route("api/v1/tenants/{tenantId}/programs/{programId}/tiers")]
+public sealed class TiersController(ITiersAppService appService, IValidator<CreateTierRequest> createValidator)
+    : LoyaltyControllerBase
 {
-    public TiersModule(ITiersAppService appService, IValidator<CreateTierRequest> createValidator)
-        : base("/api/v1/tenants/{tenantId}/programs/{programId}/tiers")
+    [HttpGet]
+    public async Task<IActionResult> List(CancellationToken ct)
     {
-        MapGet("", async (parameters, ct) =>
-        {
-            var programId = RouteGuidParam(parameters, "programId");
-            var search = (string?)Request.Query["search"];
-            return JsonResponses.Ok(await appService.ListAsync(tenantId, programId, ReadPageRequest(), ct));
-        });
-        MapPost("", async (parameters, ct) =>
-        {
-            var request = await Request.ReadValidatedJsonBodyAsync(createValidator, ct);
-            return JsonResponses.Ok(await appService.CreateAsync(tenantId, programId, request, ct), HttpStatusCode.Created);
-        });
-        MapDelete("/{tierId}", async (parameters, ct) =>
-        {
-            await appService.DeleteAsync(tenantId, RouteGuidParam(parameters, "programId"), RouteGuidParam(parameters, "tierId"), ct);
-            return JsonResponses.NoContent();
-        });
+        var programId = RouteGuidParam("programId");
+        var search = (string?)Request.Query["search"];
+        return JsonResponses.Ok(await appService.ListAsync(tenantId, programId, ReadPageRequest(), ct));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create(CancellationToken ct)
+    {
+        var request = await Request.ReadValidatedJsonBodyAsync(createValidator, ct);
+        return JsonResponses.Ok(await appService.CreateAsync(tenantId, programId, request, ct), HttpStatusCode.Created);
+    }
+
+    [HttpDelete("{tierId}")]
+    public async Task<IActionResult> Delete(CancellationToken ct)
+    {
+        await appService.DeleteAsync(tenantId, RouteGuidParam("programId"), RouteGuidParam("tierId"), ct);
+        return JsonResponses.NoContent();
     }
 }`,
   'src/dEngage.Loyalty.RuleEngine/Models/RuleCalculation.cs': `
@@ -102,17 +105,15 @@ public sealed record LoginResponse(string Token);`,
   'src/dEngage.Loyalty.Api/Auth/AuthAppService.cs': `
 namespace dEngage.Loyalty.Api.Auth;
 public interface IAuthAppService { Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken ct); }`,
-  'src/dEngage.Loyalty.Api/Auth/AuthModule.cs': `
+  'src/dEngage.Loyalty.Api/Auth/AuthController.cs': `
 namespace dEngage.Loyalty.Api.Auth;
-public sealed class AuthModule : NancyModule
+public sealed class AuthController(IAuthAppService appService, IValidator<LoginRequest> loginValidator) : LoyaltyControllerBase
 {
-    public AuthModule(IAuthAppService appService, IValidator<LoginRequest> loginValidator)
+    [HttpPost("api/v1/auth/login")]
+    public async Task<IActionResult> Login(CancellationToken ct)
     {
-        Post("/api/v1/auth/login", async (_, ct) =>
-        {
-            var request = await Request.ReadValidatedJsonBodyAsync(loginValidator, ct);
-            return JsonResponses.Ok(await appService.LoginAsync(request, ct));
-        });
+        var request = await Request.ReadValidatedJsonBodyAsync(loginValidator, ct);
+        return JsonResponses.Ok(await appService.LoginAsync(request, ct));
     }
 }`,
 };
@@ -188,7 +189,7 @@ describe('buildSpec', () => {
     expect(Object.keys(remove.responses)).toEqual(['204', 'default']);
   });
 
-  it('reads a raw Nancy route with its full path, and marks login as unauthenticated', () => {
+  it('reads an action route without a class route, and marks login as unauthenticated', () => {
     const spec = buildSpec({ repoRoot: repo({ ...FRAMEWORK, ...TIERS }), overrides: NO_OVERRIDES }) as Json;
     expect(spec.paths['/api/v1/auth/login'].post.security).toEqual([]);
   });
@@ -216,7 +217,7 @@ describe('buildSpec', () => {
     const spec = buildSpec({
       repoRoot: files,
       overrides: {
-        excludeModules: [],
+        excludeControllers: [],
         stringUnions: {
           'TierResponse.rounding': { values: ['down', 'up'], source: 'test' },
           'TierResponse.tags': { values: ['a', 'b'], source: 'test' },
@@ -236,7 +237,7 @@ describe('buildSpec', () => {
       buildSpec({
         repoRoot: files,
         overrides: {
-          excludeModules: [],
+          excludeControllers: [],
           stringUnions: { 'TierResponse.gone': { values: ['x'], source: 'test' } },
         },
       }),

@@ -1,7 +1,7 @@
 /**
  * A deliberately small C# reader for the generator. It understands exactly the shapes the
  * backend uses (`.claude/rules/backend-api.md`): positional `sealed record` DTOs, classes with
- * `{ get; set/init; }` properties, enums, app-service interfaces and Nancy modules. Anything
+ * `{ get; set/init; }` properties, enums, app-service interfaces and API controllers. Anything
  * else is reported as an error by the caller rather than guessed.
  */
 
@@ -366,60 +366,72 @@ export function parseTypes(file: CsFile): CsType[] {
   return types;
 }
 
-// ── Nancy modules ──
+// ── ASP.NET Core controllers ──
 
 export interface CsRoute {
   method: 'get' | 'post' | 'patch' | 'put' | 'delete';
   /** Full path, e.g. `/api/v1/tenants/{tenantId}/programs/{programId}/tiers/{tierId}`. */
   path: string;
-  /** The lambda body. */
+  /** The action method's body. */
   body: string;
 }
 
-export interface CsModule {
+export interface CsController {
   name: string;
   file: string;
-  /** Constructor parameters: variable name → C# type. */
+  /** Primary-constructor parameters: variable name → C# type. */
   ctorParams: Map<string, string>;
   routes: CsRoute[];
 }
 
-export function parseModule(file: CsFile): CsModule | null {
-  const cls = /\bclass\s+(\w+Module)\s*:\s*(\w+)/.exec(file.code);
+/**
+ * Reads a controller written the way the loyalty API writes them: an optional class-level
+ * `[Route("…")]`, a primary constructor carrying the app service and validators, and one
+ * `[HttpGet("…")]`-style attribute per action. Templates combine as ASP.NET Core does
+ * (class route + "/" + action route).
+ */
+export function parseController(file: CsFile): CsController | null {
+  const cls =
+    /(?:\[Route\s*\(\s*"([^"]*)"\s*\)\]\s*)?(?:public\s+)?(?:sealed\s+)?class\s+(\w+Controller)\b/.exec(file.code);
   if (!cls) return null;
-  const name = cls[1] ?? '';
-  const ctor = new RegExp(`\\b${name}\\s*\\(`).exec(file.code.slice((cls.index ?? 0) + cls[0].length));
+  const classRoute = cls[1] ?? '';
+  const name = cls[2] ?? '';
+  let pos = (cls.index ?? 0) + cls[0].length;
+
   const ctorParams = new Map<string, string>();
-  let basePath = '';
-  let ctorBodyStart = (cls.index ?? 0) + cls[0].length;
-  if (ctor) {
-    const open = ctorBodyStart + (ctor.index ?? 0) + ctor[0].length - 1;
+  const ctorOpen = /^\s*\(/.exec(file.code.slice(pos));
+  if (ctorOpen) {
+    const open = pos + ctorOpen[0].length - 1;
     const close = matchBracket(file.code, open);
     for (const p of splitTopLevel(file.code.slice(open + 1, close))) {
       const pm = /^(.*\S)\s+(\w+)$/.exec(p);
       if (pm) ctorParams.set(pm[2] ?? '', (pm[1] ?? '').trim());
     }
-    const after = file.code.slice(close + 1);
-    basePath = /^\s*:\s*base\s*\(\s*"([^"]*)"/.exec(after)?.[1] ?? '';
-    ctorBodyStart = close + 1;
+    pos = close + 1;
   }
+  const bodyOpen = file.code.indexOf('{', pos);
+  const bodyClose = matchBracket(file.code, bodyOpen);
+  const classBody = file.code.slice(bodyOpen, bodyClose + 1);
 
   const routes: CsRoute[] = [];
-  const re =
-    /(?<![\w.])(MapGet|MapPost|MapPatch|MapPut|MapDelete|Get|Post|Patch|Put|Delete)\s*\(\s*"([^"]*)"/g;
-  re.lastIndex = ctorBodyStart;
-  for (const m of file.code.matchAll(re)) {
-    if ((m.index ?? 0) < ctorBodyStart) continue;
-    const verb = (m[1] ?? '').replace(/^Map/, '').toLowerCase() as CsRoute['method'];
-    const isMapped = (m[1] ?? '').startsWith('Map');
-    const open = file.code.indexOf('(', m.index);
-    const close = matchBracket(file.code, open);
+  for (const m of classBody.matchAll(/\[Http(Get|Post|Patch|Put|Delete)(?:\s*\(\s*"([^"]*)"\s*\))?\s*\]/g)) {
+    const verb = (m[1] ?? '').toLowerCase() as CsRoute['method'];
     const rel = m[2] ?? '';
-    routes.push({
-      method: verb,
-      path: isMapped ? basePath + rel : rel,
-      body: file.code.slice(open, close + 1),
-    });
+    // The action: its parameter list, then a block body or an expression body.
+    const paramsOpen = classBody.indexOf('(', (m.index ?? 0) + m[0].length);
+    const paramsClose = matchBracket(classBody, paramsOpen);
+    const rest = classBody.slice(paramsClose + 1);
+    const lead = /^\s*(\{|=>)/.exec(rest);
+    if (!lead) throw new Error(`${name}: cannot find the body of the ${verb.toUpperCase()} "${rel}" action`);
+    let body: string;
+    if (lead[1] === '{') {
+      const open = paramsClose + 1 + lead[0].length - 1;
+      body = classBody.slice(open, matchBracket(classBody, open) + 1);
+    } else {
+      body = rest.slice(lead[0].length, rest.indexOf(';') + 1);
+    }
+    const template = [classRoute, rel].filter(Boolean).join('/');
+    routes.push({ method: verb, path: '/' + template, body });
   }
   return { name, file: file.path, ctorParams, routes };
 }

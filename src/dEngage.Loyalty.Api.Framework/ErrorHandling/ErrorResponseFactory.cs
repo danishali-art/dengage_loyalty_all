@@ -1,13 +1,28 @@
 using System.Text.Json;
 using dEngage.Loyalty.Api.Framework.Json;
-using Nancy;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using HttpStatusCode = System.Net.HttpStatusCode;
 
 namespace dEngage.Loyalty.Api.Framework.ErrorHandling;
 
 public static class ErrorResponseFactory
 {
-    public static Response FromApiException(ApiException ex, string traceId, bool includeDetailInBody)
+    // The one mapping from an exception thrown anywhere in an /api request to its error body.
+    public static SerializedResult FromException(Exception exception, string traceId, bool includeDetailInBody) =>
+        exception switch
+        {
+            AggregateValidationApiException vex => FromValidationFailure(traceId, vex.Errors),
+            ApiException apiEx => FromApiException(apiEx, traceId, includeDetailInBody),
+            InvalidOperationException ioe => FromApiException(DomainErrorTranslator.Translate(ioe), traceId, includeDetailInBody),
+            DbUpdateException { InnerException: PostgresException { SqlState: "23505" } } =>
+                FromApiException(
+                    new ConflictApiException("unique_violation", "A record with the same unique value already exists."),
+                    traceId, includeDetailInBody),
+            _ => FromUnexpectedException(traceId, includeDetailInBody, exception)
+        };
+
+    public static SerializedResult FromApiException(ApiException ex, string traceId, bool includeDetailInBody)
     {
         var body = new ProblemDetailsBody
         {
@@ -20,7 +35,7 @@ public static class ErrorResponseFactory
         return Write(body, ex.StatusCode);
     }
 
-    public static Response FromValidationFailure(string traceId, IReadOnlyDictionary<string, string[]> errors)
+    public static SerializedResult FromValidationFailure(string traceId, IReadOnlyDictionary<string, string[]> errors)
     {
         var body = new ProblemDetailsBody
         {
@@ -34,7 +49,7 @@ public static class ErrorResponseFactory
         return Write(body, HttpStatusCode.BadRequest);
     }
 
-    public static Response FromUnexpectedException(string traceId, bool includeDetailInBody, Exception ex)
+    public static SerializedResult FromUnexpectedException(string traceId, bool includeDetailInBody, Exception ex)
     {
         var body = new ProblemDetailsBody
         {
@@ -47,7 +62,7 @@ public static class ErrorResponseFactory
         return Write(body, HttpStatusCode.InternalServerError);
     }
 
-    public static Response FromStatus(HttpStatusCode statusCode, string code, string title, string traceId)
+    public static SerializedResult FromStatus(HttpStatusCode statusCode, string code, string title, string traceId)
     {
         var body = new ProblemDetailsBody
         {
@@ -70,14 +85,6 @@ public static class ErrorResponseFactory
         _ => "The request was invalid."
     };
 
-    private static Response Write(ProblemDetailsBody body, HttpStatusCode statusCode)
-    {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(body, JsonConventions.Options);
-        return new Response
-        {
-            StatusCode = (Nancy.HttpStatusCode)(int)statusCode,
-            ContentType = "application/problem+json",
-            Contents = stream => stream.Write(bytes, 0, bytes.Length)
-        };
-    }
+    private static SerializedResult Write(ProblemDetailsBody body, HttpStatusCode statusCode) =>
+        new((int)statusCode, "application/problem+json", JsonSerializer.SerializeToUtf8Bytes(body, JsonConventions.Options));
 }

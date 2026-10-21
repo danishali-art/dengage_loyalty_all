@@ -5,7 +5,7 @@ import type {
   UpdateStreakCampaignRequest,
 } from '../model/types';
 
-/** `/tenants/{tenantId}/programs/{programId}/streak-campaigns` (StreakCampaignsModule.cs). */
+/** `/tenants/{tenantId}/programs/{programId}/streak-campaigns` (StreakCampaignsController.cs). */
 export function listStreakCampaigns(
   tenantId: string,
   programId: string,

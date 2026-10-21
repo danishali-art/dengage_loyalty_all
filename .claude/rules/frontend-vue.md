@@ -70,7 +70,7 @@ Layers, top to bottom: `app → pages → widgets → features → entities → 
 
 ## Generated API types (OpenAPI)
 - The backend has no OpenAPI spec and isn't changed (scope change D4). `npm run api:spec` builds
-  `openapi/openapi.json` by **reading the C# source** (`*Dtos.cs`, `*Module.cs`, `*AppService.cs`,
+  `openapi/openapi.json` by **reading the C# source** (`*Dtos.cs`, `*Controller.cs`, `*AppService.cs`,
   the engine models they use). `npm run api:types` writes `src/shared/api/generated/schema.d.ts`.
   Both files are generated. **Never edit them by hand.**
 - `npm run api:check` (also before every build) fails when either is out of date. After any

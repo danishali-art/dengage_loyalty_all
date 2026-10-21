@@ -3,26 +3,18 @@ using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Consumer;
 
 public class OutboxPublisherWorker(
     IServiceProvider serviceProvider,
     ConsumerConfig config,
+    ConsumerTelemetry telemetry,
     ILogger<OutboxPublisherWorker> logger) : BackgroundService
 {
     private const string Exchange = MessagingTopology.OutboundExchange;
-    private const int BatchSize = 100;
-    private const int MaxAttempts = 8;
 
-    private static readonly TimeSpan[] Backoff =
-    [
-        TimeSpan.FromMinutes(1),
-        TimeSpan.FromMinutes(5),
-        TimeSpan.FromMinutes(30),
-        TimeSpan.FromHours(2),
-        TimeSpan.FromHours(12)
-    ];
 
     private DateOnly _lastPurgeDate = DateOnly.MinValue;
 
@@ -48,13 +40,7 @@ public class OutboxPublisherWorker(
 
     private async Task RunPublishLoopAsync(CancellationToken ct)
     {
-        var factory = new ConnectionFactory
-        {
-            HostName = config.RabbitMqHost,
-            Port = config.RabbitMqPort,
-            UserName = config.RabbitMqUser,
-            Password = config.RabbitMqPassword
-        };
+        var factory = config.CreateConnectionFactory();
 
         using var connection = factory.CreateConnection("loyalty-outbox-publisher");
         using var channel = connection.CreateModel();
@@ -98,6 +84,17 @@ public class OutboxPublisherWorker(
     {
         using var scope = serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LoyaltyDbContext>();
+        var loyaltyConfig = scope.ServiceProvider.GetRequiredService<ILoyaltyConfig>();
+        // loyalty_config (loyalty.jobs/Outbox.*), read per batch (alignment D4).
+        var batchSize = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxBatchSize, ct);
+        var maxAttempts = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxMaxAttempts, ct);
+        var backoffMinutes = await loyaltyConfig.GetAsync<int[]>(
+            LoyaltyConfigKeys.Jobs.Module, LoyaltyConfigKeys.Jobs.OutboxBackoffMinutes, ct);
+        if (batchSize <= 0 || maxAttempts <= 0 || backoffMinutes.Length == 0 || backoffMinutes.Any(m => m <= 0))
+            throw new InvalidOperationException(
+                "loyalty_config_invalid: loyalty.jobs/Outbox.* must be positive and Outbox.BackoffMinutes non-empty.");
 
         // SKIP LOCKED: keeps multiple Consumer instances from grabbing the same row.
         // The lock is held for the whole tx; the publish outcome (published/backoff) is written in the same tx.
@@ -108,7 +105,7 @@ public class OutboxPublisherWorker(
                 SELECT * FROM outbox_events
                 WHERE status = 'pending' AND next_attempt_at <= now()
                 ORDER BY id
-                LIMIT {BatchSize}
+                LIMIT {batchSize}
                 FOR UPDATE SKIP LOCKED
                 """)
             .ToListAsync(ct);
@@ -155,20 +152,24 @@ public class OutboxPublisherWorker(
             // All of them fall back to retry; at-least-once, the consumer dedups by eventId.
             publishError = ex;
             var now = DateTime.UtcNow;
+            int retried = 0, failed = 0;
             foreach (var evt in batch)
             {
                 evt.Attempts += 1;
-                if (evt.Attempts >= MaxAttempts)
+                if (evt.Attempts >= maxAttempts)
                 {
                     evt.Status = OutboxStatus.Failed;
+                    failed++;
                     logger.LogError("Outbox event permanently failed: id={Id} type={Type} tenant={Tenant}",
                         evt.Id, evt.EventType, evt.TenantId);
                 }
                 else
                 {
-                    evt.NextAttemptAt = now + Backoff[Math.Min(evt.Attempts - 1, Backoff.Length - 1)];
+                    evt.NextAttemptAt = now + TimeSpan.FromMinutes(backoffMinutes[Math.Min(evt.Attempts - 1, backoffMinutes.Length - 1)]);
+                    retried++;
                 }
             }
+            telemetry.RecordOutboxFailure(retried, failed, ex);
         }
 
         await db.SaveChangesAsync(ct);
@@ -180,6 +181,7 @@ public class OutboxPublisherWorker(
             throw new InvalidOperationException("Outbox publish/confirm failed", publishError);
         }
 
+        telemetry.RecordOutboxPublished(batch.Select(e => e.EventType));
         logger.LogInformation("Outbox: {Count} events published", batch.Count);
         return batch.Count;
     }

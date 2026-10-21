@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Engine;
 
@@ -137,7 +138,7 @@ public sealed class StreakMonthlySumTests : IDisposable
         _ledger.Verify(l => l.AddEntryAsync(
             "t1", account.Id, "tq_h", 25m, LedgerReason.Earn, "evt-5",
             It.IsAny<string>(), _ruleId, It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()), Times.Once);
-        _outbox.Verify(o => o.Enqueue("t1", dEngage.Loyalty.Shared.Events.OutboundEventTypes.StreakCompleted,
+        _outbox.Verify(o => o.Enqueue("t1", dEngage.Loyalty.Contract.OutboundEventTypes.StreakCompleted,
             "tq_h", It.IsAny<object>(), $"streak_completed:{_ruleId}:tq_h:1", It.IsAny<CancellationToken>()), Times.Once);
     }
 }

@@ -1,8 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using dEngage.Loyalty.Api.Framework.Json;
-using dEngage.Loyalty.Shared.Events;
 using RabbitMQ.Client;
+using dEngage.Loyalty.Contract;
+using dEngage.Loyalty.Shared.Messaging;
 
 namespace dEngage.Loyalty.Api.Framework.Messaging;
 
@@ -45,14 +46,16 @@ public sealed class RabbitMqConnectionHolder : IRabbitMqConnectionHolder
 {
     public IConnection Connection { get; }
 
-    public RabbitMqConnectionHolder(Options.RabbitMqOptions options)
+    public RabbitMqConnectionHolder(BrokerConnectionSettings broker)
     {
         var factory = new ConnectionFactory
         {
-            HostName = options.Host,
-            Port = options.Port,
-            UserName = options.User,
-            Password = options.Password
+            HostName = broker.Host,
+            Port = broker.Port,
+            UserName = broker.User,
+            Password = broker.Password,
+            VirtualHost = broker.VirtualHost,
+            Ssl = new SslOption { Enabled = broker.UseSsl, ServerName = broker.Host }
         };
         Connection = factory.CreateConnection("loyalty-api-gateway");
     }

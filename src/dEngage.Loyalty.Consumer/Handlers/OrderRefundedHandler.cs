@@ -1,7 +1,7 @@
 using System.Globalization;
 using dEngage.Loyalty.Engine.Framework.Consumers;
 using dEngage.Loyalty.Ledger;
-using dEngage.Loyalty.Shared.Events;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Consumer.Handlers;
 

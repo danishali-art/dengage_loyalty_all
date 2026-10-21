@@ -8,11 +8,11 @@ using dEngage.Loyalty.RuleEngine.Campaigns.Streak;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 using CampaignEntity = dEngage.Loyalty.Schema.Entities.StreakCampaign;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
 using RewardEntity = dEngage.Loyalty.Schema.Entities.RewardDefinition;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Api.StreakCampaigns;
 

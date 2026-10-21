@@ -7,7 +7,8 @@ const baseURL = `http://localhost:${PORT}`;
  * Two kinds of spec live in `e2e/`:
  * - `*.spec.ts` answer `/api` in the browser with an in-memory mock (`e2e/mock-api.ts`), so they run
  *   without the backend.
- * - `*.e2e.spec.ts` drive the real stack (Api on :5173, plus the Consumer for the customers spec) and
+ * - `*.e2e.spec.ts` drive the real stack (Api on :5173, plus Public.Api on :5175 and the Consumer
+ *   for the customers spec) and
  *   are skipped unless `E2E_BACKEND=1`.
  * `PW_CHANNEL` picks an installed browser (e.g. `msedge`) instead of Playwright's own Chromium.
  */

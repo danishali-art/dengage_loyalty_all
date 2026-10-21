@@ -4,7 +4,6 @@ using dEngage.Loyalty.Consumer.Handlers;
 using dEngage.Loyalty.Engine.Framework.Consumers;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 
@@ -57,7 +57,8 @@ public sealed class ConsumerEvaluatesOnceCr1006Tests : IDisposable
 
     // ProcessAsync doesn't use RuleSyncService (only the RabbitMQ listener waits on it).
     private EventConsumerWorker Worker() =>
-        new(_services.GetRequiredService<IServiceScopeFactory>(), null!, NullLogger<EventConsumerWorker>.Instance);
+        new(_services.GetRequiredService<IServiceScopeFactory>(), null!,
+            new ConsumerTelemetry(new App.Metrics.MetricsBuilder().Build(), TimeProvider.System), NullLogger<EventConsumerWorker>.Instance);
 
     private static EventEnvelope Event(string eventType, string eventId) => new()
     {
@@ -91,10 +92,13 @@ public sealed class ConsumerEvaluatesOnceCr1006Tests : IDisposable
     public async Task A_processed_event_is_not_evaluated_again()
     {
         var worker = Worker();
-        await worker.ProcessAsync(Event(EventTypes.OrderCreated, "e2"), CancellationToken.None);
-        await worker.ProcessAsync(Event(EventTypes.OrderCreated, "e2"), CancellationToken.None);
+        var first = await worker.ProcessAsync(Event(EventTypes.OrderCreated, "e2"), CancellationToken.None);
+        var second = await worker.ProcessAsync(Event(EventTypes.OrderCreated, "e2"), CancellationToken.None);
 
         VerifyEvaluated("e2", 1);
+        // Reported to ConsumerTelemetry / the log event as such.
+        first.Should().Be(DeliveryOutcome.Processed);
+        second.Should().Be(DeliveryOutcome.Duplicate);
     }
 
     [Fact]

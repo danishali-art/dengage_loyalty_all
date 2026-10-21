@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using dEngage.Loyalty.Api.Events;
 using dEngage.Loyalty.Api.Framework.Auth;
 using dEngage.Loyalty.Api.Framework.Json;
 using dEngage.Loyalty.Api.Rules;
@@ -9,12 +8,12 @@ using dEngage.Loyalty.IntegrationTests.Fixtures;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 

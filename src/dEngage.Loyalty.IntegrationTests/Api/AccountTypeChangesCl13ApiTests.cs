@@ -15,7 +15,7 @@ using Xunit;
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
 // 1.3.CL Phase 1 (docs/scope-changes/2026-09-28-program-account-type-changes.md §3.1–3.5) over
-// the real Nancy pipeline: account type config validation (warning days, CASH currency and
+// the real HTTP pipeline: account type config validation (warning days, CASH currency and
 // expiry, decimals), the tier-qualifying flag and its locks, and the Program fields that moved.
 public sealed class AccountTypeChangesCl13ApiTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {

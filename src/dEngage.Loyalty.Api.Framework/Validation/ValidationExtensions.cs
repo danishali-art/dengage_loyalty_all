@@ -1,13 +1,13 @@
 using FluentValidation;
 using dEngage.Loyalty.Api.Framework.ErrorHandling;
 using dEngage.Loyalty.Api.Framework.Json;
-using Nancy;
+using Microsoft.AspNetCore.Http;
 
 namespace dEngage.Loyalty.Api.Framework.Validation;
 
 public static class ValidationExtensions
 {
-    public static async Task<T> ReadValidatedJsonBodyAsync<T>(this Request request, IValidator<T> validator, CancellationToken ct)
+    public static async Task<T> ReadValidatedJsonBodyAsync<T>(this HttpRequest request, IValidator<T> validator, CancellationToken ct)
     {
         var value = await request.ReadJsonBodyAsync<T>(ct);
         await ValidateAsync(validator, value, ct);

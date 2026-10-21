@@ -19,12 +19,12 @@ import {
   CsEnumType,
   CsFile,
   CsInterface,
-  CsModule,
+  CsController,
   CsObjectType,
   CsRoute,
   CsType,
+  parseController,
   parseFile,
-  parseModule,
   parseTypes,
   splitTopLevel,
 } from './csharp-parse';
@@ -45,13 +45,14 @@ const TYPE_SOURCE_DIRS = [
   'src/dEngage.Loyalty.Api.Framework',
   'src/dEngage.Loyalty.RuleEngine',
   'src/dEngage.Loyalty.Shared',
+  'src/dEngage.Loyalty.Contract',
   'src/dEngage.Loyalty.Schema',
   'src/dEngage.Loyalty.Ledger',
   'src/dEngage.Loyalty.Engine.Framework',
 ];
 
 /**
- * Module-private query helpers (`CustomersModule`), by name → the schema of the value they read.
+ * Controller-private query helpers (`CustomersController`), by name → the schema of the value they read.
  * A helper that isn't listed here makes the generator fail.
  */
 const QUERY_HELPERS: Record<string, Schema> = {
@@ -316,11 +317,11 @@ export function buildSpec({ repoRoot, overrides = DEFAULT_OVERRIDES }: BuildOpti
   // ── paths ──
   const paths: Record<string, Record<string, Schema>> = {};
   const operationIds = new Set<string>();
-  const apiFiles = files.filter((f) => /^src\/dEngage\.Loyalty\.Api\/[^/]+\/[^/]+Module\.cs$/.test(f.path));
+  const apiFiles = files.filter((f) => /^src\/dEngage\.Loyalty\.Api\/[^/]+\/[^/]+Controller\.cs$/.test(f.path));
 
   for (const f of apiFiles) {
-    const module = parseModule(f);
-    if (!module || OVERRIDES.excludeModules.includes(module.name)) continue;
+    const module = parseController(f);
+    if (!module || OVERRIDES.excludeControllers.includes(module.name)) continue;
     for (const route of module.routes) {
       const operation = buildOperation(module, route, f);
       const key = route.path || '/';
@@ -330,7 +331,7 @@ export function buildSpec({ repoRoot, overrides = DEFAULT_OVERRIDES }: BuildOpti
     }
   }
 
-  function serviceInterface(module: CsModule, varName: string, f: CsFile): CsInterface {
+  function serviceInterface(module: CsController,varName: string, f: CsFile): CsInterface {
     const typeName = module.ctorParams.get(varName);
     if (!typeName) throw new Error(`${module.name}: '${varName}' is not a constructor parameter`);
     const t = resolve(typeName, f);
@@ -338,16 +339,16 @@ export function buildSpec({ repoRoot, overrides = DEFAULT_OVERRIDES }: BuildOpti
     return t;
   }
 
-  function buildOperation(module: CsModule, route: CsRoute, f: CsFile): Schema {
+  function buildOperation(module: CsController, route: CsRoute, f: CsFile): Schema {
     const where = `${module.name} ${route.method.toUpperCase()} ${route.path}`;
     const body = route.body;
-    const resource = module.name.replace(/Module$/, '');
+    const resource = module.name.replace(/Controller$/, '');
 
     // Path parameters.
     const parameters: Schema[] = [];
     for (const m of route.path.matchAll(/\{(\w+)\}/g)) {
       const name = m[1] ?? '';
-      const isGuid = new RegExp(`RouteGuidParam\\(\\s*parameters\\s*,\\s*"${name}"`).test(body);
+      const isGuid = new RegExp(`RouteGuidParam\\(\\s*"${name}"`).test(body);
       parameters.push({
         name,
         in: 'path',
@@ -362,7 +363,7 @@ export function buildSpec({ repoRoot, overrides = DEFAULT_OVERRIDES }: BuildOpti
       query.set('page', { type: 'integer', minimum: 1 });
       query.set('pageSize', { type: 'integer', minimum: 1, maximum: 100 });
     }
-    // CustomersModule.ReadLimit(): `limit`, clamped to 1..100, default 25.
+    // CustomersController.ReadLimit(): `limit`, clamped to 1..100, default 25.
     if (/\bReadLimit\(\)/.test(body)) query.set('limit', { type: 'integer', minimum: 1, maximum: 100 });
     for (const m of body.matchAll(/(?:(\w+)\.TryParse\(\s*)?\(string\?\)\s*Request\.Query\["(\w+)"\]/g)) {
       const parsedAs = m[1];
@@ -386,7 +387,7 @@ export function buildSpec({ repoRoot, overrides = DEFAULT_OVERRIDES }: BuildOpti
     for (const [name, schema] of [...query].sort(([a], [b]) => a.localeCompare(b))) {
       parameters.push({ name, in: 'query', required: false, schema });
     }
-    // EventsModule.IdempotencyKey(): the header becomes the event id.
+    // EventsController.IdempotencyKey(): the header becomes the event id.
     if (/\bIdempotencyKey\(\)/.test(body)) {
       parameters.push({ name: 'Idempotency-Key', in: 'header', required: false, schema: { type: 'string' } });
     }
@@ -459,7 +460,7 @@ export function buildSpec({ repoRoot, overrides = DEFAULT_OVERRIDES }: BuildOpti
         content: { 'application/json': { schema: schemaFor(parseTypeRef(requestType), f) } },
       };
     }
-    if (module.name === 'AuthModule') operation['security'] = [];
+    if (module.name === 'AuthController') operation['security'] = [];
     return operation;
   }
 

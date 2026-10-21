@@ -1,7 +1,7 @@
 import { apiClient, unwrap, withFlags, type Page } from '@/shared/api';
 import type { AdminUser, CreateAdminUserRequest } from '../model/types';
 
-/** `/platform/tenants/{tenantId}/admin-users` (PlatformModule.cs) — platform_admin only. */
+/** `/platform/tenants/{tenantId}/admin-users` (TenantsController.cs) — platform_admin only. */
 export function listAdminUsers(tenantId: string, page: number, pageSize: number): Promise<Page<AdminUser>> {
   return unwrap(
     apiClient().GET('/api/v1/platform/tenants/{tenantId}/admin-users', {

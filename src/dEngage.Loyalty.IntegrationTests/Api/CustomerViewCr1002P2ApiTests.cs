@@ -9,16 +9,16 @@ using dEngage.Loyalty.Api.Framework.Pagination;
 using dEngage.Loyalty.IntegrationTests.Fixtures;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
-// CR 2026-10-02 (Customer 360) P2 through the real Nancy pipeline: header summary, per-program
+// CR 2026-10-02 (Customer 360) P2 through the real HTTP pipeline: header summary, per-program
 // overview (pending, FIFO expiring-soon, tier status, streaks), rule fires, per-customer cap usage
 // from the ledger, streaks, rewards with their payouts, tier-change cause — and tenant isolation.
 // Day-relative data uses the current UTC date, the same clock the endpoints use.

@@ -16,6 +16,7 @@ public class CampaignConfigCacheService(
     IConnectionMultiplexer redis,
     LoyaltyDbContext db,
     ITenantSlugResolver tenantSlugResolver,
+    ILoyaltyConfig loyaltyConfig,
     ILogger<CampaignConfigCacheService> logger) : ICampaignConfigCacheService
 {
     private readonly IDatabase _cache = redis.GetDatabase();
@@ -88,7 +89,12 @@ public class CampaignConfigCacheService(
         }
 
         var key = CampaignKey(tenantId, programId);
-        await _cache.StringSetAsync(key, JsonSerializer.Serialize(configs), TimeSpan.FromHours(1));
+        // From loyalty_config (alignment D4).
+        var ttlMinutes = await loyaltyConfig.GetAsync<int>(
+            LoyaltyConfigKeys.Engine.Module, LoyaltyConfigKeys.Engine.CampaignConfigCacheTtlMinutes, ct);
+        if (ttlMinutes <= 0)
+            throw new InvalidOperationException("loyalty_config_invalid: loyalty.engine/CampaignConfigCache.TtlMinutes must be positive.");
+        await _cache.StringSetAsync(key, JsonSerializer.Serialize(configs), TimeSpan.FromMinutes(ttlMinutes));
 
         return configs;
     }

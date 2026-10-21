@@ -29,6 +29,8 @@ __MACOSX/
 # Local dev settings with plaintext secrets (JWT signing key, connection passwords).
 # Copy src/dEngage.Loyalty.Api/appsettings.Development.example.json and fill it in.
 src/dEngage.Loyalty.Api/appsettings.Development.json
+# Same for Public.Api (connection passwords): copy its appsettings.Development.example.json.
+src/dEngage.Loyalty.Public.Api/appsettings.Development.json
 
 # Database dumps / backups — may contain real data; keep them local.
 scripts/*_pg_backup_*.sql

@@ -1,9 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { PLATFORM_ADMIN, apiAuth, loginAs, provisionTenant, requireBackend } from './fixtures';
 
+/** Public.Api (event ingestion by API key), which the dev-server proxy doesn't cover. */
+const PUBLIC_API_URL = process.env['PUBLIC_API_URL'] ?? 'http://localhost:5175';
+
 /**
  * Port of `web/e2e/customers.e2e.spec.ts`: rule → event through the API-key gateway → Consumer →
- * ledger → Customer 360. Needs the Consumer running beside the Api, not just the Api.
+ * ledger → Customer 360. Needs Public.Api and the Consumer running beside the Api, not just the Api.
  */
 test.describe('Customers — event ingestion round-trip (real backend)', () => {
   requireBackend();
@@ -60,7 +63,8 @@ test.describe('Customers — event ingestion round-trip (real backend)', () => {
     await page.waitForTimeout(35_000);
 
     const contactKey = `e2e_customer_${Date.now()}`;
-    const eventRes = await request.post(`/api/v1/tenants/${tenantId}/events/order-created`, {
+    // Event ingestion is served by Public.Api, not the Api the portal proxies to.
+    const eventRes = await request.post(`${PUBLIC_API_URL}/api/v1/tenants/${tenantId}/events/order-created`, {
       headers: { 'X-Api-Key': rawKey },
       data: { contactKey, amount: '50' },
     });

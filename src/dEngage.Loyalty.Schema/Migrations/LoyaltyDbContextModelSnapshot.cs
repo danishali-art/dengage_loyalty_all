@@ -17,7 +17,7 @@ namespace dEngage.Loyalty.Schema.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "9.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -546,6 +546,134 @@ namespace dEngage.Loyalty.Schema.Migrations
                         .HasDatabaseName("idx_ledger_entries_tenant_account_date");
 
                     b.ToTable("ledger_entries", (string)null);
+                });
+
+            modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.LoyaltyConfigEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsSecret")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_secret");
+
+                    b.Property<string>("ModuleName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("module_name");
+
+                    b.Property<string>("ParameterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("parameter_name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("updated_by");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("text")
+                        .HasColumnName("value");
+
+                    b.Property<string>("ValueJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("value_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModuleName", "ParameterName")
+                        .IsUnique()
+                        .HasDatabaseName("ux_loyalty_config_key");
+
+                    b.ToTable("loyalty_config", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_loyalty_config_global_settings", "NOT ((module_name = 'loyalty.api' AND parameter_name = 'RateLimit.EventIngestionPerMinute') OR (module_name = 'loyalty.api' AND parameter_name = 'Pii.ExtraMaskedFields'))");
+                        });
+                });
+
+            modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.LoyaltyTenantConfigEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsSecret")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_secret");
+
+                    b.Property<string>("ModuleName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("module_name");
+
+                    b.Property<string>("ParameterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("parameter_name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("updated_by");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("text")
+                        .HasColumnName("value");
+
+                    b.Property<string>("ValueJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("value_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ModuleName", "ParameterName")
+                        .IsUnique()
+                        .HasDatabaseName("ux_loyalty_tenant_config_key");
+
+                    b.ToTable("loyalty_tenant_config", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_loyalty_tenant_config_tenant_settings", "(module_name = 'loyalty.api' AND parameter_name = 'RateLimit.EventIngestionPerMinute') OR (module_name = 'loyalty.api' AND parameter_name = 'Pii.ExtraMaskedFields')");
+                        });
                 });
 
             modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.OutboxEvent", b =>
@@ -1701,7 +1829,7 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.HasIndex("TenantId", "ContactKey")
                         .HasDatabaseName("idx_tier_upgrade_log_tenant_contact");
 
-                    b.HasIndex("TenantId", "ContactKey", "SourceEventId")
+                    b.HasIndex("TenantId", "ContactKey", "SourceEventId", "ToTierId")
                         .IsUnique()
                         .HasDatabaseName("ux_tier_upgrade_log_source_event");
 
@@ -1781,6 +1909,15 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.Navigation("CustomerAccount");
 
                     b.Navigation("Rule");
+                });
+
+            modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.LoyaltyTenantConfigEntry", b =>
+                {
+                    b.HasOne("dEngage.Loyalty.Schema.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("dEngage.Loyalty.Schema.Entities.OutboxEvent", b =>

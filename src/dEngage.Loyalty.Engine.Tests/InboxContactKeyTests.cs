@@ -1,8 +1,8 @@
 using System.Text.Json;
 using FluentAssertions;
 using dEngage.Loyalty.Consumer;
-using dEngage.Loyalty.Shared.Events;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 

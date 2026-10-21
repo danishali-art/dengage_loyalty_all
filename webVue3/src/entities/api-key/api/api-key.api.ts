@@ -4,7 +4,7 @@ export type ApiKey = ApiSchema<'ApiKeyResponse'>;
 /** The create response carries the raw key — shown once, never retrievable again. */
 export type CreatedApiKey = ApiSchema<'CreateApiKeyResponse'>;
 
-/** `/platform/tenants/{tenantId}/api-keys` (PlatformModule.cs) — platform_admin only. */
+/** `/platform/tenants/{tenantId}/api-keys` (TenantsController.cs) — platform_admin only. */
 export function listApiKeys(tenantId: string, page: number, pageSize: number): Promise<Page<ApiKey>> {
   return unwrap(
     apiClient().GET('/api/v1/platform/tenants/{tenantId}/api-keys', {

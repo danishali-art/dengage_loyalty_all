@@ -9,16 +9,16 @@ using dEngage.Loyalty.Api.Framework.Pagination;
 using dEngage.Loyalty.IntegrationTests.Fixtures;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
-// CR 2026-10-02 (Customer 360) P1 through the real Nancy pipeline: programs on balances, the
+// CR 2026-10-02 (Customer 360) P1 through the real HTTP pipeline: programs on balances, the
 // enriched and filtered ledger, the customer's events (event_inbox.contact_key), the event drawer
 // (linkage → 404, masked payload, counterparty postings, rule fires, tier change, messages without
 // payload, scheduled-job postings) and tenant isolation.

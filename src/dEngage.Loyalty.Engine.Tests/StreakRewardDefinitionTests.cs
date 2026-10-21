@@ -7,12 +7,12 @@ using dEngage.Loyalty.RuleEngine.Processing;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Engine.Tests;
 

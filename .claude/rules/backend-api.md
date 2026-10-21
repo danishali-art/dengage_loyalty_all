@@ -1,38 +1,52 @@
 ---
 paths:
   - "src/dEngage.Loyalty.Api/**"
+  - "src/dEngage.Loyalty.Public.Api/**"
 ---
 
-# dEngage.Loyalty.Api — HTTP API host
+# dEngage.Loyalty.Api and Public.Api — HTTP API hosts
 
-Admin/configuration REST API plus event ingestion. Nancy modules run inside ASP.NET Core
-(`http://localhost:5173/swagger`). **Reference slice to copy: `Rewards/`.**
+- **Api** (`http://localhost:5173`): the admin/configuration REST API the portals call (JWT), plus
+  the portal's event routes (`simulate`, `types`, status). **Reference slice to copy: `Rewards/`.**
+- **Public.Api** (`http://localhost:5175`): event ingestion from client systems, `X-Api-Key`
+  only. It never registers JWT (`AddLoyaltyJwtAuthentication`), so a portal token is ignored
+  there. Its request/response bodies live in `dEngage.Loyalty.Contract` (`PublicApiEvents.cs`),
+  because they are the public contract; the ingestion service and validators are shared in
+  `Api.Framework/Events/`. Paths are the same as before the split — deployments route clients to
+  it by host name.
+- Both are ASP.NET Core controllers on the same framework and follow the rules below. A route
+  belongs to exactly one of them; the event status lookup is the one route both serve.
 
 ## One folder per resource, four files
 | File | Contains | Rules |
 |---|---|---|
-| `<Resource>Module.cs` | `public sealed class <Resource>Module : TenantScopedModule` | Routes only. No EF or business logic. |
+| `<Resource>Controller.cs` | `public sealed class <Resource>Controller(...) : LoyaltyControllerBase` | Routes only. No EF or business logic. |
 | `<Resource>AppService.cs` | `I<Resource>AppService` + `public sealed class <Resource>AppService(...)` | All business logic. Returns DTOs, never entities. |
 | `<Resource>Dtos.cs` | `sealed record` requests/responses | PATCH request fields are nullable, and null means "unchanged". |
 | `<Resource>Validators.cs` | `AbstractValidator<T>` per request | Picked up automatically by `AddValidatorsFromAssemblyContaining<Program>()`. |
 Some resources add a registry or helper next to these (for example `RewardTypeRegistry.cs`). Keep
 such types in the resource folder.
 
-## Registering (both steps are required in `Program.cs`)
-1. `builder.Services.AddScoped<I<Resource>AppService, <Resource>AppService>();`
-2. `builder.Services.AddNancyModule<<Resource>Module>();` — **a module that isn't registered here
-   has no routes at all**, and nothing tells you. Don't use Nancy auto-discovery.
+## Registering in `Program.cs`
+- `builder.Services.AddScoped<I<Resource>AppService, <Resource>AppService>();`
+- Controllers are discovered automatically (`MapControllers()`); there is nothing to register.
 
-## Module rules
-- Route base is `/api/v1/tenants/{tenantId}/...` (tenant-scoped) or `/api/v1/platform/...` / auth.
-  Pass the base to the constructor and register routes through `MapGet/MapPost/MapPatch/MapDelete`.
-  Never use raw Nancy `Get(...)`, because the base-path prefix won't apply.
-- Every handler starts with an auth guard:
-  - tenant routes → `var tenantId = RequireTenantScope(RouteParam(parameters, "tenantId"));`
+## Controller rules
+- The class route is `[Route("api/v1/tenants/{tenantId}/...")]` (tenant-scoped) or
+  `api/v1/platform/...` / auth, and each action has `[HttpGet("relative")]`-style attributes.
+  Action templates must not start with `/` (that would ignore the class route).
+- The app service and validators are primary-constructor parameters. Actions take only a
+  `CancellationToken`: no `[FromBody]` / `[FromRoute]` / `[FromQuery]` and no `[ApiController]`
+  (see `backend-api-framework.md`).
+- The Vue portal's OpenAPI generator (`webVue3/tools/openapi`) reads these files: keep the file
+  name `<Resource>Controller.cs`, one action attribute per method, and the helpers below. After a
+  route or DTO change run `npm run api:spec && npm run api:types` in `webVue3`.
+- Every action starts with an auth guard:
+  - tenant routes → `var tenantId = RequireTenantScope(RouteParam("tenantId"));`
   - platform routes → `RequirePlatformAdmin();`
   - server-to-server ingestion → `RequireApiKeyPrincipal();`
   - public routes (login, health) only by explicit decision.
-- Ids → `RouteGuidParam(parameters, "<name>Id")`. Lists → `ReadPageRequest()` → `PagedResult<T>`.
+- Ids → `RouteGuidParam("<name>Id")`. Lists → `ReadPageRequest()` → `PagedResult<T>`.
 - Bodies → `await Request.ReadValidatedJsonBodyAsync(validator, ct)`. Use unvalidated
   `ReadJsonBodyAsync<T>` only for trivial private bodies (for example `SetActiveRequest(bool)`).
 - Responses → `JsonResponses.Ok(x)`, `JsonResponses.Ok(x, HttpStatusCode.Created)`,
@@ -77,7 +91,7 @@ such types in the resource folder.
 - The envelope `Data` is serialized with `JsonConventions.EventDataOptions` (**snake_case**).
 - The request's `Idempotency-Key` becomes the `EventId` (a random Guid if absent), which the
   Consumer's `EventInbox` dedupes on. Keep passing it through.
-- New built-in event types need, in the same change: a `Shared/Events/EventTypes` constant, event
+- New built-in event types need, in the same change: a `Contract/EventTypes` constant, event
   metadata, a Consumer handler (see `backend-consumer.md`) and an ingestion route or a
   generic-type config.
 

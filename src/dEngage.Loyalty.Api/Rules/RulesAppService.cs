@@ -9,11 +9,11 @@ using dEngage.Loyalty.RuleEngine.Metadata;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using Microsoft.EntityFrameworkCore;
 using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
 using RuleEntity = dEngage.Loyalty.Schema.Entities.Rule;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Api.Rules;
 

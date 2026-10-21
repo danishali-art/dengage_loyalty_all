@@ -9,16 +9,16 @@ using dEngage.Loyalty.Api.Framework.Pagination;
 using dEngage.Loyalty.IntegrationTests.Fixtures;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
-// CR 2026-10-02 (Customer 360) P3 through the real Nancy pipeline: the customer's card buckets
+// CR 2026-10-02 (Customer 360) P3 through the real HTTP pipeline: the customer's card buckets
 // with usage from the ledger, a bucket's postings through the ledger's ruleId filter, and messages
 // sent (no payload, filters, paging) — plus tenant isolation.
 public sealed class CustomerViewCr1002P3ApiTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime

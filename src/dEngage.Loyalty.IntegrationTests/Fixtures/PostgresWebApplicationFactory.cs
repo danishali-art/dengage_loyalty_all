@@ -4,6 +4,7 @@ using dEngage.Loyalty.Schema;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -31,6 +32,10 @@ public sealed class PostgresWebApplicationFactory(string connectionString) : Web
             {
                 ["ConnectionString"] = connectionString,
                 ["RedisConnectionString"] = "unused-fake-rate-limiter-is-used-instead",
+                // Required at startup (BrokerConnectionSettings); never opened, the publisher is a fake.
+                ["RabbitMq:Host"] = "unused-fake-event-publisher-is-used-instead",
+                ["RabbitMq:User"] = "unused",
+                ["RabbitMq:Password"] = "unused",
                 ["Jwt:SigningKey"] = "test-signing-key-not-for-production-32chars-min",
             });
         });
@@ -39,7 +44,10 @@ public sealed class PostgresWebApplicationFactory(string connectionString) : Web
         {
             services.RemoveAll<DbContextOptions<LoyaltyDbContext>>();
             services.RemoveAll<DbContextOptions>();
-            services.AddDbContext<LoyaltyDbContext>(options => options.UseNpgsql(connectionString));
+            // See CustomWebApplicationFactory — EF Core 9 also keeps the upstream options action.
+            services.RemoveAll<IDbContextOptionsConfiguration<LoyaltyDbContext>>();
+            services.AddDbContext<LoyaltyDbContext>(options => options.UseNpgsql(connectionString)
+                .AddInterceptors(new TenantSettingsSeedingInterceptor()));
 
             services.RemoveAll<IEventPublisher>();
             services.AddSingleton<IEventPublisher>(EventPublisher);

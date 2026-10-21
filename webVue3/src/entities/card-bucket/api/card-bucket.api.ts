@@ -1,7 +1,7 @@
 import { apiClient, unwrap, withFlags, type Page } from '@/shared/api';
 import type { CardBucket, CreateCardBucketRequest, UpdateCardBucketRequest } from '../model/types';
 
-/** `/tenants/{tenantId}/programs/{programId}/card-buckets` (CardBucketsModule.cs). */
+/** `/tenants/{tenantId}/programs/{programId}/card-buckets` (CardBucketsController.cs). */
 export function listCardBuckets(
   tenantId: string,
   programId: string,

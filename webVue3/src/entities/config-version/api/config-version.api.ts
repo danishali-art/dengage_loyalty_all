@@ -3,7 +3,7 @@ import type { ConfigVersionDetail, ConfigVersionSummary } from '../model/types';
 
 const ALL_PAGE_SIZE = 100;
 
-/** `/tenants/{tenantId}/config-versions` (ConfigVersionsModule.cs) — newest first per entity. */
+/** `/tenants/{tenantId}/config-versions` (ConfigVersionsController.cs) — newest first per entity. */
 export function listConfigVersions(
   tenantId: string,
   entityType: string,

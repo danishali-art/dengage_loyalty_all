@@ -10,13 +10,13 @@ using dEngage.Loyalty.IntegrationTests.Fixtures;
 using dEngage.Loyalty.RuleEngine.Models;
 using dEngage.Loyalty.Schema.Entities;
 using dEngage.Loyalty.Shared;
-using dEngage.Loyalty.Shared.Events;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
 using ProgramEntity = dEngage.Loyalty.Schema.Entities.Program;
 using RuleEntity = dEngage.Loyalty.Schema.Entities.Rule;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
 

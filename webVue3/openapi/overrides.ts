@@ -5,8 +5,8 @@
 export interface Overrides {
   /** `Schema.wireName` → the allowed values of a C# `string` member. */
   stringUnions: Record<string, { values: string[]; source: string }>;
-  /** Modules left out of the spec, with the reason. */
-  excludeModules: string[];
+  /** Controllers left out of the spec, with the reason. */
+  excludeControllers: string[];
 }
 
 const ROUNDING = {
@@ -40,7 +40,7 @@ const RULE_TYPES = [
 
 const EVENT_CATEGORY = {
   values: ['Earn', 'Burn', 'Reverse', 'Adjust'],
-  source: 'Shared/Events/EventTypes.cs (EventCategory, sent with ToString())',
+  source: 'Contract/EventTypes.cs (EventCategory, sent with ToString())',
 };
 
 /** Streak campaigns and card buckets: never pending (only CASH rules wait for approval). */
@@ -197,7 +197,7 @@ export const OVERRIDES: Overrides = {
     },
     'EventFieldMetadata.kind': {
       values: ['Money', 'Number', 'String'],
-      source: 'Shared/Events/EventTypes.cs (EventFieldKind, sent with ToString())',
+      source: 'Contract/EventTypes.cs (EventFieldKind, sent with ToString())',
     },
     'StreakCampaignResponse.status': ENTITY_STATUS,
     'SetStreakCampaignStatusRequest.status': SETTABLE_STATUS,
@@ -247,9 +247,9 @@ export const OVERRIDES: Overrides = {
     'AdminUserResponse.role': ADMIN_ROLE,
     'CreateAdminUserRequest.role': ADMIN_ROLE,
   },
-  excludeModules: [
+  excludeControllers: [
     // Health checks (`/api/v1/ping`, `/api/v1/ping/db`): they return anonymous objects, and the
     // portal never calls them.
-    'PingModule',
+    'PingController',
   ],
 };

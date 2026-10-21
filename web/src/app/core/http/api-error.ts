@@ -11,7 +11,7 @@ export type ApiErrorKind =
   | 'network' // no response at all
   | 'unknown';
 
-/** RFC 7807-shaped error body the Nancy API returns. */
+/** RFC 7807-shaped error body the loyalty API returns. */
 interface ProblemBody {
   type?: string;
   title?: string;

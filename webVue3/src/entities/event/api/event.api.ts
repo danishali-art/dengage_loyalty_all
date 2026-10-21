@@ -6,7 +6,7 @@ export type EventStatus = ApiSchema<'EventStatusResponse'>;
 
 /**
  * The admin-JWT path to the same publish pipeline as the API-key `/generic` route, for testing
- * from the portal (EventsModule.cs `simulate`). The caller shows the error itself.
+ * from the portal (EventsController.cs `simulate`). The caller shows the error itself.
  */
 export function simulateEvent(
   tenantId: string,

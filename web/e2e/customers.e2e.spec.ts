@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { PLATFORM_ADMIN, loginAs, provisionTenant } from './fixtures';
 
+/** Public.Api (event ingestion by API key), which the dev-server proxy doesn't cover. */
+const PUBLIC_API_URL = process.env['PUBLIC_API_URL'] ?? 'http://localhost:5175';
+
 /**
  * Proves the full chain: UI-created program/rule -> event ingested via the API-key gateway ->
  * LoyaltySaaS.Consumer processes it from RabbitMQ -> a ledger entry lands in Postgres -> the
@@ -62,7 +65,8 @@ test.describe('Customers — event ingestion round-trip', () => {
     await page.waitForTimeout(35_000);
 
     const contactKey = `e2e_customer_${Date.now()}`;
-    const eventRes = await request.post(`/api/v1/tenants/${tenantId}/events/order-created`, {
+    // Event ingestion is served by Public.Api, not the Api the portal proxies to.
+    const eventRes = await request.post(`${PUBLIC_API_URL}/api/v1/tenants/${tenantId}/events/order-created`, {
       headers: { 'X-Api-Key': rawKey },
       data: { contactKey, amount: '50' },
     });

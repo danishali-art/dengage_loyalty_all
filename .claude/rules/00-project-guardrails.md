@@ -41,7 +41,7 @@ If a task seems to need breaking one of these, stop and explain why. Don't work 
   Don't invent a new pattern, layer, base class or folder layout.
 - Keep the change as small as possible. No drive-by renames, reformatting of untouched code, or
   "cleanup" outside the task.
-- Don't add NuGet or npm packages, change framework versions, or swap libraries (Nancy, EF Core,
+- Don't add NuGet or npm packages, change framework versions, or swap libraries (ASP.NET Core MVC, EF Core,
   FluentValidation, Angular CDK, Tailwind, ...) unless explicitly asked.
 - Comments explain **why** (a constraint, a contract, an earlier bug), in the existing style.
   Don't narrate the code.
@@ -64,7 +64,7 @@ If a task seems to need breaking one of these, stop and explain why. Don't work 
 A change isn't done until the docs that describe it are updated in the same piece of work:
 - Behaviour or scope → `docs/SCOPE_BASELINE.md` (and `docs/SOW.md` if it's contractual).
 - Endpoints or DTOs → `LoyaltySaaSApi.md` (regenerated 2026-10-02 from
-  `src/dEngage.Loyalty.Api/*/*Dtos.cs` and `*Module.cs`). Keep it in step from the code; don't
+  `src/dEngage.Loyalty.Api/*/*Dtos.cs` and `*Controller.cs`). Keep it in step from the code; don't
   document behaviour the code doesn't have.
 - DB schema → a new migration plus an updated `scripts/loyalty_schema_reference.md`.
 - A changed convention → the relevant `CLAUDE.md` or `.claude/rules/*.md` file.

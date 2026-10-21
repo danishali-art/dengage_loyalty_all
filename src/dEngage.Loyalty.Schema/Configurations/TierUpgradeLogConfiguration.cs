@@ -33,9 +33,11 @@ public class TierUpgradeLogConfiguration : IEntityTypeConfiguration<TierUpgradeL
         builder.HasIndex(x => new { x.TenantId, x.ContactKey })
             .HasDatabaseName("idx_tier_upgrade_log_tenant_contact");
 
-        // Race guard: a single tier change log per event.
-        // Keeps TierEvaluationService from writing double logs on concurrent events.
-        builder.HasIndex(x => new { x.TenantId, x.ContactKey, x.SourceEventId })
+        // Race guard: a single tier change log per event and target tier.
+        // Keeps TierEvaluationService from writing double logs on concurrent events. The target
+        // tier is part of the key because one event runs every active program, and each program
+        // has its own tiers, so one event can change the tier in several programs.
+        builder.HasIndex(x => new { x.TenantId, x.ContactKey, x.SourceEventId, x.ToTierId })
             .IsUnique()
             .HasDatabaseName("ux_tier_upgrade_log_source_event");
     }

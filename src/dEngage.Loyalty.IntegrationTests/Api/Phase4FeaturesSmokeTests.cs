@@ -18,7 +18,7 @@ using AccountTypeEntity = dEngage.Loyalty.Schema.Entities.AccountType;
 namespace dEngage.Loyalty.IntegrationTests.Api;
 
 // End-to-end HTTP coverage for the Phase 4 backend features (config version history,
-// program immutability/soft-delete; complaints were removed by CR 2026-10-05) against the real Nancy pipeline — proves the wiring in
+// program immutability/soft-delete; complaints were removed by CR 2026-10-05) against the real HTTP pipeline — proves the wiring in
 // Program.cs (services + modules) actually works, not just that the app services compile.
 public sealed class Phase4FeaturesSmokeTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {

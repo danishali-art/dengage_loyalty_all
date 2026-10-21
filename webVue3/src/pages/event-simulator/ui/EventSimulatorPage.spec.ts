@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { mountWithProviders } from '../../../../tests/utils/mount-with-providers';
+import { apiErrorFrom } from '@/shared/api';
 import { useTenantContextStore } from '@/shared/model';
 import * as eventApi from '@/entities/event/api/event.api';
 import * as eventTypeApi from '@/entities/event-type/api/event-type.api';
@@ -75,6 +76,30 @@ describe('EventSimulatorPage', () => {
     await vi.waitFor(() => expect(eventApi.getEventStatus).toHaveBeenCalledWith('novapay', 'evt-9'));
     await vi.waitFor(() => expect(document.body.textContent).toContain('evt-9'));
     expect(document.body.textContent).toContain('processed');
+  });
+
+  // The consumer records the event only once it picks it up, so the first polls can be 404.
+  it('keeps polling while the event is not recorded yet (404) and shows the status once it is', async () => {
+    vi.mocked(eventApi.getEventStatus).mockRejectedValueOnce(
+      apiErrorFrom(404, { code: 'not_found', title: "Event 'evt-9' not found." }),
+    );
+    await mountPage();
+    await pickType('order.created');
+
+    sendButton().click();
+    await vi.waitFor(() => expect(eventApi.getEventStatus).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    await vi.waitFor(() => expect(document.body.textContent).toContain('processed'));
+  });
+
+  it('stops polling on any other error', async () => {
+    vi.mocked(eventApi.getEventStatus).mockRejectedValueOnce(apiErrorFrom(500, { code: 'internal_error' }));
+    await mountPage();
+    await pickType('order.created');
+
+    sendButton().click();
+    await vi.waitFor(() => expect(eventApi.getEventStatus).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 1800));
+    expect(eventApi.getEventStatus).toHaveBeenCalledTimes(1);
   });
 
   it('keeps an edited payload when the type changes, and refuses JSON that is not an object', async () => {
