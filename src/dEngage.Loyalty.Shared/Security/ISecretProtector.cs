@@ -8,8 +8,9 @@ public interface ISecretProtector
 {
     string Protect(string plaintext);
 
-    // `stored` must be an ENC(...) token. A plaintext value is refused rather than passed through,
-    // so a secret saved unencrypted by mistake is noticed instead of silently used.
+    // `stored` must be exactly one ENC(...) token. Anything else — plaintext, or plaintext mixed with
+    // a token — is refused rather than passed through, so a secret saved unencrypted (even partly)
+    // by mistake is noticed instead of silently used.
     string Unprotect(string stored);
 }
 
@@ -23,8 +24,8 @@ public sealed class SecretCryptoProtector : ISecretProtector
 
     public string Unprotect(string stored)
     {
-        if (!SecretCrypto.ContainsToken(stored))
-            throw new InvalidOperationException("secret_not_encrypted: a stored secret must be an ENC(...) value.");
-        return SecretCrypto.ResolveTokens(stored, _key.Value);
+        if (!SecretCrypto.IsToken(stored))
+            throw new InvalidOperationException("secret_not_encrypted: a stored secret must be a single ENC(...) value.");
+        return SecretCrypto.Decrypt(stored.Trim(), _key.Value);
     }
 }

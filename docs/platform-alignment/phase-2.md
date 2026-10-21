@@ -38,7 +38,7 @@
 
 ### 1.4 Not done (and why)
 - **Per-tenant concurrency cap.** With one event in flight per queue, each lane is already capped at one; a separate cap only makes sense once events run in parallel within a tenant, which is the throughput change's partitioning (its Phase 2).
-- **Setting the list in `loyalty_config`.** D4's table doesn't exist yet; the list is in the Consumer's config for now and can move into `loyalty_config` with D4.
+- **Setting the list in `loyalty_config`.** Decided against, now that D4 exists: the list stays in the Consumer's config (`RabbitMq:IsolatedTenants`). The lane queues are declared and consumed when the Consumer starts, so a table value would only take effect after a restart anyway, and a row changed by SQL would look live without being so. Changing the list remains a deployment change, with the empty-lane rule above.
 - **Automatic isolation** (detecting noisy tenants). Out of scope for a small change.
 
 ### 1.5 Relation to the throughput change

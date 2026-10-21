@@ -119,6 +119,16 @@ public static class SecretCrypto
     public static bool ContainsToken(string? value) =>
         value is not null && TokenPattern.IsMatch(value);
 
+    /// <summary>True only when the whole value (ignoring surrounding whitespace) is a single ENC(...)
+    /// token — unlike <see cref="ContainsToken"/>, which also accepts "plain text ENC(...)".</summary>
+    public static bool IsToken(string? value)
+    {
+        if (value is null) return false;
+        var trimmed = value.Trim();
+        var match = TokenPattern.Match(trimmed);
+        return match.Success && match.Index == 0 && match.Length == trimmed.Length;
+    }
+
     /// <summary>Resolves ALL ENC(...) tokens within a value — partial use
     /// ("Host=x;Password=ENC(...)") and full-value tokens go through the same path.</summary>
     public static string ResolveTokens(string value, byte[] key) =>
