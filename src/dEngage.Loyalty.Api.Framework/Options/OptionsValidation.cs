@@ -1,3 +1,4 @@
+using dEngage.Loyalty.Shared.Messaging;
 using Microsoft.Extensions.Options;
 
 namespace dEngage.Loyalty.Api.Framework.Options;
@@ -25,12 +26,15 @@ public sealed class ApiOptionsValidator : IValidateOptions<ApiOptions>
     }
 }
 
-public sealed class RabbitMqOptionsValidator : IValidateOptions<RabbitMqOptions>
+// No localhost or guest/guest fallback: a deployment without broker settings must not start
+// (the old RabbitMqOptions defaulted to both, so a missing value went unnoticed).
+public sealed class BrokerConnectionSettingsValidator : IValidateOptions<BrokerConnectionSettings>
 {
-    public ValidateOptionsResult Validate(string? name, RabbitMqOptions options)
+    public ValidateOptionsResult Validate(string? name, BrokerConnectionSettings options)
     {
-        if (string.IsNullOrWhiteSpace(options.Host))
-            return ValidateOptionsResult.Fail("RabbitMq:Host must be set.");
+        if (options.Problems.Count > 0)
+            return ValidateOptionsResult.Fail(
+                "RabbitMQ connection settings are incomplete or invalid. Fix: " + string.Join(", ", options.Problems) + ".");
         return ValidateOptionsResult.Success;
     }
 }

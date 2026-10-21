@@ -44,14 +44,7 @@ public class EventConsumerWorker(
         using var scope = scopeFactory.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<ConsumerConfig>();
 
-        var factory = new ConnectionFactory
-        {
-            HostName = config.RabbitMqHost,
-            Port = config.RabbitMqPort,
-            UserName = config.RabbitMqUser,
-            Password = config.RabbitMqPassword,
-            DispatchConsumersAsync = true
-        };
+        var factory = config.CreateConnectionFactory(dispatchConsumersAsync: true);
 
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();

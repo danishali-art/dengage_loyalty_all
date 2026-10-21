@@ -49,6 +49,11 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 // connection is never opened since the DbContext registration is replaced below.
                 ["ConnectionString"] = "unused-sqlite-in-memory-is-used-instead",
                 ["RedisConnectionString"] = "unused-fake-rate-limiter-is-used-instead",
+                // The broker connection is required at startup (BrokerConnectionSettings); never
+                // opened, since the event publisher is replaced by a fake.
+                ["RabbitMq:Host"] = "unused-fake-event-publisher-is-used-instead",
+                ["RabbitMq:User"] = "unused",
+                ["RabbitMq:Password"] = "unused",
                 // JwtOptionsValidator requires >= 32 chars.
                 ["Jwt:SigningKey"] = "test-signing-key-not-for-production-32chars-min",
             });

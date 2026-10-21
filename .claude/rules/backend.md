@@ -44,6 +44,14 @@ Per-project rules are in their own files and load when you touch that project:
   reject missing `ConnectionString`, `RedisConnectionString` (Consumer still accepts the legacy
   `Redis` key) and RabbitMQ host/user/password at startup. Connection values live only in
   `appsettings.Development.json` (local) or the mounted files, never in the base `appsettings.json`.
+- **RabbitMQ connection (alignment D8):** `BrokerConnectionSettings` (Shared) is the only reader,
+  for the Api, Public.Api and Consumer. It takes the platform's `appsettings.messagebroker.json`
+  section `RabbitMQSettings` (`RabbitMQHost`, `RabbitMQPort`, `RabbitMQUsername`,
+  `RabbitMQPassword`, `VirtualHost`, `UseSsl`) when `RabbitMQHost` is set, else the legacy
+  `RabbitMq:Host/Port/User/Password` keys (local dev files still use these) — never a mix. Loyalty's
+  own messaging keys (`RabbitMq:GenericEventTypes`, `RabbitMq:IsolatedTenants`) stay under
+  `RabbitMq`. The transport stays loyalty's own RabbitMQ.Client code; the platform's MassTransit
+  broker library is deliberately not used (wire contract, ordering, tenant lanes).
 - **Secrets:** deployed environments mount secrets as config files under `CONFIG_PATH`. `ENC(...)`
   values still work; the key comes from the file in `LOYALTY_MASTER_KEY_FILE` (mounted secret),
   else from `LOYALTY_MASTER_KEY` (local development).

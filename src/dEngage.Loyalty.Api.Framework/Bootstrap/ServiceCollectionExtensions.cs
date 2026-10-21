@@ -8,6 +8,7 @@ using dEngage.Loyalty.Api.Framework.RateLimiting;
 using dEngage.Loyalty.Api.Framework.Tenancy;
 using dEngage.Loyalty.Contract;
 using dEngage.Loyalty.Schema;
+using dEngage.Loyalty.Shared.Messaging;
 using dEngage.Loyalty.Shared.Security;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
@@ -27,9 +28,11 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddLoyaltyApiFramework(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<ApiOptions>().Bind(configuration).ValidateOnStart();
-        services.AddOptions<RabbitMqOptions>().Bind(configuration.GetSection("RabbitMq")).ValidateOnStart();
+        services.AddOptions<RabbitMqOptions>().Bind(configuration.GetSection("RabbitMq"));
+        // The broker connection: the platform's RabbitMQSettings, else the legacy RabbitMq keys (D8).
+        services.AddOptions<BrokerConnectionSettings>().Configure(s => s.LoadFrom(configuration)).ValidateOnStart();
         services.AddSingleton<IValidateOptions<ApiOptions>, ApiOptionsValidator>();
-        services.AddSingleton<IValidateOptions<RabbitMqOptions>, RabbitMqOptionsValidator>();
+        services.AddSingleton<IValidateOptions<BrokerConnectionSettings>, BrokerConnectionSettingsValidator>();
 
         services.AddDbContext<LoyaltyDbContext>((sp, options) =>
             options.UseNpgsql(sp.GetRequiredService<IOptions<ApiOptions>>().Value.ConnectionString));
@@ -38,7 +41,7 @@ public static class ServiceCollectionExtensions
             ConnectionMultiplexer.Connect(sp.GetRequiredService<IOptions<ApiOptions>>().Value.RedisConnectionString));
 
         services.AddSingleton<IRabbitMqConnectionHolder>(sp =>
-            new RabbitMqConnectionHolder(sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value));
+            new RabbitMqConnectionHolder(sp.GetRequiredService<IOptions<BrokerConnectionSettings>>().Value));
         services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
 
         services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));

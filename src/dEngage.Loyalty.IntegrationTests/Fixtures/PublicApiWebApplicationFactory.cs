@@ -35,6 +35,11 @@ public sealed class PublicApiWebApplicationFactory(CustomWebApplicationFactory a
                 // Redis-backed services are replaced below.
                 ["ConnectionString"] = "unused-sqlite-in-memory-is-used-instead",
                 ["RedisConnectionString"] = "unused-fake-rate-limiter-is-used-instead",
+                // The broker connection is required at startup (BrokerConnectionSettings); never
+                // opened, since the event publisher is replaced by a fake.
+                ["RabbitMq:Host"] = "unused-fake-event-publisher-is-used-instead",
+                ["RabbitMq:User"] = "unused",
+                ["RabbitMq:Password"] = "unused",
             });
         });
 

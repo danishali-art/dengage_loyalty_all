@@ -32,6 +32,10 @@ public sealed class PostgresWebApplicationFactory(string connectionString) : Web
             {
                 ["ConnectionString"] = connectionString,
                 ["RedisConnectionString"] = "unused-fake-rate-limiter-is-used-instead",
+                // Required at startup (BrokerConnectionSettings); never opened, the publisher is a fake.
+                ["RabbitMq:Host"] = "unused-fake-event-publisher-is-used-instead",
+                ["RabbitMq:User"] = "unused",
+                ["RabbitMq:Password"] = "unused",
                 ["Jwt:SigningKey"] = "test-signing-key-not-for-production-32chars-min",
             });
         });

@@ -1,5 +1,7 @@
 using dEngage.Loyalty.IntegrationTests.Fixtures;
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace dEngage.Loyalty.IntegrationTests.Api;
@@ -26,5 +28,18 @@ public sealed class HostBootSmokeTests : IClassFixture<CustomWebApplicationFacto
         // cleanly (401/403), which proves the whole DI graph (DbContext, controllers,
         // fake publisher/rate-limiter) wired up without throwing during startup.
         ((int)response.StatusCode).Should().BeOneOf(401, 403);
+    }
+
+    // Platform alignment D8: no localhost or guest/guest fallback for the broker any more. The
+    // old RabbitMqOptions defaulted to both, so a deployment missing them started "fine".
+    [Fact]
+    public void The_api_refuses_to_start_without_broker_settings()
+    {
+        using var factory = _factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["RabbitMq:Host"] = "" })));
+
+        var act = () => factory.CreateClient();
+
+        act.Should().Throw<Exception>().Where(e => e.ToString().Contains("RabbitMQSettings:RabbitMQHost"));
     }
 }

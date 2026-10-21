@@ -39,13 +39,7 @@ public class OutboxPublisherWorker(
 
     private async Task RunPublishLoopAsync(CancellationToken ct)
     {
-        var factory = new ConnectionFactory
-        {
-            HostName = config.RabbitMqHost,
-            Port = config.RabbitMqPort,
-            UserName = config.RabbitMqUser,
-            Password = config.RabbitMqPassword
-        };
+        var factory = config.CreateConnectionFactory();
 
         using var connection = factory.CreateConnection("loyalty-outbox-publisher");
         using var channel = connection.CreateModel();

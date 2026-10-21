@@ -33,10 +33,10 @@ public sealed class ConsumerConfigTests
 
         config.ConnectionString.Should().Be("Host=db;Database=loyalty");
         config.RedisConnectionString.Should().Be("redis:6379");
-        config.RabbitMqHost.Should().Be("mq");
-        config.RabbitMqPort.Should().Be(5673);
-        config.RabbitMqUser.Should().Be("loyalty");
-        config.RabbitMqPassword.Should().Be("pw");
+        config.Broker.Host.Should().Be("mq");
+        config.Broker.Port.Should().Be(5673);
+        config.Broker.User.Should().Be("loyalty");
+        config.Broker.Password.Should().Be("pw");
         config.GenericEventTypes.Should().Equal("custom.event");
     }
 
@@ -90,7 +90,7 @@ public sealed class ConsumerConfigTests
     [Fact]
     public void The_port_defaults_to_5672_but_an_invalid_port_fails()
     {
-        ConsumerConfig.FromConfiguration(Config(Complete())).RabbitMqPort.Should().Be(5672);
+        ConsumerConfig.FromConfiguration(Config(Complete())).Broker.Port.Should().Be(5672);
 
         var values = Complete();
         values["RabbitMq:Port"] = "not-a-port";

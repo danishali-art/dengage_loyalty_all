@@ -1,13 +1,14 @@
+using dEngage.Loyalty.Shared.Messaging;
+using RabbitMQ.Client;
+
 namespace dEngage.Loyalty.Consumer;
 
 public class ConsumerConfig
 {
     public string ConnectionString { get; set; } = default!;
     public string RedisConnectionString { get; set; } = default!;
-    public string RabbitMqHost { get; set; } = default!;
-    public int RabbitMqPort { get; set; } = 5672;
-    public string RabbitMqUser { get; set; } = default!;
-    public string RabbitMqPassword { get; set; } = default!;
+    // The broker connection: the platform's RabbitMQSettings, else the legacy RabbitMq keys (D8).
+    public BrokerConnectionSettings Broker { get; set; } = new();
 
     // Non-built-in event types to bind on q.loyalty. Direct exchange: an unbound
     // routing key is dropped silently — new generic types require config + restart.
@@ -22,7 +23,8 @@ public class ConsumerConfig
     // Fail fast at startup. The Consumer used to fall back to localhost and postgres/guest
     // credentials when a value was missing, so a deployment with an incomplete mounted config
     // started "fine" against the wrong database (platform alignment, Phase 1). Key names match
-    // the Api's ApiOptions/RabbitMqOptions.
+    // the Api's ApiOptions/RabbitMqOptions, and the broker connection is read the same way as
+    // there (BrokerConnectionSettings).
     public static ConsumerConfig FromConfiguration(IConfiguration configuration)
     {
         var missing = new List<string>();
@@ -42,9 +44,7 @@ public class ConsumerConfig
             ConnectionString = Required("ConnectionString"),
             // "Redis" was the Consumer's own key before it was aligned with the Api.
             RedisConnectionString = Required("RedisConnectionString", legacyKey: "Redis"),
-            RabbitMqHost = Required("RabbitMq:Host"),
-            RabbitMqUser = Required("RabbitMq:User"),
-            RabbitMqPassword = Required("RabbitMq:Password"),
+            Broker = BrokerConnectionSettings.Read(configuration),
             GenericEventTypes = configuration.GetSection("RabbitMq:GenericEventTypes").Get<string[]>() ?? Array.Empty<string>(),
             IsolatedTenants = (configuration.GetSection("RabbitMq:IsolatedTenants").Get<string[]>() ?? Array.Empty<string>())
                 .Distinct(StringComparer.Ordinal).ToArray()
@@ -54,14 +54,7 @@ public class ConsumerConfig
         if (invalidSlugs.Count > 0)
             missing.Add($"RabbitMq:IsolatedTenants (not tenant slugs: {string.Join(", ", invalidSlugs)})");
 
-        var portValue = configuration["RabbitMq:Port"];
-        if (!string.IsNullOrWhiteSpace(portValue))
-        {
-            if (!int.TryParse(portValue, out var port) || port <= 0)
-                missing.Add("RabbitMq:Port (must be a positive number)");
-            else
-                config.RabbitMqPort = port;
-        }
+        missing.AddRange(config.Broker.Problems);
 
         if (missing.Count > 0)
             throw new InvalidOperationException(
@@ -69,4 +62,15 @@ public class ConsumerConfig
 
         return config;
     }
+
+    public ConnectionFactory CreateConnectionFactory(bool dispatchConsumersAsync = false) => new()
+    {
+        HostName = Broker.Host,
+        Port = Broker.Port,
+        UserName = Broker.User,
+        Password = Broker.Password,
+        VirtualHost = Broker.VirtualHost,
+        Ssl = new SslOption { Enabled = Broker.UseSsl, ServerName = Broker.Host },
+        DispatchConsumersAsync = dispatchConsumersAsync
+    };
 }

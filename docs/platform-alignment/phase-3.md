@@ -10,8 +10,8 @@
 |---|---|
 | D7 Nancy → ASP.NET Core controllers | ✅ Done and tested (§1). Committed `3b2b420` |
 | D9 `Public.Api` split | ✅ Done and tested (§2). Committed `da3100c` |
-| `dEngage.Loyalty.Api.Client` package | ✅ Done and tested (§3) |
-| D8 messaging → common broker / outbox library | Not started |
+| `dEngage.Loyalty.Api.Client` package | ✅ Done and tested (§3). Committed `85e00c6` |
+| D8 messaging | ✅ Settings step done and tested (§4). Library move **not done by decision** (§4.1) |
 
 ## 1. D7 — Nancy → ASP.NET Core controllers (done)
 
@@ -130,3 +130,27 @@ Windows note: the first full test run had 26 end-to-end failures, all `TimeoutEx
 | `src/dEngage.Loyalty.Api.Framework/Json/JsonConventions.cs` | changed | Uses the Contract converter |
 | `src/dEngage.Loyalty.IntegrationTests/Api/LoyaltyApiClientTests.cs`, test `.csproj` | new / changed | Client tests |
 | `dEngage.Loyalty.sln`, `build.json` | changed | New project; NuGet package |
+
+## 4. D8 — messaging (settings step done; library move not done, by decision)
+
+### 4.1 Why the library move was not done (decided 2026-10-21)
+D8 recommended moving to `dEngage.Common.MessageBroker` or `dEngage.Messaging.RabbitMq` + `dEngage.Outbox` after a first settings step. On inspection none of them fits:
+- **`dEngage.Common.MessageBroker`** is MassTransit 8.1.3: its own message envelope, an exchange per message type, `_error` / `_skipped` queues, retry and defer filters. Loyalty's wire contract (published in `Contract`) is a raw JSON `EventEnvelope` on the direct exchange `loyalty.events`, routed by event type, plus `loyalty.outbound` for the connector. Adopting it changes that contract for every publisher and consumer, and hands over the guarantees loyalty depends on: one message in flight per queue (`BasicQos(0,1)`), tenant lanes with a confirmed forward before the ack (D12), the inbox-based de-duplication and the DLQ topology.
+- **`dEngage.Outbox`** depends on `dEngage.DbManager` (not allowed in the core, D13) and on an inapp-specific table and channel enum.
+- **`dEngage.Messaging.RabbitMq`** is a single publisher class on RabbitMQ.Client 7; using it means upgrading loyalty from 6.8 for no functional gain.
+
+So the transport stays loyalty's own RabbitMQ.Client code, and only the **configuration** converges with the platform.
+
+### 4.2 What was built
+- **`BrokerConnectionSettings`** (`Shared/Messaging/`): the single reader of the RabbitMQ connection for the Api, Public.Api and the Consumer. It reads the platform's `appsettings.messagebroker.json` section `RabbitMQSettings` (`RabbitMQHost`, `RabbitMQPort`, `RabbitMQUsername`, `RabbitMQPassword`, `VirtualHost`, `UseSsl`) when `RabbitMQHost` is set — the file both platform builders already load from `CONFIG_PATH` — and otherwise the legacy `RabbitMq:Host/Port/User/Password` keys, kept for one release. The two are never mixed. `VirtualHost` and `UseSsl` are new to loyalty.
+- **Fail fast in the HTTP hosts too.** `RabbitMqOptions` defaulted to `localhost` and `guest/guest`, so the Api started "fine" without broker settings. Now the Api and Public.Api refuse to start, naming the missing keys, as the Consumer already did. `RabbitMqOptions` keeps only `GenericEventTypes`.
+- **Templates:** each service has an `appsettings.messagebroker.json` in the platform format with empty values (ops mount the real one); the broker keys were removed from the Api / Public.Api Staging and Production templates. Local `appsettings.Development.json` files keep the legacy keys and keep working.
+
+### 4.3 Verification
+| Check | Result |
+|---|---|
+| `BrokerConnectionSettingsTests` (8) | ✅ platform section read as the platform writes it (string port, vhost, SSL); platform wins and is never mixed with the legacy keys; legacy keys with defaults; nothing configured names both ways; invalid port / SSL reported; Consumer builds its connection factory from the platform section and fails on an incomplete one |
+| `ConsumerConfigTests` (existing) | ✅ unchanged behaviour on the legacy keys, same error messages |
+| `HostBootSmokeTests` | ✅ new: the Api refuses to start without broker settings |
+| Engine / integration tests | ✅ 163/163, 358/358 |
+| Local run | ✅ Public.Api with `RabbitMQSettings__*` (platform section): `/health/ready` rabbitmq ok; Consumer on the legacy keys of the dev file: outbox publisher connected |
