@@ -2,7 +2,7 @@
 
 Bu doküman [`loyalty_schema.sql`](loyalty_schema.sql) içindeki tüm tabloları ve kolonları açıklar.
 
-- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261020150844_LoyaltyTenantConfigAlignD4`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
+- **Kaynak:** `src/dEngage.Loyalty.Schema` EF Core migration'ları (son migration: `20261021121236_TierUpgradeLogPerTierUnique`). Script `dotnet ef migrations script --idempotent` ile üretilmiştir; şema değişirse aynı komutla yeniden üretilir, elle düzenlenmez.
 - **Kurulum:** boş bir PostgreSQL veritabanına `psql -d loyalty_dev -f loyalty_schema.sql`. Ardından **her tenant için** [`provision_tenant.sql`](provision_tenant.sql) (partition oluşturur) ve tenant'ın seed script'i (örn. [`starbucks_loyalty.sql`](starbucks_loyalty.sql)) çalıştırılır.
 - Tüm parasal/puan kolonları `numeric(20,4)`'tür; tüm zaman kolonları `timestamptz` (UTC) tutulur.
 - Event/mesaj davranışlarının detayı için: `docsv2/01_inbound_events.md`, `docsv2/02_outbound_events.md`.
@@ -413,7 +413,7 @@ Tier değişimlerinin audit kaydı (yükselme gerçek zamanlı, düşme gece bat
 - `IX_tier_upgrade_log_from_tier_id (from_tier_id)`
 - `IX_tier_upgrade_log_to_tier_id (to_tier_id)`
 - `idx_tier_upgrade_log_tenant_contact (tenant_id, contact_key)`
-- `ux_tier_upgrade_log_source_event (tenant_id, contact_key, source_event_id)` UNIQUE — aynı event'ten çift tier yazımını engeller (idempotency)
+- `ux_tier_upgrade_log_source_event (tenant_id, contact_key, source_event_id, to_tier_id)` UNIQUE — aynı event'ten aynı tier'a çift yazımı engeller (idempotency). `to_tier_id` anahtarda, çünkü bir event tüm aktif programlarda çalışır ve her programın kendi tier'ları vardır: bir event birden fazla programda tier değiştirebilir (`20261021121236_TierUpgradeLogPerTierUnique`)
 
 ---
 

@@ -3029,5 +3029,27 @@ BEGIN
     VALUES ('20261020150844_LoyaltyTenantConfigAlignD4', '9.0.13');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261021121236_TierUpgradeLogPerTierUnique') THEN
+    DROP INDEX ux_tier_upgrade_log_source_event;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261021121236_TierUpgradeLogPerTierUnique') THEN
+    CREATE UNIQUE INDEX ux_tier_upgrade_log_source_event ON tier_upgrade_log (tenant_id, contact_key, source_event_id, to_tier_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261021121236_TierUpgradeLogPerTierUnique') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261021121236_TierUpgradeLogPerTierUnique', '9.0.13');
+    END IF;
+END $EF$;
 COMMIT;
 

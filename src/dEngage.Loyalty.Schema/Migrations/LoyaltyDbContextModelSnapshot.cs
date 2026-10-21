@@ -1829,7 +1829,7 @@ namespace dEngage.Loyalty.Schema.Migrations
                     b.HasIndex("TenantId", "ContactKey")
                         .HasDatabaseName("idx_tier_upgrade_log_tenant_contact");
 
-                    b.HasIndex("TenantId", "ContactKey", "SourceEventId")
+                    b.HasIndex("TenantId", "ContactKey", "SourceEventId", "ToTierId")
                         .IsUnique()
                         .HasDatabaseName("ux_tier_upgrade_log_source_event");
 

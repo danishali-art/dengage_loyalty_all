@@ -54,15 +54,30 @@ export function useEventSimulatorPage() {
     if (untouched) dataJson.value = sampleJson.value;
   }
 
+  /**
+   * The consumer records an event only once it picks it up, so right after a send the API
+   * answers 404 for a while. That means "not there yet" (null), not a failure.
+   */
+  async function getStatusIfKnown(id: string): Promise<EventStatus | null> {
+    try {
+      return await getEventStatus(tenant.require(), id);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
   async function pollStatus(): Promise<void> {
     const id = eventId.value;
     if (!id || polling.value) return;
     polling.value = true;
     try {
       for (let attempt = 0; attempt < STATUS_POLL_ATTEMPTS && !stopped; attempt++) {
-        const current = await getEventStatus(tenant.require(), id);
-        status.value = current;
-        if (current.status !== 'pending') return;
+        const current = await getStatusIfKnown(id);
+        if (current) {
+          status.value = current;
+          if (current.status !== 'pending') return;
+        }
         await new Promise((resolve) => setTimeout(resolve, STATUS_POLL_INTERVAL_MS));
       }
     } catch {
