@@ -52,9 +52,7 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 
-app.MapHealthChecks();
-app.UseLoyaltyApiFramework();
-app.MapControllers();
+app.UseLoyaltyApi(corsPolicy: null);
 
 try
 {

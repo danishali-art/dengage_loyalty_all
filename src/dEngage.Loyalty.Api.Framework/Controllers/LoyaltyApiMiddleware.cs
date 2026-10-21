@@ -59,7 +59,9 @@ public sealed class LoyaltyApiMiddleware(RequestDelegate next, IHostEnvironment 
         }
         catch (Exception ex) when (!httpContext.Response.HasStarted)
         {
-            httpContext.Response.Clear();
+            // No Response.Clear(): it would also drop headers set before the exception, such as
+            // CORS, and a browser couldn't read the error body. Nothing has been written yet;
+            // status and Content-Type are set by the error result.
             await ErrorResponseFactory.FromException(ex, correlationId, environment.IsDevelopment())
                 .WriteAsync(httpContext);
         }

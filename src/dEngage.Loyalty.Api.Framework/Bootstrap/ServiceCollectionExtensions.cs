@@ -10,8 +10,14 @@ using dEngage.Loyalty.Contract;
 using dEngage.Loyalty.Schema;
 using dEngage.Loyalty.Shared.Messaging;
 using dEngage.Loyalty.Shared.Security;
+using dEngage.Common.AspNetCore;
+using dEngage.Common.AspNetCore.Extensions;
+using dEngage.Common.AspNetCore.Filters;
+using dEngage.Common.AspNetCore.Settings;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,9 +77,19 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<RewardPurchaseRequest>, RewardPurchaseRequestValidator>();
         services.AddScoped<IValidator<GenericEventRequest>, GenericEventRequestValidator>();
 
-        // Controllers (platform alignment D7). No MVC formatters or model binding are relied on:
-        // see LoyaltyControllerBase and JsonResponses.
-        services.AddControllers();
+        // Controllers on the platform's MVC setup (dEngage.Common.AspNetCore: log events, controller
+        // debug view, Swagger behind SwaggerSettings:IsActive). Its JSON formatters (Newtonsoft) never
+        // touch loyalty's bodies: requests are read and responses written by JsonResponses with
+        // JsonConventions. Its GeneralExceptionFilter is removed, because it answers errors with
+        // { "message": … }; LoyaltyApiMiddleware writes the API's ProblemDetails body (with the `code`
+        // the portals and Api.Client rely on) instead.
+        services.AddDengageCommonAspNetCoreModule(mvcSetupAction: mvc =>
+        {
+            foreach (var filter in mvc.Filters.OfType<TypeFilterAttribute>()
+                         .Where(f => f.ImplementationType == typeof(GeneralExceptionFilter)).ToList())
+                mvc.Filters.Remove(filter);
+        });
+        services.AddCors();
 
         return services;
     }
@@ -89,8 +105,22 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    // Before the controllers: correlation id, credential resolution and ProblemDetails error
-    // bodies for everything under /api (LoyaltyApiMiddleware).
-    public static IApplicationBuilder UseLoyaltyApiFramework(this IApplicationBuilder app) =>
-        app.UseMiddleware<LoyaltyApiMiddleware>();
+    // The request pipeline, on the platform's external-API defaults (forwarded headers, trace id, log
+    // events, routing, Swagger when enabled, CORS, controllers; outside Development the platform's
+    // internal endpoints are switched off). LoyaltyApiMiddleware runs after routing, before the
+    // endpoints: correlation id, credential resolution and ProblemDetails error bodies for /api.
+    //
+    // The platform's request/response logger is OFF on purpose: it logs every header and the first
+    // 1 KB of every body, which here means portal JWTs, raw API keys, login passwords and customer
+    // data in Graylog/Seq.
+    public static void UseLoyaltyApi(this WebApplication app, Action<CorsPolicyBuilder>? corsPolicy)
+    {
+        app.UseExternalApiDengageCommonDefaults(app.Environment, app.Configuration,
+            corsPolicyAction: corsPolicy,
+            swaggerSettings: app.Services.GetRequiredService<ISwaggerSettings>(),
+            useLogEventLogger: true,
+            useRequestResponseLogger: false,
+            preAuthenticationAction: pipeline => pipeline.UseMiddleware<LoyaltyApiMiddleware>(),
+            configureEndpoints: endpoints => endpoints.MapLoyaltyHealthChecks());
+    }
 }

@@ -1,6 +1,7 @@
 using dEngage.Loyalty.Schema;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -12,7 +13,7 @@ namespace dEngage.Loyalty.Api.Framework.Bootstrap;
 // Shared by the admin Api and Public.Api.
 public static class HealthChecks
 {
-    public static void MapHealthChecks(this WebApplication app)
+    public static void MapLoyaltyHealthChecks(this IEndpointRouteBuilder app)
     {
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 

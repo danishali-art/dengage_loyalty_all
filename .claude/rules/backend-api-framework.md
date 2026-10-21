@@ -14,8 +14,15 @@ IntegrationTests (`HostBootSmokeTests` at a minimum).
 
 ## Bootstrap (`Bootstrap/`)
 - `AddLoyaltyApiFramework(configuration)` is the only entry point that registers framework
-  services (including `AddControllers()`). Add new framework services here, not in `Api/Program.cs`.
-- `UseLoyaltyApiFramework()` adds `LoyaltyApiMiddleware`; it must come before `MapControllers()`.
+  services, including MVC through the platform's `AddDengageCommonAspNetCoreModule`. Add new
+  framework services here, not in `Program.cs`.
+- `UseLoyaltyApi(corsPolicy)` builds the whole pipeline on the platform's
+  `UseExternalApiDengageCommonDefaults` and puts `LoyaltyApiMiddleware` after routing. Don't call
+  `MapControllers()` or map endpoints separately.
+- Keep the three deviations from the platform defaults: the platform's `GeneralExceptionFilter`
+  removed (its `{ message }` body would replace the API's ProblemDetails), the request/response
+  logger off (it logs headers and bodies: JWTs, API keys, passwords, PII), and Swagger only via
+  `SwaggerSettings:IsActive`. `PlatformAspNetCoreApiTests` guards the first and CORS on errors.
 
 ## Middleware and controller base (`Controllers/`) — the security boundary
 - `LoyaltyApiMiddleware` runs for every `/api` request. It sets the correlation id and resolves a

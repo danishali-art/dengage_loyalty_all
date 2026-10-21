@@ -92,27 +92,17 @@ builder.Services.AddSingleton<IAccountTypeConfigValidator, PointsAccountTypeConf
 builder.Services.AddSingleton<IAccountTypeConfigValidator, CashAccountTypeConfigValidator>();
 builder.Services.AddSingleton<AccountTypeConfigValidatorSelector>();
 
-// Environment isolation (plan §5): strict CORS outside Development, generic error bodies enforced
-// by LoyaltyApiMiddleware via IHostEnvironment.IsDevelopment().
-if (!builder.Environment.IsDevelopment())
-{
-    builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
-            .AllowAnyHeader()
-            .AllowAnyMethod()));
-}
-
 var app = builder.Build();
 
+// Environment isolation (plan §5): strict CORS outside Development (the portal's dev server proxies
+// /api instead), generic error bodies enforced by LoyaltyApiMiddleware via IsDevelopment().
+var allowedOrigins = app.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 if (!app.Environment.IsDevelopment())
-{
-    app.UseCors();
     app.UseHttpsRedirection();
-}
 
-app.MapHealthChecks();
-app.UseLoyaltyApiFramework();
-app.MapControllers();
+app.UseLoyaltyApi(corsPolicy: app.Environment.IsDevelopment()
+    ? null
+    : policy => policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
 
 try
 {
