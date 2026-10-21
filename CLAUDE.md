@@ -38,6 +38,8 @@ The process for a scope change:
   limiting, pagination, validation, error handling, and the event ingestion service (`Events/`).
 - `src/dEngage.Loyalty.Contract` — wire contract (netstandard2.0 NuGet package): event envelope
   and types, topology names, and the public event API request/response bodies.
+- `src/dEngage.Loyalty.Api.Client` — typed HTTP client for Public.Api (netstandard2.0 NuGet
+  package; per-tenant API keys; depends only on Contract).
 - `src/dEngage.Loyalty.Consumer` — background worker consuming events off RabbitMQ.
 - `src/dEngage.Loyalty.Engine.Framework` — shared engine abstractions/bootstrap/consumers.
 - `src/dEngage.Loyalty.RuleEngine` — the core evaluation engine: rule matching/calculation

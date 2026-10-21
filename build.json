@@ -17,6 +17,9 @@
   "NugetPackageSettingsList": [
     {
       "Name": "dEngage.Loyalty.Contract"
+    },
+    {
+      "Name": "dEngage.Loyalty.Api.Client"
     }
   ]
 }

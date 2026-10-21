@@ -9,8 +9,8 @@
 | Item | Status |
 |---|---|
 | D7 Nancy → ASP.NET Core controllers | ✅ Done and tested (§1). Committed `3b2b420` |
-| D9 `Public.Api` split | ✅ Done and tested (§2) |
-| `dEngage.Loyalty.Api.Client` package | Not started |
+| D9 `Public.Api` split | ✅ Done and tested (§2). Committed `da3100c` |
+| `dEngage.Loyalty.Api.Client` package | ✅ Done and tested (§3) |
 | D8 messaging → common broker / outbox library | Not started |
 
 ## 1. D7 — Nancy → ASP.NET Core controllers (done)
@@ -100,3 +100,33 @@ Windows note: the first full test run had 26 end-to-end failures, all `TimeoutEx
 | `webVue3/openapi/openapi.json`, `webVue3/src/shared/api/generated/schema.d.ts` | regenerated | Ingestion routes no longer on the admin Api |
 | `web/e2e/customers.e2e.spec.ts`, `webVue3/e2e/customers.e2e.spec.ts`, `webVue3/playwright.config.ts` | changed | Event posted to Public.Api |
 | `CLAUDE.md`, `.claude/rules/{backend,backend-api,backend-api-framework,01-workflow-and-debugging}.md` | changed | Two HTTP hosts |
+
+## 3. `dEngage.Loyalty.Api.Client` package (done)
+
+### 3.1 What was built
+- **`dEngage.Loyalty.Api.Client`** (netstandard2.0, version 1.0.0, published through `build.json` like `Contract`): a typed `HttpClient` for **Public.Api** — `ILoyaltyApiClient` with one `Publish…Async` per ingestion route plus `GetEventStatusAsync`.
+- **Platform shape:** registered with `services.AddLoyaltyApiClient(publicApiBaseUrl, …)` (like `AddCouponApiClient`), returning the `IHttpClientBuilder` so callers can add handlers. A base URL with a path prefix works.
+- **Per-tenant API keys:** `ILoyaltyApiKeyProvider` (the Phase 4 connector serves many tenants, each with its own key); `StaticLoyaltyApiKeyProvider` for a fixed list. A tenant without a key fails before any request is sent.
+- **Results, not exceptions, for HTTP errors** (as the platform's `ApiClientHttpResponse`): `LoyaltyApiResult<T>` with the status, the body, or `LoyaltyApiProblem` (the API's error body: `code`, `title`, `traceId`, per-field `errors`). A non-API error body (for example a proxy's 502 page) becomes code `http_<status>`.
+- **One wire format:** `DecimalStringJsonConverter` moved from `Api.Framework` into `Contract`, so the server and the client share it (camelCase, nulls omitted, decimals as JSON strings).
+
+### 3.2 Decisions
+- **No `dEngage.Common.Shared` dependency** (unlike the coupon client): it would pull the platform's SecMan and Newtonsoft into every consumer. The package depends on `dEngage.Loyalty.Contract` and `Microsoft.Extensions.Http` only (checked in the packed `.nuspec`).
+- **Public.Api only.** The admin Api is authenticated by portal logins (JWT); a service-to-service way in is part of Phase 4 (D6), so there's nothing for a client to call there yet. The balance/wallet lookup (§2.2) would be added to this client once it exists.
+
+### 3.3 Verification
+| Check | Result |
+|---|---|
+| `dotnet build dEngage.Loyalty.sln`; `dotnet pack` | ✅ 0 errors, 0 warnings; `.nuspec` dependencies: `dEngage.Loyalty.Contract` 1.0.0, `Microsoft.Extensions.Http` 9.0.9 |
+| `LoyaltyApiClientTests` (7) against the real Public.Api host | ✅ publish with idempotency key (= event id), decimal sent as `"10.5"`; validation failure → `invalid_request` with field errors and trace id; unknown key → 401 `unauthorized`; unknown event → 404; missing key → fails before any request; registration keeps the base path, escapes the tenant, sends the headers and the API's JSON; a non-API 502 body → `http_502` |
+| Integration / engine tests | ✅ 357/357, 155/155 |
+| `npm run api:check` | ✅ unchanged (the converter move doesn't affect the spec) |
+
+### 3.4 Files
+| File | Change | Purpose |
+|---|---|---|
+| `src/dEngage.Loyalty.Api.Client/**` | new | `ILoyaltyApiClient`/`LoyaltyApiClient`, `LoyaltyApiResult`/`LoyaltyApiProblem`, `ILoyaltyApiKeyProvider`, `LoyaltyApiClientModule`, `IsExternalInit` polyfill |
+| `src/dEngage.Loyalty.Contract/DecimalStringJsonConverter.cs` | moved from `Api.Framework/Json/` | Shared wire format |
+| `src/dEngage.Loyalty.Api.Framework/Json/JsonConventions.cs` | changed | Uses the Contract converter |
+| `src/dEngage.Loyalty.IntegrationTests/Api/LoyaltyApiClientTests.cs`, test `.csproj` | new / changed | Client tests |
+| `dEngage.Loyalty.sln`, `build.json` | changed | New project; NuGet package |

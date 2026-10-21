@@ -1,4 +1,5 @@
 using System.Text.Json;
+using dEngage.Loyalty.Contract;
 
 namespace dEngage.Loyalty.Api.Framework.Json;
 
