@@ -1,5 +1,5 @@
 # Images are built with the repo root as context (Dockerfiles COPY . . so NuGet.Config is
-# available). Keep everything that isn't backend source out of the build context.
+# available). Keep everything that isn't backend or Vue portal source out of the build context.
 
 # Local credentials and developer-only settings must never be baked into an image.
 **/.env
@@ -17,10 +17,15 @@
 .github/
 .claude/
 
-# Front-ends are built and hosted separately
+# Front-ends: only the Vue portal (webVue3) is built into an image (dengage.loyalty.frontend).
+# The Angular portal (web/) is never deployed.
 web/
-webVue3/
 **/node_modules/
+webVue3/dist/
+webVue3/coverage/
+webVue3/test-results/
+webVue3/playwright-report/
+webVue3/**/*.tsbuildinfo
 
 # Docs, scripts, data dumps and local infra
 docs/
