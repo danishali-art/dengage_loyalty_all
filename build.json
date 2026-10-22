@@ -12,6 +12,10 @@
     {
       "Name": "dEngage.Loyalty.Consumer",
       "DockerImageName": "dengage.loyalty.consumer"
+    },
+    {
+      "Name": "dengage.loyalty.frontend",
+      "DockerImageName": "dengage.loyalty.frontend"
     }
   ],
   "NugetPackageSettingsList": [
