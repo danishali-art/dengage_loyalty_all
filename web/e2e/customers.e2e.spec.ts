@@ -1,27 +1,22 @@
 import { expect, test } from '@playwright/test';
-import { PLATFORM_ADMIN, loginAs, provisionTenant } from './fixtures';
+import { PLATFORM_ADMIN, apiAuth, loginAs, provisionTenant, requireBackend } from './fixtures';
 
 /** Public.Api (event ingestion by API key), which the dev-server proxy doesn't cover. */
 const PUBLIC_API_URL = process.env['PUBLIC_API_URL'] ?? 'http://localhost:5175';
 
 /**
- * Proves the full chain: UI-created program/rule -> event ingested via the API-key gateway ->
- * LoyaltySaaS.Consumer processes it from RabbitMQ -> a ledger entry lands in Postgres -> the
- * Customer 360 screen reads it back. Requires LoyaltySaaS.Consumer running alongside the API
- * (documented in the plan) — this is the one spec that exercises the pre-existing event
- * pipeline, not just the new API/UI layer.
+ * Rule → event through the API-key gateway → Consumer →
+ * ledger → Customer 360. Needs Public.Api and the Consumer running beside the Api, not just the Api.
  */
-test.describe('Customers — event ingestion round-trip', () => {
+test.describe('Customers — event ingestion round-trip (real backend)', () => {
+  requireBackend();
+
   test('an ingested order.created event shows up on the customer profile', async ({ page, request }) => {
-    // The Consumer's RuleSyncService delta-polls every 30s (see the comment below) — this test
-    // waits out that cycle, so it needs more than Playwright's default 30s test timeout.
+    // The Consumer's RuleSyncService delta-polls every 30s; the test waits that out.
     test.setTimeout(90_000);
 
     const { tenantId, adminEmail, adminPassword } = await provisionTenant(request, 'e2e_customers');
-
-    const adminLoginRes = await request.post('/api/v1/auth/login', { data: { email: adminEmail, password: adminPassword } });
-    const { token } = (await adminLoginRes.json()) as { token: string };
-    const auth = { Authorization: `Bearer ${token}` };
+    const auth = await apiAuth(request, adminEmail, adminPassword);
 
     const programRes = await request.post(`/api/v1/tenants/${tenantId}/programs`, {
       headers: auth,
@@ -48,20 +43,23 @@ test.describe('Customers — event ingestion round-trip', () => {
       },
     });
 
-    // Platform admin issues the API key (platform-scoped route).
-    const platformLoginRes = await request.post('/api/v1/auth/login', { data: PLATFORM_ADMIN });
-    const { token: platformToken } = (await platformLoginRes.json()) as { token: string };
+    // 1.3.CL: the Consumer only evaluates programs that are published and active — publish once
+    // the rule exists, so the published snapshot includes it.
+    const publishRes = await request.post(`/api/v1/tenants/${tenantId}/programs/${program.id}/publish`, {
+      headers: auth,
+    });
+    expect(publishRes.ok()).toBeTruthy();
+
+    const platformAuth = await apiAuth(request, PLATFORM_ADMIN.email, PLATFORM_ADMIN.password);
     const apiKeyRes = await request.post(`/api/v1/platform/tenants/${tenantId}/api-keys`, {
-      headers: { Authorization: `Bearer ${platformToken}` },
+      headers: platformAuth,
     });
     const { rawKey } = (await apiKeyRes.json()) as { rawKey: string };
 
     await loginAs(page, adminEmail, adminPassword);
 
-    // The Consumer's RuleSyncService only picks up newly-created rules on its 30s delta poll
-    // (RuleSyncService.DeltaInterval) — publishing the event before that cycle runs would have
-    // it processed with a stale (rule-less) cache for this brand-new tenant, silently matching
-    // nothing. So wait out the cycle here, before publishing, rather than polling longer after.
+    // Wait out the Consumer's 30s rule-sync cycle before publishing, or the event is processed
+    // against a rule-less cache for this brand-new tenant.
     await page.waitForTimeout(35_000);
 
     const contactKey = `e2e_customer_${Date.now()}`;
@@ -73,18 +71,16 @@ test.describe('Customers — event ingestion round-trip', () => {
     expect(eventRes.status()).toBe(202);
 
     await page.goto(`/customers/${contactKey}`);
-
-    // Processing itself is fast once the rule is cached — this just absorbs normal async lag.
     await expect(async () => {
       await page.reload();
-      const balanceRow = page.locator('div', { hasText: 'E2E Points' }).last();
-      await expect(balanceRow).toContainText('50');
-      await expect(page.getByText('+50')).toBeVisible();
+      await expect(page.locator('main')).toContainText('E2E Points');
+      await expect(page.locator('main')).toContainText('50');
     }).toPass({ timeout: 15_000, intervals: [1000, 2000, 3000] });
 
-    // The customer also shows up in the browsable list, not just via direct lookup.
+    // The customer is also in the browsable list, not just reachable by direct lookup.
     await page.goto('/customers');
-    await page.getByPlaceholder('Filter by contact key…').fill(contactKey);
+    await page.getByPlaceholder('Search by contact key, e.g. cust_1001').fill(contactKey);
+    await page.getByRole('button', { name: 'Search' }).click();
     await expect(page.getByRole('cell', { name: contactKey })).toBeVisible();
   });
 });

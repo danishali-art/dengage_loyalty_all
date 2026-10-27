@@ -15,7 +15,7 @@
 | 4 | ~~Test mode hidden and rejected on new redeem, transfer, reversal and adjustment rules (D9)~~ Superseded by row 11 (D20) | — | — |
 | 5 | Automatic once-only for `signup` / `kyc.completed`, per customer per rule, on every rule (D4, D4a, D4b, D12) | **Scope change** — repeat events stop paying. **Done 2026-10-08** | 1b |
 | 6 | Every per-customer cap follows On breach on both exclusive and stackable rules (D6, D13) | **Scope change** — changes payouts on capped exclusive rules. **Done 2026-10-08** | 1b |
-| 7 | Rule form by trigger: Configuration/Limits fields shown per trigger group on new rules, with API create validation; Configuration section in en/tr; "Redemption terms" / "Transfer terms" titles; amount hint on tenant-defined triggers (D5, D8, D10, D11, D14, D17) | **UI only** + create-time validation. **Done 2026-10-08** | 2 |
+| 7 | Rule form by trigger: Configuration/Limits fields shown per trigger group on new rules, with API create validation; Configuration section translated; "Redemption terms" / "Transfer terms" titles; amount hint on tenant-defined triggers (D5, D8, D10, D11, D14, D17) | **UI only** + create-time validation. **Done 2026-10-08** | 2 |
 | 8 | ~~Test mode on earn rules as a true shadow run, marked and reported, with a "Go live" action (D9, D16)~~ Dropped by D20 | — | ~~3~~ |
 | 9 | Rounding: wallet decimals + rule/program direction; program `default_rounding` (D2) | **Scope change**. **Done 2026-10-08** | 4 |
 | 10 | Expiry override: per-rule override of the POINTS wallet's `expiration_days`; soonest-expiring-first consumption (D2, E1–E3) | **Scope change**. **Done 2026-10-08** | 5 |
@@ -62,10 +62,10 @@ Answers came from the stakeholders, relayed by the developer.
 | D11 (Q6, Q6a) | Where do burn limits live; one redeem minimum or two? | **Minimum redemption and Daily transfer limit stay in Calculation; only Minimum redemption is shown.** | Design §3.5. |
 | D12 (F2) | What counts as "once"? | **Once per customer per rule (option A).** | Design §3.6. |
 | D13 (F4) | Per-customer caps and On breach | **Every per-customer cap follows On breach on both kinds of rule; default Clamp.** | Design §3.7. |
-| D14 (F3) | Warn admins when a rule needs an `amount` the event might not send? | **Yes.** | A one-line hint on Spend's rate and on Min event amount for tenant-defined triggers. Portal only, en/tr. |
+| D14 (F3) | Warn admins when a rule needs an `amount` the event might not send? | **Yes.** | A one-line hint on Spend's rate and on Min event amount for tenant-defined triggers. Portal only. |
 | D15 (H4) | Release held points even if the rule was disabled or the program paused during the hold? | **Yes.** | The award was decided at event time; documented as deliberate. |
 | D16 (O1) | "Go live" action for test mode? | **Yes.** | Switches test mode off as a new rule version. |
-| D17 (O2) | Rename "Calculation" on redeem/transfer rules? | **Yes.** | "Redemption terms" / "Transfer terms". Label only, en/tr. |
+| D17 (O2) | Rename "Calculation" on redeem/transfer rules? | **Yes.** | "Redemption terms" / "Transfer terms". Label only. |
 | D18 (O3) | Fix the double evaluation in Phase 1? | **Yes.** | Budgets and counters stop double-counting. |
 | D19 (O4) | Approve the phases, one Scope Change Request each? | **Yes.** | §7. |
 | D20 (final verdict, 2026-10-08) | Test mode: shadow run on earn rules (D9) or remove it? | **"Let's execute with test mode removal."** | Test mode is removed from **every** rule type and trigger. **Supersedes** D9's earn shadow run and D16 ("Go live"); D9's hide-and-reject for burn, reversal and adjustment is now part of the general removal. Phase 3 is dropped. Design §3.10; existing rules with test mode on: Q10 (§8). |
@@ -121,7 +121,7 @@ The rule form shows every Configuration and Limits field for every trigger. Now 
 
 ### 2.2 Configuration section, field by field
 
-The section has 7 fields, shown for every rule type and trigger, English only (hardcoded in [rule-form.page.ts](../../web/src/app/features/programs/rules/rule-form.page.ts)). Which code applies a rule depends on its type:
+The section has 7 fields, shown for every rule type and trigger, English only (hardcoded in [RuleForm.vue](../../web/src/features/rule-edit/ui/RuleForm.vue)). Which code applies a rule depends on its type:
 
 - **Earn pipeline** — Spend, Fixed bonus, Manual adjustment: [WinnerSelector.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/WinnerSelector.cs) then [LedgerPoster.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/LedgerPoster.cs).
 - **Burn handlers** — Redemption, Transfer: [BurnRuleResolver.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/BurnRuleResolver.cs) picks the rule; [PointsRedeemHandler.cs](../../src/dEngage.Loyalty.Consumer/Handlers/PointsRedeemHandler.cs) / [PointsTransferHandler.cs](../../src/dEngage.Loyalty.Consumer/Handlers/PointsTransferHandler.cs) post.
@@ -160,7 +160,7 @@ The section has 7 fields, shown for every rule type and trigger, English only (h
 
 ### 2.5 Limits, enforcement by path
 
-The portal shows all 9 limits plus Period, Reset window and On breach for every trigger. The API ([RulesValidators.cs](../../src/dEngage.Loyalty.Api/Rules/RulesValidators.cs)) and portal ([rule-limits.ts](../../web/src/app/features/programs/rules/rule-limits.ts)) check values identically (positive, ≤ 4 decimals, a period for per-period caps) but not whether a limit fits the trigger.
+The portal shows all 9 limits plus Period, Reset window and On breach for every trigger. The API ([RulesValidators.cs](../../src/dEngage.Loyalty.Api/Rules/RulesValidators.cs)) and portal ([rule-limits.ts](../../web/src/entities/rule/model/rule-limits.ts)) check values identically (positive, ≤ 4 decimals, a period for per-period caps) but not whether a limit fits the trigger.
 
 | Limit | Earn pipeline | Burn handlers | Reversal |
 |---|---|---|---|
@@ -369,7 +369,7 @@ Shown only on rules earning into a POINTS wallet (A, B). Label "Points expire af
 
 **Design.**
 
-1. **Portal:** the Test mode checkbox is removed from the rule form for every trigger; its en/tr strings are removed.
+1. **Portal:** the Test mode checkbox is removed from the rule form for every trigger; its strings are removed.
 2. **API:** `configuration.testMode: true` is rejected (new 400 code `test_mode_removed`) on create and on any edit that sends it. The `testMode` field stays on `RuleSettings` and on the wire (existing fields are frozen), and responses always return `false`.
 3. **Engine:** the test-mode branch in [LedgerPoster.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/LedgerPoster.cs) (no posting, no budget reservation, excluded from `points.earned`) is removed, so every matching rule posts. This only happens together with the D21 data migration for existing rules, in the same deploy.
 4. **History:** past test fires stay in `rule_fire_audits` as they are (no flag to mark them; they have an empty `ledger_entry_id`). No backfill.
@@ -387,7 +387,7 @@ Shown only on rules earning into a POINTS wallet (A, B). Label "Points expire af
 
 | Area | Change |
 |---|---|
-| Portal | `programs/rules/rule-form.page.ts`, `rule.model.ts`; en/tr |
+| Portal | `RuleForm.vue`, `entities/rule/model/types.ts` |
 | API | `Rules/RulesValidators.cs` (reject `testMode: true`), `RulesAppService.cs` (always return `false`) |
 | RuleEngine | `LedgerPoster.cs` test-mode branch removed; `LimitCounterSync` needs no test-mode handling |
 | Schema | **Data-only migration** (D21): disable active / pending-approval earn rules whose current configuration has `testMode: true`. No schema change. |
@@ -407,10 +407,10 @@ Shown only on rules earning into a POINTS wallet (A, B). Label "Points expire af
 | Consumer | 1 | `EventConsumerWorker.cs` and/or `Handlers/SignupHandler.cs`, `KycCompletedHandler.cs`, `CardTransactionHandler.cs`, `RemittanceHandler.cs`, `PointsAdjustedHandler.cs` | Engine runs once per event (D18) |
 | API: Rules | 1, 2 | `Rules/RulesValidators.cs`, `RulesAppService.cs`, `rules/metadata` | Create-only rejection of test mode / delayed posting / hidden fields per trigger (D5, D9, D10, D11) |
 | API: Customers | 1, 5 | `Customers/CustomersAppService.cs`, `CustomersDtos.cs` | `already_awarded_once` in the event drawer; expiring-soon amounts (`isTest` dropped by D20) |
-| Portal: rules | 2, 3, 4, 5 | `programs/rules/rule-form.page.ts`, `rule-limits.ts`, `rule.model.ts`, `rules-list.page.ts` | Fields per trigger group; en/tr Configuration section; terms titles; amount hint; test results and Go live; rounding display; expiry field |
+| Portal: rules | 2, 3, 4, 5 | `RuleForm.vue`, `rule-limits.ts`, `entities/rule/model/types.ts`, `RulesPage.vue` | Fields per trigger group Configuration section; terms titles; amount hint; test results and Go live; rounding display; expiry field |
 | Portal: customers | 1, 3 | `features/customers/*` | Event drawer label; Test badge |
 | Portal: programs | 4 | program form | `defaultRounding` |
-| Portal: i18n | all | `public/i18n/en.json`, `tr.json` | New strings |
+| Portal: i18n | all | `shared/i18n/locales/en.json` | New strings |
 | Schema | 1, 4, 5 | migrations `…Cr1006` | Phase 1: data-only migration disabling earn rules with test mode on (D21); ~~`rule_fire_audits.is_test`~~ dropped by D20; `programs.default_rounding`; `ledger_entries.expires_at` (partitioned table) |
 | Ledger | 5 | `PointsExpirationJob.cs`, `PointsExpiringDetectorJob.cs` | Expiry by `expires_at`; soonest-expiring-first |
 | Ops | 1 | Pre-deploy SQL in the release notes (not `scripts/*.sql`) | (a) every rule with test mode on (D20, D21); (b) rules whose cap behaviour changes (§3.7); (c) held postings whose `order.refunded` is in the dead-letter queue (H1) |
@@ -476,14 +476,14 @@ Each phase: Jira Scope Change Request → PO + Architect approval of its scope �
 | 0 | Refund integration test (§2.4, §2.8); settles Q9 — **done 2026-10-08** (§7.1) | — | No |
 | 1a | **Money correctness (D24) — done 2026-10-08 (§7.3):** engine once per event (D18); no Reversal rule on `order.refunded` + shared cap (D22); refund cancels held points, release announces and re-evaluates the tier (H1–H3), no recheck (H4/D15); `cash.spent` reports insufficient balance (D23) | D15, D18, D22, D23 | `HeldPostingRefundsCr1006` (schema), `DisableReversalRulesOnOrderRefundedCr1006` (data) |
 | 1b | **Rule behaviour (D24) — done 2026-10-08 (§7.5):** test mode removed from every rule, existing earn rules with test mode on disabled (D20, D21); once-only for signup/KYC (D4, D4a, D4b, D12); per-customer caps follow On breach on both kinds (D6, D13) | D4, D4a, D4b, D6, D12, D13, D20, D21 | Data-only migration (D21) |
-| 2 | **Done 2026-10-08 (§7.7):** Rule form by trigger with create validation; en/tr Configuration section; terms titles; amount hint | D5, D8, D10, D11, D14, D17 | No |
+| 2 | **Done 2026-10-08 (§7.7):** Rule form by trigger with create validation Configuration section; terms titles; amount hint | D5, D8, D10, D11, D14, D17 | No |
 | ~~3~~ | ~~Test mode shadow run, `is_test`, badge, Test results panel, Go live~~ **Dropped by D20** | ~~D9 (earn), D16~~ | — |
 | 4 | **Done 2026-10-08 (§7.9):** Rounding | D2 | `programs.default_rounding` |
 | 5 | **Done 2026-10-08 (§7.11):** Expiry override | D2, E1–E3 | `ledger_entries.expires_at` |
 
 **Verification per phase** (`01-workflow-and-debugging.md`):
 - `dotnet build dEngage.Loyalty.sln`; `dotnet test src/dEngage.Loyalty.Engine.Tests`; `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker running).
-- Portal (from `web/`): `npx ng lint` · `npm test` · `npx ng build --configuration development` · `npx prettier --write <changed files>`.
+- Portal (from `web/`): `npm run lint` · `npm test` · `npm run build` · `npx prettier --write <changed files>`.
 - Engine and ledger changes assert idempotency (`backend-tests.md`): the same event twice → one posting, one budget reservation, one limit increment.
 - Each fix gets a test that fails without it (Engine.Tests for engine logic, IntegrationTests for API/persistence).
 - New migrations via `dotnet ef migrations add <Name>Cr1006 -p src/dEngage.Loyalty.Schema`; applied migrations and the model snapshot are never hand-edited.
@@ -563,8 +563,8 @@ Query (c) assumes the inbox payload stores the envelope with `Data`; check one r
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | **110/110 passed** (baseline 95) |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker) | **261/261 passed** (baseline 251) — incl. the two Phase 0 tests that failed before |
 | Portal `npm test` | 145/145 passed |
-| Portal `npx ng build --configuration development` | Succeeded |
-| Portal `npx ng lint` | 3 errors, **all in files not touched by this change** (`core/ui/confirm.service.ts` ×2 `no-autofocus`, `features/dashboard/dashboard.page.ts` `label-has-associated-control`) — existing, left as they are |
+| Portal `npm run build` | Succeeded |
+| Portal `npm run lint` | Only errors in files not touched by this change — existing, left as they are |
 | `npx prettier --write` | Run on the two changed portal files |
 | Not run | The full local stack (`.\run.ps1`) and a manual pass through the portal |
 
@@ -603,8 +603,8 @@ Query (c) assumes the inbox payload stores the envelope with `Data`; check one r
 | `src/dEngage.Loyalty.IntegrationTests/E2E/CashEventsProgramLiveE2ETests.cs` | Changed | D23 tests; handler constructor |
 | `src/dEngage.Loyalty.IntegrationTests/E2E/RefundPathsCr1006E2ETests.cs` | Changed | H1–H3 tests; job constructor |
 | `src/dEngage.Loyalty.IntegrationTests/Engine/RuleConfigurationTests.cs` | Changed | Job constructor only (no assertion changed) |
-| `web/src/app/features/customers/customer.model.ts`, `customer-event.drawer.ts` | Changed | H1: show refunded / cancelled holds |
-| `web/public/i18n/en.json`, `tr.json` | Changed | Two new drawer strings |
+| `web/src/entities/customer/model/types.ts`, `EventDrawer.vue` | Changed | H1: show refunded / cancelled holds |
+| `web/src/shared/i18n/locales/en.json` | Changed | Two new drawer strings |
 | `scripts/loyalty_schema.sql` | Regenerated | `dotnet ef migrations script --idempotent` (appends the two migrations) |
 | `scripts/loyalty_schema_reference.md` | Changed | `held_postings.cancelled_at`, `held_posting_refunds`, D22 note |
 | `docs/SCOPE_BASELINE.md`, `docs/SOW.md`, `LoyaltySaaSApi.md` | Changed | Part 1a behaviour and contract |
@@ -659,8 +659,8 @@ HAVING COUNT(*) > 1;
 | `dotnet build dEngage.Loyalty.sln` | 0 errors, 1 warning (existing) |
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | **110/110 passed** |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker) | **277/277 passed** (251 at baseline; 26 new across Phase 0, 1a and 1b) |
-| Portal `npm test` / `npx ng build --configuration development` | All passed / succeeded |
-| Portal `npx ng lint` | The same 3 existing errors in untouched files (§7.3); none in this change |
+| Portal `npm test` / `npm run build` | All passed / succeeded |
+| Portal `npm run lint` | The same 3 existing errors in untouched files (§7.3); none in this change |
 | Not run | The full local stack and a manual pass through the portal (the migration was applied to the developer's local database afterwards — §12, revision 19) |
 
 **New / changed tests:** `OnceOnlyAndCapsCr1006Tests` (D12: repeat pays once, two rules on one event, next exclusive rule, award before the change, legacy per-customer total, other events unaffected; D13: the §3.7 worked example 150 → 300 → 370 → 390 → 410, exclusive Skip, stackable Skip); `RuleTestModeRemovedCr1006ApiTests` (D20 API); `RuleDataMigrationsCr1006E2ETests` (D21 and D22 migrations on Postgres: exactly the intended rows disabled, nothing deleted, program flagged); `CustomerViewCr1002E2ETests.A_repeated_signup_shows_which_rule_already_paid_and_when` (drawer). **Changed expectation:** `RuleConfigurationTests.Test_mode_evaluates_and_audits_but_posts_nothing` asserted the behaviour D20 removed; it now asserts that a stored flag is ignored and the rule posts (renamed `A_stored_test_mode_flag_is_ignored_and_the_rule_posts`).
@@ -687,8 +687,8 @@ HAVING COUNT(*) > 1;
 | `src/dEngage.Loyalty.IntegrationTests/E2E/RuleDataMigrationsCr1006E2ETests.cs` | Created | D21, D22 migrations |
 | `src/dEngage.Loyalty.IntegrationTests/E2E/CustomerViewCr1002E2ETests.cs` | Changed | D12 drawer test |
 | `src/dEngage.Loyalty.IntegrationTests/Engine/RuleConfigurationTests.cs` | Changed | D20 expectation (explained above) |
-| `web/src/app/features/programs/rules/rule-form.page.ts`, `rule.model.ts` | Changed | D20: checkbox removed |
-| `web/src/app/features/customers/customer.model.ts`, `customer-event.drawer.ts`, `web/public/i18n/en.json`, `tr.json` | Changed | D12: drawer line |
+| `web/src/features/rule-edit/model/useRuleForm.ts`, `entities/rule/model/types.ts` | Changed | D20: checkbox removed |
+| `web/src/entities/customer/model/types.ts`, `EventDrawer.vue`, `web/src/shared/i18n/locales/en.json` | Changed | D12: drawer line |
 | `scripts/loyalty_schema.sql` | Regenerated | Appends the D21 migration |
 | `scripts/loyalty_schema_reference.md` | Changed | Last migration; `testMode` note |
 | `docs/SCOPE_BASELINE.md`, `docs/SOW.md`, `LoyaltySaaSApi.md` | Changed | Part 1b behaviour and contract; as-built correction: expiry override stored but not applied |
@@ -698,7 +698,7 @@ HAVING COUNT(*) > 1;
 
 **Title:** Rule configuration & limits by trigger — Phase 2: rule form by trigger (CR 2026-10-06)
 
-**Scope (D5, D8, D10, D11, D14, D17):** a NEW rule shows and may set only the Configuration and Limits fields that apply to its trigger and rule type, per the tables in §3.2 — e.g. no Min event amount or Per customer total on signup / KYC, no Delayed posting outside amount-based earn, no Configuration on redeem / transfer / reversal rules, no On breach on burn rules, no expiry override on a CASH target. The list lives once, in `RuleFieldCatalog` (RuleEngine, next to `RuleTypeCatalog`): the API rejects other non-default values on create (400 `field_not_applicable`) and serves the list as `applicableFields` in `GET rules/metadata`, which the portal reads. Existing rules are unchecked and show every field on edit (D5). Also: the Configuration section translated (en/tr); "Redemption terms" / "Transfer terms" as the calculation title on redeem / transfer rules (D17); a hint on Spend's rate and Min event amount for tenant-defined triggers (D14).
+**Scope (D5, D8, D10, D11, D14, D17):** a NEW rule shows and may set only the Configuration and Limits fields that apply to its trigger and rule type, per the tables in §3.2 — e.g. no Min event amount or Per customer total on signup / KYC, no Delayed posting outside amount-based earn, no Configuration on redeem / transfer / reversal rules, no On breach on burn rules, no expiry override on a CASH target. The list lives once, in `RuleFieldCatalog` (RuleEngine, next to `RuleTypeCatalog`): the API rejects other non-default values on create (400 `field_not_applicable`) and serves the list as `applicableFields` in `GET rules/metadata`, which the portal reads. Existing rules are unchecked and show every field on edit (D5). Also: the Configuration section translated; "Redemption terms" / "Transfer terms" as the calculation title on redeem / transfer rules (D17); a hint on Spend's rate and Min event amount for tenant-defined triggers (D14).
 
 **Breaking / visible changes:** API clients creating rules with a non-default value in a field that doesn't apply get 400 (defaults are still accepted). No migration, no change to existing rules or to payouts.
 
@@ -714,8 +714,8 @@ HAVING COUNT(*) > 1;
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | **126/126 passed** (16 new: `RuleFieldCatalogTests`, the §3.2 tables) |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker) | **285/285 passed** (8 new: `RuleFieldsByTriggerCr1006ApiTests`) |
 | Portal `npm test` | **149/149 passed** (4 new: `rule-field-visibility.spec.ts`) |
-| Portal `npx ng build --configuration development` | Succeeded |
-| Portal `npx ng lint` | The same 3 existing errors in untouched files; none in this change |
+| Portal `npm run build` | Succeeded |
+| Portal `npm run lint` | The same 3 existing errors in untouched files; none in this change |
 | Not run | The full local stack and a manual pass through the rule form |
 
 **For the Architect's review:**
@@ -734,9 +734,9 @@ HAVING COUNT(*) > 1;
 | `src/dEngage.Loyalty.Api/Rules/RulesDtos.cs` | Changed | `ApplicableFieldsResponse` (additive) |
 | `src/dEngage.Loyalty.Engine.Tests/RuleFieldCatalogTests.cs` | Created | The §3.2 tables |
 | `src/dEngage.Loyalty.IntegrationTests/Api/RuleFieldsByTriggerCr1006ApiTests.cs` | Created | API behaviour (create, edit, CASH, generic, metadata) |
-| `web/src/app/features/programs/rules/rule-field-visibility.ts` (+ `.spec.ts`) | Created | Reads `applicableFields` |
-| `web/src/app/features/programs/rules/rule-form.page.ts`, `rule.model.ts` | Changed | Fields per trigger, translated Configuration, terms titles, hints |
-| `web/public/i18n/en.json`, `tr.json` | Changed | 25 strings each |
+| `web/src/entities/rule/model/rule-field-visibility.ts` (+ `.spec.ts`) | Created | Reads `applicableFields` |
+| `web/src/features/rule-edit/model/useRuleForm.ts`, `entities/rule/model/types.ts` | Changed | Fields per trigger, translated Configuration, terms titles, hints |
+| `web/src/shared/i18n/locales/en.json` | Changed | 25 strings each |
 | `docs/SCOPE_BASELINE.md`, `docs/SOW.md`, `LoyaltySaaSApi.md` | Changed | Phase 2 behaviour and contract |
 | `.claude/rules/backend-rule-engine.md`, `backend-api.md`, `01-workflow-and-debugging.md` | Changed | Keep `RuleFieldCatalog` the one list; new pitfall |
 
@@ -784,14 +784,14 @@ The pre-build check in §3.8 is answered: nothing rejected a fixed bonus with mo
 | `dotnet build dEngage.Loyalty.sln` | 0 errors, 1 warning (existing) |
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | **123/123 passed** |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker) | **303/303 passed** (18 new: `RoundingCr1006Tests` 15, `ProgramDefaultRoundingCr1006ApiTests` 3) |
-| Portal `npm test` / `npx ng build --configuration development` | 149/149 passed / succeeded |
-| Portal `npx ng lint` | The same 3 existing errors in untouched files; none in this change |
+| Portal `npm test` / `npm run build` | 149/149 passed / succeeded |
+| Portal `npm run lint` | The same 3 existing errors in untouched files; none in this change |
 | Not run | The full local stack and a manual pass (the migration was applied to the developer's local database afterwards — all 7 programs got `down`; §12, revision 22) |
 
 **Changed expectations (explained):**
 - `RuleTypeHandlerRegistryTests`: three `SpendRuleHandler` tests asserted that the handler rounds down (1.3.CL item 2). The agreed design moves rounding to one place, so they now assert the unrounded rate × amount; the same payouts (12, 12.8, 12.89, 12.897 for wallet decimals 0–4) are asserted end to end in `RoundingCr1006Tests`.
 - `RuleDataMigrationsCr1006E2ETests`: seeds its program with raw SQL, because the current EF model maps `default_rounding`, which doesn't exist yet at the migration it starts from. Assertions unchanged.
-- `program-overview.page.spec.ts`: the `Program` fixture gains `defaultRounding: 'down'` (the type requires it). Assertions unchanged.
+- `ProgramOverviewPage.vue`: the `Program` fixture gains `defaultRounding: 'down'` (the type requires it). Assertions unchanged.
 
 **For the Architect's review:**
 - The program's direction reaches the engine per event through the already-loaded `RuleEvaluationContext.Program` (`IWinnerSelector.SelectAsync` gains an optional parameter), so there's no rule-cache invalidation to manage when a program's default changes.
@@ -813,9 +813,9 @@ The pre-build check in §3.8 is answered: nothing rejected a fixed bonus with mo
 | `src/dEngage.Loyalty.IntegrationTests/Engine/RoundingCr1006Tests.cs` | Created | Rounding end to end |
 | `src/dEngage.Loyalty.IntegrationTests/Api/ProgramDefaultRoundingCr1006ApiTests.cs` | Created | Program API |
 | `src/dEngage.Loyalty.IntegrationTests/E2E/RuleDataMigrationsCr1006E2ETests.cs` | Changed | Raw-SQL program seed |
-| `web/src/app/features/programs/program.model.ts`, `program-overview.page.ts`, `program-overview.page.spec.ts` | Changed | Default rounding setting; fixture |
-| `web/src/app/features/programs/rules/rule-form.page.ts` | Changed | "Inherit from program (…)" shows the program's direction |
-| `web/public/i18n/en.json`, `tr.json` | Changed | 3 strings each |
+| `web/src/entities/program/model/types.ts`, `ProgramOverviewPage.vue`, `ProgramOverviewPage.vue` | Changed | Default rounding setting; fixture |
+| `web/src/features/rule-edit/model/useRuleForm.ts` | Changed | "Inherit from program (…)" shows the program's direction |
+| `web/src/shared/i18n/locales/en.json` | Changed | 3 strings each |
 | `scripts/loyalty_schema.sql` | Regenerated | Appends the migration |
 | `scripts/loyalty_schema_reference.md` | Changed | `programs.default_rounding`; last migration |
 | `docs/SCOPE_BASELINE.md`, `docs/SOW.md`, `LoyaltySaaSApi.md` | Changed | Phase 4 behaviour and contract |
@@ -864,8 +864,8 @@ WHERE r.configuration->>'expiryOverrideDays' IS NOT NULL
 | `dotnet build dEngage.Loyalty.sln` | 0 errors, 1 warning (existing, `RuleVersioningServiceTests.cs:57`) |
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | **123/123 passed** |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker) | **314/314 passed** (11 new: `ExpiryOverrideCr1006E2ETests` 7, `ExpiryOverridePostingCr1006Tests` 3, `CustomerViewCr1002E2ETests` 1). One run had a transient Testcontainers timeout in `ProgramPublicationCl13MigrationE2ETests`; it passed alone and in the next full run |
-| Portal `npm test` / `npx ng build --configuration development` | 149/149 passed / succeeded |
-| Portal `npx ng lint` / `npx prettier --check` | The same 3 existing errors in untouched files; none in this change / formatted |
+| Portal `npm test` / `npm run build` | 149/149 passed / succeeded |
+| Portal `npm run lint` / `npx prettier --check` | The same 3 existing errors in untouched files; none in this change / formatted |
 | `scripts/loyalty_schema.sql` | Regenerated; append-only (no existing line changed) |
 | Not run | The full local stack and a manual pass (the migration was applied to the developer's local database afterwards — 39 existing ledger rows left undated, no rule has an override saved; §12, revision 24) |
 
@@ -882,7 +882,7 @@ WHERE r.configuration->>'expiryOverrideDays' IS NOT NULL
 **Self-review fixes (2026-10-08, after the first record):** a technical review of the Phase 5 code against the existing patterns found three gaps, now fixed and re-verified (build 0 errors / 1 existing warning, Engine 123/123, Integration 314/314, portal 149/149, build OK, lint unchanged):
 - `LedgerService` stored a rule's override on any earn, including into a CASH wallet (possible only for a rule saved before Phase 2's create check). It now stores a date only for a POINTS wallet; `Postings_record_their_expiry_date_from_the_wallet_or_the_override` asserts it (fails without the fix).
 - `DelayedPostingPromotionJob` read the rule row twice per release (override, then announcements); it now reads it once.
-- The portal's expiry field had only the HTML `min`; it now has `Validators.min(1)` with an inline error, like Hold days (new key `rules.config.expiryOverride.min`, en/tr).
+- The portal's expiry field had only the HTML `min`; it now has a minimum of 1 in the form schema with an inline error, like Hold days (new key `rules.config.expiryOverride.min`).
 - One full Integration run had two 1 ms failures at container start (`CashEventsProgramLiveE2ETests`, `CustomerViewCr1002E2ETests`); both classes passed alone (12/12) and the next full run passed 314/314.
 
 **Files (Phase 5):**
@@ -902,8 +902,8 @@ WHERE r.configuration->>'expiryOverrideDays' IS NOT NULL
 | `src/dEngage.Loyalty.IntegrationTests/E2E/ExpiryOverrideCr1006E2ETests.cs` | Created | Expiry, ordering, warning and stored dates (Postgres), incl. no date on cash |
 | `src/dEngage.Loyalty.IntegrationTests/Engine/ExpiryOverridePostingCr1006Tests.cs` | Created | Engine and release postings store the right date |
 | `src/dEngage.Loyalty.IntegrationTests/E2E/CustomerViewCr1002E2ETests.cs` | Changed | Customer 360 expiring figure with an override lot |
-| `web/src/app/features/programs/rules/rule-form.page.ts` | Changed | Label, `min="1"`, "Wallet default: N" / "never" placeholder, hint |
-| `web/public/i18n/en.json`, `tr.json` | Changed | Expiry override strings (old placeholder key removed) |
+| `web/src/features/rule-edit/model/useRuleForm.ts` | Changed | Label, `min="1"`, "Wallet default: N" / "never" placeholder, hint |
+| `web/src/shared/i18n/locales/en.json` | Changed | Expiry override strings (old placeholder key removed) |
 | `scripts/loyalty_schema.sql` | Regenerated | Appends the migration |
 | `scripts/loyalty_schema_reference.md` | Changed | `ledger_entries.expires_at`; `expiryOverrideDays`; last migration |
 | `docs/SCOPE_BASELINE.md`, `docs/SOW.md`, `LoyaltySaaSApi.md` | Changed | Phase 5 behaviour and contract |
@@ -1047,7 +1047,7 @@ Part 1a files are listed in §7.3.
 | 2026-10-08 | Revision 17: D22 (Q9: no Reversal rule on `order.refunded`), D23 (Q11: `cash.spent` reports insufficient balance), D24 (Phase 1 split into 1a / 1b) approved; §2.9 (which code applies each rule) added; §7.2 Part 1a SCR text and pre-deploy queries; **Part 1a implemented and verified** (§7.3); R13–R14; open questions closed. | Claude Code, at the request of Moiz |
 | 2026-10-08 | Revision 18: **Part 1b implemented and verified** — test mode removed (D20) with the D21 migration, once per customer per rule for signup / KYC (D12) with the drawer reason, caps follow On breach on both kinds (D13); §7.4 SCR text and pre-deploy queries, §7.5 implementation record. | Claude Code, at the request of Moiz |
 | 2026-10-08 | Revision 19: D21 migration applied to the developer's local database (no rule had test mode on — no data changed); the guardrails git note dropped at the developer's request. | Claude Code, at the request of Moiz |
-| 2026-10-08 | Revision 20: **Phase 2 implemented and verified** — fields per trigger on new rules (`RuleFieldCatalog`, create validation, `applicableFields` in metadata, portal reads it), en/tr Configuration section, terms titles, amount hint; §7.6 SCR text, §7.7 record. | Claude Code, at the request of Moiz |
+| 2026-10-08 | Revision 20: **Phase 2 implemented and verified** — fields per trigger on new rules (`RuleFieldCatalog`, create validation, `applicableFields` in metadata, portal reads it) Configuration section, terms titles, amount hint; §7.6 SCR text, §7.7 record. | Claude Code, at the request of Moiz |
 | 2026-10-08 | Revision 21: **Phase 4 implemented and verified** — program default rounding, one rounding step at the wallet's decimals in the rule's or program's direction, portal setting; §3.8 pre-check answered (nothing rejected excess decimals); §7.8 SCR text and pre-deploy queries, §7.9 record. | Claude Code, at the request of Moiz |
 | 2026-10-08 | Revision 22: `ProgramDefaultRoundingCr1006` applied to the developer's local database (7 programs, all `down` — no payout change). | Claude Code, at the request of Moiz |
 | 2026-10-08 | Revision 23: **Phase 5 implemented and verified** — expiry override applied: `ledger_entries.expires_at` stored on earn / transfer_in postings (rule override or wallet days), expiry and warnings by each lot's date, soonest-expiring first (E1–E3); §7.10 (SCR text, pre-deploy queries) and §7.11 (record) added; every phase of this CR is built. | Claude Code, at the request of Moiz |

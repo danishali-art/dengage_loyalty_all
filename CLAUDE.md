@@ -1,10 +1,7 @@
 # CLAUDE.md — dEngage.Loyalty (repo root)
 
-Multi-tenant loyalty platform: .NET backend under `src/` + Angular admin portal under `web/`
-(see `web/CLAUDE.md` for frontend-specific conventions). A Vue 3 rewrite of the portal is being
-built in phases beside it under `webVue3/` (see `webVue3/CLAUDE.md`; scope change
-`docs/scope-changes/2026-10-12-vue3-portal-rewrite.md`). `web/` stays the live portal until parity
-is signed off.
+Multi-tenant loyalty platform: .NET backend under `src/` + Vue 3 admin portal under `web/`
+(see `web/CLAUDE.md` for frontend-specific conventions).
 
 ## Scope governance — read this before implementing a scope change
 
@@ -31,7 +28,7 @@ The process for a scope change:
 
 - `src/dEngage.Loyalty.Api` — HTTP API (ASP.NET Core controllers), one folder per resource:
   AccountTypes, Auth, CardBuckets, ConfigVersions, Customers, Dashboard, Events,
-  Platform, Programs, Rewards, Rules, StreakCampaigns, Tiers. Used by the portals (JWT).
+  Platform, Programs, Rewards, Rules, StreakCampaigns, Tiers. Used by the portal (JWT).
 - `src/dEngage.Loyalty.Public.Api` — event ingestion from client systems (`X-Api-Key` only, no
   JWT), on the same `/api/v1/tenants/{tenantId}/events/...` paths the Api used to serve.
 - `src/dEngage.Loyalty.Api.Framework` — shared by both HTTP hosts: auth, tenancy, rate
@@ -56,13 +53,13 @@ The process for a scope change:
   see `Fixtures/`).
 
 Infra (local): Postgres, Redis, RabbitMQ via `docker-compose.yml`. `.\run.ps1` boots infra +
-Api (`http://localhost:5173`) + Public.Api (`http://localhost:5175`) + Consumer + web (`http://localhost:4200`) each in their
+Api (`http://localhost:5173`) + Public.Api (`http://localhost:5175`) + Consumer + the portal (`http://localhost:4201`) each in their
 own window. The Consumer also listens on `http://localhost:5174` (platform `/health-check` and
 metrics only).
 
 Runtime: .NET 9 on the dEngage platform host (`dEngage.Common.Hosting`): `CONFIG_PATH` config
-layering, NLog, Prometheus metrics. Images: `src/dEngage.Loyalty.{Api,Consumer}/Dockerfile`
-(repo root as build context), CI via `build.json` + `bitbucket-pipelines.yml`. Conventions and
+layering, NLog, Prometheus metrics. Images: `src/dEngage.Loyalty.{Api,Consumer}/Dockerfile` and
+`dengage.loyalty.frontend/Dockerfile` for the portal (repo root as build context), CI via `build.json` + `bitbucket-pipelines.yml`. Conventions and
 pitfalls (environment bridge, `MarkAsExternal`, fail-fast config, the D13 dependency boundary,
 restoring off the VPN) are in `.claude/rules/backend.md` → "Hosting and configuration". The
 decisions behind this are recorded in `docs/platform-alignment/`.
@@ -85,12 +82,11 @@ the service at startup instead of falling back to localhost.
 
 - `docs/SOW.md` — as-built Statement of Work; the scope contract pending PO+Architect sign-off.
 - `docs/SCOPE_BASELINE.md` — locked scope, reconciled against `docs/SOW.md`.
-- `LoyaltySaaSApi.md` — API contract (referenced by `web/CLAUDE.md`; recreate/regenerate from
-  the `Api` controllers/DTOs if not recovered from prior history).
+- `LoyaltySaaSApi.md` — API contract (recreate/regenerate from the `Api` controllers/DTOs if not
+  recovered from prior history).
 - `scripts/loyalty_schema_reference.md` — DB schema reference (Turkish), maintained by hand: update
   it in the same change as each migration, checked against the EF Core configurations.
-- `web/CLAUDE.md` — Angular portal conventions.
-- `webVue3/CLAUDE.md` — Vue 3 portal (in progress): architecture, commands, phase status. Rules in
-  `.claude/rules/frontend-vue.md`.
-- `webVue3/openapi/openapi.json` — machine-readable API contract **generated from the C# source**
-  (`npm run api:spec` in `webVue3/`); the Vue portal's TypeScript types come from it.
+- `web/CLAUDE.md` — admin portal (Vue 3): architecture and commands. Rules in
+  `.claude/rules/frontend.md`.
+- `web/openapi/openapi.json` — machine-readable API contract **generated from the C# source**
+  (`npm run api:spec` in `web/`); the portal's TypeScript types come from it.

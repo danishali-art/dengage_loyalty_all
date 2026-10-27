@@ -36,13 +36,13 @@ If a task seems to need breaking one of these, stop and explain why. Don't work 
 
 ## 3. Match what's already there
 - Before writing code, find the nearest existing example and copy its shape. Use `Rewards/` for
-  API resources and `features/programs/rewards/` for portal features. In the Vue 3 portal
-  (`webVue3/`), copy `entities/program` + `features/program-create` + `pages/programs-list`.
+  API resources and, in the portal (`web/`), `entities/program` + `features/program-create` +
+  `pages/programs-list`.
   Don't invent a new pattern, layer, base class or folder layout.
 - Keep the change as small as possible. No drive-by renames, reformatting of untouched code, or
   "cleanup" outside the task.
 - Don't add NuGet or npm packages, change framework versions, or swap libraries (ASP.NET Core MVC, EF Core,
-  FluentValidation, Angular CDK, Tailwind, ...) unless explicitly asked.
+  FluentValidation, Vue, Reka UI, Tailwind, ...) unless explicitly asked.
 - Comments explain **why** (a constraint, a contract, an earlier bug), in the existing style.
   Don't narrate the code.
 

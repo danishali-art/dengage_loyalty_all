@@ -83,7 +83,7 @@ These are not the same kind of removal:
 | Dashboard | [DashboardAppService.cs](../../src/dEngage.Loyalty.Api/Dashboard/DashboardAppService.cs) injects `IComplaintsAppService` and calls `SummaryAsync`; [DashboardDtos.cs](../../src/dEngage.Loyalty.Api/Dashboard/DashboardDtos.cs) carries `ComplaintSummaryResponse Complaints` |
 | Schema | [Complaint.cs](../../src/dEngage.Loyalty.Schema/Entities/Complaint.cs), [ComplaintConfiguration.cs](../../src/dEngage.Loyalty.Schema/Configurations/ComplaintConfiguration.cs), `DbSet<Complaint>` in [LoyaltyDbContext.cs](../../src/dEngage.Loyalty.Schema/LoyaltyDbContext.cs); table created by `20260905184227_AddComplaints` |
 | Shared | [ComplaintStatus.cs](../../src/dEngage.Loyalty.Shared/Constants/ComplaintStatus.cs) |
-| Portal | [features/complaints/](../../web/src/app/features/complaints/) (model, list page, routes, service); route in [app.routes.ts](../../web/src/app/app.routes.ts); sidebar entry `nav.complaints` in [sidebar.ts](../../web/src/app/layout/sidebar/sidebar.ts); dashboard card in [dashboard.page.ts](../../web/src/app/features/dashboard/dashboard.page.ts) + `ComplaintSummary` in [dashboard.model.ts](../../web/src/app/features/dashboard/dashboard.model.ts); i18n keys in `web/public/i18n/en.json` / `tr.json` |
+| Portal | the complaints screens (model, list page, routes, API calls); route in [routes.ts](../../web/src/app/router/routes.ts); sidebar entry `nav.complaints` in [useSidebarNav.ts](../../web/src/widgets/app-sidebar/model/useSidebarNav.ts); dashboard card in [DashboardPage.vue](../../web/src/pages/dashboard/ui/DashboardPage.vue) + `ComplaintSummary` in [entities/dashboard/api/dashboard.api.ts](../../web/src/entities/dashboard/api/dashboard.api.ts); i18n keys in `web/src/shared/i18n/locales/en.json` |
 | Tests | `Phase4FeaturesSmokeTests.Complaint_lifecycle_*`, `DashboardEndpointE2ETests.Dashboard_summary_reflects_created_programs_and_complaints` |
 | Docs | `LoyaltySaaSApi.md` §Complaints + dashboard summary, `scripts/loyalty_schema_reference.md`, SOW §2.5, baseline |
 
@@ -101,7 +101,7 @@ No engine, consumer, event or ledger code touches complaints. The one match in [
 | Schema: rewards | `RewardDefinition.StampAccountTypeId` + `StampAccountType` navigation ([RewardDefinition.cs](../../src/dEngage.Loyalty.Schema/Entities/RewardDefinition.cs) l.14, l.28); column, FK and two indexes in [RewardDefinitionConfiguration.cs](../../src/dEngage.Loyalty.Schema/Configurations/RewardDefinitionConfiguration.cs) l.23, l.39–41, l.54–58 | Link a stamp reward to its wallet (no live use since CR 2026-09-30) |
 | Engine | [StampRuleHandler.cs](../../src/dEngage.Loyalty.RuleEngine/Calculation/StampRuleHandler.cs) (+1 per positive-amount event), [LedgerPoster.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/LedgerPoster.cs) (l.47 `isStamp`, l.123 completion hook, l.271 `StampRule → stamp_earn`), [StampCompletionHandler.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/StampCompletionHandler.cs) + [IStampCompletionHandler.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/IStampCompletionHandler.cs) (posts `stamp_reset`, writes `RewardLog`, enqueues `loyalty.reward.earned` with `source = stamp_completion`) | Earn stamps, complete cards, announce completion |
 | Consumer | [Program.cs](../../src/dEngage.Loyalty.Consumer/Program.cs) l.71 (`StampRuleHandler`), l.84 (`StampCompletionHandler`) | DI registration |
-| Portal | [account-type-form.dialog.ts](../../web/src/app/features/programs/account-types/account-type-form.dialog.ts) (STAMP option + JSON config editor), [account-type.model.ts](../../web/src/app/features/programs/account-types/account-type.model.ts) `AccountTypeKind`, [rule-form.page.ts](../../web/src/app/features/programs/rules/rule-form.page.ts) (`StampRule` case l.510, l.1077), [rule.model.ts](../../web/src/app/features/programs/rules/rule.model.ts), [reward.model.ts](../../web/src/app/features/programs/rewards/reward.model.ts) `stampAccountTypeId` | Configure stamps |
+| Portal | [AccountTypeForm.vue](../../web/src/features/account-type-edit/ui/AccountTypeForm.vue) (STAMP option + JSON config editor), [entities/account-type/model/types.ts](../../web/src/entities/account-type/model/types.ts) `AccountTypeKind`, [RuleForm.vue](../../web/src/features/rule-edit/ui/RuleForm.vue) (`StampRule` case), [entities/rule/model/types.ts](../../web/src/entities/rule/model/types.ts), [entities/reward/model/types.ts](../../web/src/entities/reward/model/types.ts) `stampAccountTypeId` | Configure stamps |
 
 **Read and calculation paths over historical stamp data, which are kept (D5, D6):**
 
@@ -111,7 +111,7 @@ No engine, consumer, event or ledger code touches complaints. The one match in [
 | [RuleLimitEvaluator.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/RuleLimitEvaluator.cs), [LimitCacheService.cs](../../src/dEngage.Loyalty.RuleEngine/Cache/LimitCacheService.cs) | Per-rule cap usage (inert once no StampRule is active) |
 | [RefundService.cs](../../src/dEngage.Loyalty.Ledger/RefundService.cs) l.53/101, [ReversalRuleProcessor.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/ReversalRuleProcessor.cs) l.51/79 | Reversing an earlier stamp earning on `order.refunded` (whole stamps only) |
 | [LedgerReasonGroups.cs](../../src/dEngage.Loyalty.Api/Customers/LedgerReasonGroups.cs), [CustomerViewRules.cs](../../src/dEngage.Loyalty.Api/Customers/CustomerViewRules.cs), [CustomersAppService.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersAppService.cs) l.690–748 | Customer 360 ledger filters, cap usage, Rewards tab (stamp completions from `reward_log`; does not read `stamp_account_type_id`) |
-| Portal [customer.model.ts](../../web/src/app/features/customers/customer.model.ts), [customer-icon.ts](../../web/src/app/features/customers/customer-icon.ts), [customer-rewards.tab.ts](../../web/src/app/features/customers/customer-rewards.tab.ts) | Rendering historical stamp wallets, reasons and rewards |
+| Portal [entities/customer/model/types.ts](../../web/src/entities/customer/model/types.ts), [view.ts](../../web/src/entities/customer/model/view.ts), [RewardsTab.vue](../../web/src/pages/customer-detail/ui/tabs/RewardsTab.vue) | Rendering historical stamp wallets, reasons and rewards |
 | Shared | `LedgerReason.StampEarn/StampReset`, `RewardAcquisition.StampCompletion` (retired constants) |
 
 ### 4.3 `points.expired` trigger and `ExpiryRule`
@@ -126,7 +126,7 @@ No engine, consumer, event or ledger code touches complaints. The one match in [
 | API | [RulesValidators.cs](../../src/dEngage.Loyalty.Api/Rules/RulesValidators.cs) l.59 (type list), l.84–89 (`ageDays` / `order` checks); `GET events/types` `builtIn` list (feeds the rule and streak trigger pickers); comments in [EventsAppService.cs](../../src/dEngage.Loyalty.Api/Events/EventsAppService.cs) l.40 and [EventsDtos.cs](../../src/dEngage.Loyalty.Api/Events/EventsDtos.cs) l.28–30 |
 | Engine | [ExpiryRuleHandler.cs](../../src/dEngage.Loyalty.RuleEngine/Calculation/ExpiryRuleHandler.cs); `ExpiryRule` entry in [RuleTypeCatalog.cs](../../src/dEngage.Loyalty.RuleEngine/Metadata/RuleTypeCatalog.cs) l.47; `ExpiryRule → points_expired` mapping in [LedgerPoster.cs](../../src/dEngage.Loyalty.RuleEngine/Processing/LedgerPoster.cs) l.273; `AgeDays` / `Order` in [RuleCalculation.cs](../../src/dEngage.Loyalty.RuleEngine/Models/RuleCalculation.cs) l.41–46 |
 | Consumer | [PointsExpiredHandler.cs](../../src/dEngage.Loyalty.Consumer/Handlers/PointsExpiredHandler.cs); DI in [Program.cs](../../src/dEngage.Loyalty.Consumer/Program.cs) l.76 (`ExpiryRuleHandler`), l.125 (`PointsExpiredHandler`) |
-| Portal | [rule-form.page.ts](../../web/src/app/features/programs/rules/rule-form.page.ts) `ExpiryRule` case (l.457–478), `calcAgeDays` control (l.799–800, l.984, l.1043), payload mapping (l.1095–1096); [rule.model.ts](../../web/src/app/features/programs/rules/rule.model.ts) l.18, l.32–33; `SCHEDULED_EVENT_TYPES` in [event-simulator.page.ts](../../web/src/app/features/events/event-simulator.page.ts) l.26 and the comment in [event-types.service.ts](../../web/src/app/core/events/event-types.service.ts) l.10–12 |
+| Portal | [RuleForm.vue](../../web/src/features/rule-edit/ui/RuleForm.vue) `ExpiryRule` case, `calcAgeDays` control, payload mapping; [entities/rule/model/types.ts](../../web/src/entities/rule/model/types.ts); `SCHEDULED_EVENT_TYPES` in [useEventSimulatorPage.ts](../../web/src/pages/event-simulator/model/useEventSimulatorPage.ts) and the comment in [entities/event-type/api/event-type.api.ts](../../web/src/entities/event-type/api/event-type.api.ts) |
 | Tests | [BurnTriggerRuleTypesApiTests.cs](../../src/dEngage.Loyalty.IntegrationTests/Api/BurnTriggerRuleTypesApiTests.cs) l.105–106; `ExpiryRuleHandler` in [RuleEngineTestHarness.cs](../../src/dEngage.Loyalty.IntegrationTests/Fixtures/RuleEngineTestHarness.cs) l.65 |
 
 **Kept: wallet expiry (not referenced by any of the above):**
@@ -137,7 +137,7 @@ No engine, consumer, event or ledger code touches complaints. The one match in [
 | Nightly expiry (FIFO lots) posting `points_expired` and sending outbound `loyalty.points.expired` | [PointsExpirationJob.cs](../../src/dEngage.Loyalty.Ledger/PointsExpirationJob.cs) l.204–216, `PointsExpirationWorker` |
 | Expiring-soon warning to the client app | [PointsExpiringDetectorJob.cs](../../src/dEngage.Loyalty.Ledger/PointsExpiringDetectorJob.cs), `PointsExpiringDetectorWorker` |
 | Ledger reason and outbound type | `LedgerReason.PointsExpired`, `OutboundEventTypes.PointsExpired` |
-| Customer 360 expiry display | `LedgerReasonGroups`, `CustomerViewRules`, `customer.model.ts` (`points_expired`) |
+| Customer 360 expiry display | `LedgerReasonGroups`, `CustomerViewRules`, `entities/customer/model/types.ts` (`points_expired`) |
 | Tests and TestCli | `PointsExpirationJobE2ETests`, `CustomerViewCr1002ApiTests`, TestCli `ExpireTest` / `ExpireJobVerify` (all exercise wallet expiry, not ExpiryRule) |
 
 ---
@@ -148,7 +148,7 @@ No engine, consumer, event or ledger code touches complaints. The one match in [
 
 - **API:** delete `src/dEngage.Loyalty.Api/Complaints/` (4 files) and both registrations in Api `Program.cs`. Remove `Complaints` from `DashboardSummaryResponse` and the `IComplaintsAppService` dependency in `DashboardAppService`. `/complaints/*` now returns 404.
 - **Schema:** delete `Complaint`, `ComplaintConfiguration` and the `DbSet`. Add a new migration `RemoveComplaintsCrNN` (`DropTable("complaints")`, with a `Down` that recreates the empty table). Delete `ComplaintStatus`. No export beforehand (D9).
-- **Portal:** delete `features/complaints/`. Remove the route, the sidebar item, the dashboard card (layout collapses, D11) and `ComplaintSummary`, and the `complaints` / `nav.complaints` i18n keys (en and tr).
+- **Portal:** delete the complaints screens. Remove the route, the sidebar item, the dashboard card (layout collapses, D11) and `ComplaintSummary`, and the `complaints` / `nav.complaints` i18n keys.
 - **Tests:** remove the two complaint tests. The dashboard E2E test keeps its program and tier assertions; its complaint assertion is removed. Add an assertion that `GET /complaints` returns 404.
 
 ### 5.2 Stamps: retirement
@@ -191,7 +191,7 @@ No engine, consumer, event or ledger code touches complaints. The one match in [
   - Remove the `StampRule` case from the rule form and from the creatable rule-type list.
   - Disabled stamp rules still appear in the rules list. Their target wallet is now hidden, so the list must show a fallback label (for example "Retired wallet") instead of a blank or an error when the target can't be resolved from the account-type list.
   - The rule builder already reads `rules/metadata`, so the type and target disappear from it automatically.
-- **Rewards:** remove `stampAccountTypeId` from `reward.model.ts`.
+- **Rewards:** remove `stampAccountTypeId` from `entities/reward/model/types.ts`.
 - **Customer 360:** unchanged; it keeps rendering historical stamp wallets and rewards.
 
 **Seeds and TestCli (D4):**
@@ -231,8 +231,8 @@ No engine, consumer, event or ledger code touches complaints. The one match in [
 - `ExpiryRule` was the only rule type wired for the `Adjust` category besides `ManualAdjustmentRule`. `points.adjusted` and ManualAdjustment are unchanged.
 
 **Portal:**
-- **Rule form:** remove the `ExpiryRule` case, the `calcAgeDays` / `calcOrder` controls and the payload mapping. Remove `'ExpiryRule'`, `ageDays` and `order` from `rule.model.ts`. The trigger list comes from `events/types`, so `points.expired` disappears from it automatically.
-- **Event simulator:** `SCHEDULED_EVENT_TYPES` becomes `['birthdaybonus']`, and the `event-types.service.ts` comment is updated.
+- **Rule form:** remove the `ExpiryRule` case, the `calcAgeDays` / `calcOrder` controls and the payload mapping. Remove `'ExpiryRule'`, `ageDays` and `order` from `entities/rule/model/types.ts`. The trigger list comes from `events/types`, so `points.expired` disappears from it automatically.
+- **Event simulator:** `SCHEDULED_EVENT_TYPES` becomes `['birthdaybonus']`, and the `entities/event-type/api/event-type.api.ts` comment is updated.
 - **Rules list:** disabled ExpiryRule rules show as disabled, with their type label kept.
 - **Account-type form:** the POINTS expiry and warning-day fields are **unchanged**.
 
@@ -303,7 +303,7 @@ No engine, consumer, event or ledger code touches complaints. The one match in [
 3. **P3, Stamp engine.** Removes the handler, the completion step and the `LedgerPoster` hook, plus Consumer DI, engine tests, the starbucks seed and TestCli. Ship it together with or after P2, never before (see §8, row 1).
 4. **P4, `points.expired` / ExpiryRule** (independent of P1–P3, low risk, because the removed code never runs). Covers the disable migration, Shared, API, engine, Consumer, portal, tests and docs. It can ship with P2 to share one migration and one rules-screen release.
 
-Verification for each phase: `dotnet build dEngage.Loyalty.sln`, `dotnet test src/dEngage.Loyalty.Engine.Tests`, and `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker). From `web/`: `npx ng lint`, `npm test` and `npx ng build --configuration development`. Then a manual `.\run.ps1` smoke test:
+Verification for each phase: `dotnet build dEngage.Loyalty.sln`, `dotnet test src/dEngage.Loyalty.Engine.Tests`, and `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker). From `web/`: `npm run lint`, `npm test` and `npm run build`. Then a manual `.\run.ps1` smoke test:
 - the dashboard loads without complaints
 - STAMP is not offered and an existing STAMP wallet is not listed
 - an existing stamp rule shows disabled with the fallback label
@@ -382,8 +382,8 @@ Implemented on branch `1.6-remove-complaints-stamps-expiryrule` (created from `1
 
 | Phase | Done |
 |---|---|
-| P1 Complaints | Api `Complaints/` module and its registrations removed; `DashboardSummaryResponse.complaints` removed; `Complaint` entity, configuration, `DbSet` and `ComplaintStatus` removed; migration `20261005140753_RemoveComplaintsCr1005` drops `complaints`; portal `features/complaints/`, route, sidebar entry, dashboard card and `nav.complaints` (en/tr) removed. |
-| P2 Stamp write paths + schema | STAMP rejected on create (400) and edit (409 `account_type_retired`), hidden from `GET account-types`; `StampAccountTypeConfigValidator` removed; `StampRule` out of `RuleTypes.All` and the catalog, STAMP out of ManualAdjustment targets; retired rules refused on edit/approve/activate (409 `rule_type_retired`); `stampAccountTypeId` removed from reward DTOs, publish snapshot, entity and configuration; migration `20261005141326_RetireStampsAndExpiryRuleCr1005` disables affected rules and streak campaigns and drops the column, FK and both indexes; portal account-type form, rule form, reward model and the rules-list "Retired wallet" fallback (en/tr). |
+| P1 Complaints | Api `Complaints/` module and its registrations removed; `DashboardSummaryResponse.complaints` removed; `Complaint` entity, configuration, `DbSet` and `ComplaintStatus` removed; migration `20261005140753_RemoveComplaintsCr1005` drops `complaints`; portal complaints screens, route, sidebar entry, dashboard card and `nav.complaints` removed. |
+| P2 Stamp write paths + schema | STAMP rejected on create (400) and edit (409 `account_type_retired`), hidden from `GET account-types`; `StampAccountTypeConfigValidator` removed; `StampRule` out of `RuleTypes.All` and the catalog, STAMP out of ManualAdjustment targets; retired rules refused on edit/approve/activate (409 `rule_type_retired`); `stampAccountTypeId` removed from reward DTOs, publish snapshot, entity and configuration; migration `20261005141326_RetireStampsAndExpiryRuleCr1005` disables affected rules and streak campaigns and drops the column, FK and both indexes; portal account-type form, rule form, reward model and the rules-list "Retired wallet" fallback. |
 | P3 Stamp engine | `StampRuleHandler`, `StampCompletionHandler`, `IStampCompletionHandler` deleted; `LedgerPoster` stamp branch, completion hook, constructor parameter and `StampRule → stamp_earn` mapping removed; Consumer DI updated. Historical read paths (tier, caps, refund/reversal, Customer 360) untouched (D5, D6). |
 | P4 `points.expired` / ExpiryRule | `points.expired` out of `EventTypes.All`/`Catalog`; `ExpiryRule` out of `RuleTypes.All` and the catalog; `ExpiryRuleHandler` and `PointsExpiredHandler` deleted; `ageDays`/`order` removed from `RuleCalculation` and the portal; rules and streak campaigns refuse the trigger (`trigger_retired`); event simulator constant and comments updated. Wallet expiry untouched. |
 | Seeds, TestCli, docs | `starbucks_loyalty.sql` (STAMP wallet + stamp rule removed), `fintech_loyalty.sql` (dropped column), `loyalty_schema.sql` regenerated (a pure 96-line append); TestCli stamp scenarios removed; baseline, SOW, API doc, schema reference, `.claude/rules`, `CLAUDE.md` and superseded notes on the earlier CR docs updated. |
@@ -406,8 +406,8 @@ Implemented on branch `1.6-remove-complaints-stamps-expiryrule` (created from `1
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` | **219 passed**, 0 failed (includes the new `RetiredStampsAndExpiryRuleApiTests`) |
 | `dotnet test ... --filter Category=E2E` (Postgres Testcontainers) | **28 passed**, 0 failed — applies every migration, including both new ones, to a real Postgres |
 | Portal `npm test` | **138 passed** (22 files) |
-| Portal `npx ng build --configuration development` | Succeeds |
-| Portal `npx ng lint` | 3 errors, all **pre-existing** and in untouched lines (`autofocus` ×2 in `core/ui/confirm.service.ts`; the program-filter `<label>` in `dashboard.page.ts`) |
+| Portal `npm run build` | Succeeds |
+| Portal `npm run lint` | Only **pre-existing** errors, all in untouched lines |
 | Prettier | Not applied file-wide: the touched files weren't Prettier-clean before, and a whole-file pass re-wrapped unrelated code. Edits follow the surrounding formatting instead. |
 | **Not run** | TestCli (needs the live local stack with this branch's Consumer); the `.\run.ps1` manual smoke test in §9; the migrations against the shared dev database. |
 
@@ -421,7 +421,7 @@ Implemented on branch `1.6-remove-complaints-stamps-expiryrule` (created from `1
 - `src/dEngage.Loyalty.IntegrationTests/Api/RetiredStampsAndExpiryRuleApiTests.cs` — guards every retirement path.
 
 **Deleted**
-- `src/dEngage.Loyalty.Api/Complaints/` (AppService, Dtos, Module, Validators); `src/dEngage.Loyalty.Schema/Entities/Complaint.cs`; `src/dEngage.Loyalty.Schema/Configurations/ComplaintConfiguration.cs`; `src/dEngage.Loyalty.Shared/Constants/ComplaintStatus.cs`; `web/src/app/features/complaints/` (model, list page, routes, service) — complaints removed.
+- `src/dEngage.Loyalty.Api/Complaints/` (AppService, Dtos, Module, Validators); `src/dEngage.Loyalty.Schema/Entities/Complaint.cs`; `src/dEngage.Loyalty.Schema/Configurations/ComplaintConfiguration.cs`; `src/dEngage.Loyalty.Shared/Constants/ComplaintStatus.cs`; the portal complaints screens (model, list page, routes, API calls) — complaints removed.
 - `src/dEngage.Loyalty.RuleEngine/Calculation/StampRuleHandler.cs`, `Processing/StampCompletionHandler.cs`, `Processing/IStampCompletionHandler.cs` — stamp engine removed.
 - `src/dEngage.Loyalty.RuleEngine/Calculation/ExpiryRuleHandler.cs`, `src/dEngage.Loyalty.Consumer/Handlers/PointsExpiredHandler.cs` — ExpiryRule / `points.expired` removed.
 - `src/dEngage.Loyalty.IntegrationTests/Engine/StampCompletionCr0930Tests.cs` — covered removed behaviour; replaced by the retirement guards.
@@ -444,11 +444,11 @@ Implemented on branch `1.6-remove-complaints-stamps-expiryrule` (created from `1
 - `TestCli/IntegrationTest.cs`, `OutboundTest.cs`, `RewardTest.cs`, `MultiTenantTest.cs` (comment) — stamp scenarios removed (on top of the developer's staged edits).
 
 **Changed: portal**
-- `web/src/app/app.routes.ts`, `layout/sidebar/sidebar.ts`, `features/dashboard/dashboard.page.ts`, `dashboard.model.ts`, `public/i18n/en.json`, `tr.json` — complaints removed; `rules.groups.retiredAccount` added.
-- `features/programs/account-types/account-type-form.dialog.ts`, `account-type.model.ts` — STAMP option removed.
-- `features/programs/rules/rule.model.ts`, `rule-form.page.ts`, `rules-list.page.ts` — StampRule/ExpiryRule removed; retired-wallet label.
-- `features/programs/rewards/reward.model.ts` — `stampAccountTypeId` removed.
-- `features/events/event-simulator.page.ts`, `core/events/event-types.service.ts` — `points.expired` removed.
+- `web/src/app/router/routes.ts`, `useSidebarNav.ts`, `DashboardPage.vue`, `entities/dashboard/api/dashboard.api.ts`, `shared/i18n/locales/en.json` — complaints removed; `rules.groups.retiredAccount` added.
+- `AccountTypeForm.vue`, `entities/account-type/model/types.ts` — STAMP option removed.
+- `entities/rule/model/types.ts`, `RuleForm.vue`, `RulesPage.vue` — StampRule/ExpiryRule removed; retired-wallet label.
+- `entities/reward/model/types.ts` — `stampAccountTypeId` removed.
+- `useEventSimulatorPage.ts`, `entities/event-type/api/event-type.api.ts` — `points.expired` removed.
 
 **Changed: seeds and docs**
 - `scripts/starbucks_loyalty.sql`, `scripts/fintech_loyalty.sql`, `scripts/loyalty_schema.sql` (regenerated), `scripts/loyalty_schema_reference.md`.
@@ -499,7 +499,7 @@ Ledger postings already made by the job (source event id `birthday:{contactKey}:
 | Consumer | [BirthdayBonusWorker.cs](../../src/dEngage.Loyalty.Consumer/BirthdayBonusWorker.cs) (02:00 UTC); DI in [Program.cs](../../src/dEngage.Loyalty.Consumer/Program.cs) l.93 (job), l.134 (hosted service) |
 | Api | [CustomersModule.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersModule.cs) l.11–15, l.131–136 (route, validator injection); [CustomersAppService.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersAppService.cs) l.38–42, l.498–523 (`RegisterBirthdayAsync`); [CustomersDtos.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersDtos.cs) l.111–113; [CustomersValidators.cs](../../src/dEngage.Loyalty.Api/Customers/CustomersValidators.cs) (`RegisterBirthdayRequestValidator`); comments in [EventsAppService.cs](../../src/dEngage.Loyalty.Api/Events/EventsAppService.cs) l.40 and [EventsDtos.cs](../../src/dEngage.Loyalty.Api/Events/EventsDtos.cs) l.30 |
 | Schema | [CustomerBirthday.cs](../../src/dEngage.Loyalty.Schema/Entities/CustomerBirthday.cs), [CustomerBirthdayConfiguration.cs](../../src/dEngage.Loyalty.Schema/Configurations/CustomerBirthdayConfiguration.cs), `DbSet` in [LoyaltyDbContext.cs](../../src/dEngage.Loyalty.Schema/LoyaltyDbContext.cs) l.18. The table and its 2 indexes come from `20260921161222_CustomerBirthdayCr10`, which stays (applied migrations are never edited). |
-| Portal | No screen. `SCHEDULED_EVENT_TYPES = ['birthdaybonus']` in [event-simulator.page.ts](../../web/src/app/features/events/event-simulator.page.ts) l.26; comments in [event-types.service.ts](../../web/src/app/core/events/event-types.service.ts) l.11 and [customer-profile-panel.ts](../../web/src/app/features/customers/customer-profile-panel.ts) l.11. The rule and streak trigger pickers read `events/types`, so the trigger disappears from them automatically. |
+| Portal | No screen. `SCHEDULED_EVENT_TYPES = ['birthdaybonus']` in [useEventSimulatorPage.ts](../../web/src/pages/event-simulator/model/useEventSimulatorPage.ts); comments in [entities/event-type/api/event-type.api.ts](../../web/src/entities/event-type/api/event-type.api.ts) and [ProfilePanel.vue](../../web/src/pages/customer-detail/ui/tabs/ProfilePanel.vue). The rule and streak trigger pickers read `events/types`, so the trigger disappears from them automatically. |
 | Tests | [BirthdayBonusJobTests.cs](../../src/dEngage.Loyalty.IntegrationTests/Engine/BirthdayBonusJobTests.cs) (2 tests); `BirthdayBonus` assertions in [BurnTriggerRuleTypesApiTests.cs](../../src/dEngage.Loyalty.IntegrationTests/Api/BurnTriggerRuleTypesApiTests.cs) l.109–112 and [RetiredStampsAndExpiryRuleApiTests.cs](../../src/dEngage.Loyalty.IntegrationTests/Api/RetiredStampsAndExpiryRuleApiTests.cs) l.183. Two references are unrelated and stay unchanged: `StackingResolutionWorkedExampleTests` has a rule *named* "Birthday Bonus" on `card.transaction`, and `AccountTypeChangesCl13E2ETests` uses `CustomerBirthdayCr10` only as a migration-ordering anchor. |
 | TestCli, seeds | No birthday scenario, birthday rule or registered birthday. |
 | Docs | `LoyaltySaaSApi.md` l.168, l.184; `scripts/loyalty_schema_reference.md` l.21, l.321–344; `.claude/rules/backend-consumer.md` l.44 (`BirthdayBonusWorker` is the reference example for workers) and l.50 (nightly order), `.claude/rules/backend-api.md` l.74; `docs/SOW.md` and `docs/SCOPE_BASELINE.md` as in A.3. |
@@ -527,7 +527,7 @@ Ledger postings already made by the job (source event id `birthday:{contactKey}:
 
 **Portal:**
 - `SCHEDULED_EVENT_TYPES` becomes empty, or the constant and its filter are removed because `publishable` already covers it. Either way the behaviour is the same; decide at implementation.
-- Update the comments in `event-types.service.ts` and `customer-profile-panel.ts`.
+- Update the comments in `entities/event-type/api/event-type.api.ts` and `ProfilePanel.vue`.
 - Nothing else changes: the trigger pickers follow `events/types`.
 
 **Schema docs and scripts:** regenerate `scripts/loyalty_schema.sql`, and remove `customer_birthdays` from `scripts/loyalty_schema_reference.md` with a removal note. No seed creates birthdays or birthday rules (checked).
@@ -612,8 +612,8 @@ Implemented on branch `1.6-remove-complaints-stamps-expiryrule`, nothing committ
 | Engine.Tests | **95 passed**, 0 failed |
 | IntegrationTests | **251 passed**, 0 failed |
 | IntegrationTests `Category=E2E` (Postgres; applies every migration incl. `RemoveBirthdayBonusCr1006`) | **44 passed**, 0 failed |
-| Portal `npm test` / `ng build --configuration development` | **145 passed** / succeeds |
-| Portal `ng lint` | the same 3 pre-existing errors as §15.3, nothing new |
+| Portal `npm test` / `npm run build --configuration development` | **145 passed** / succeeds |
+| Portal `npm run lint` | the same 3 pre-existing errors as §15.3, nothing new |
 | **Not run** | the migration against `loyalty_dev`; a manual smoke test on the running stack |
 
 Test counts are higher than in §15.3 because the in-flight burn-rules work added tests.
@@ -643,7 +643,7 @@ Test counts are higher than in §15.3 because the in-flight burn-rules work adde
 - `src/dEngage.Loyalty.Consumer/Program.cs` — job and worker registrations removed.
 - `src/dEngage.Loyalty.Schema/LoyaltyDbContext.cs`, `Migrations/LoyaltyDbContextModelSnapshot.cs` (generated) — `DbSet` removed.
 - `src/dEngage.Loyalty.IntegrationTests/Api/BurnTriggerRuleTypesApiTests.cs`, `RetiredStampsAndExpiryRuleApiTests.cs` — `birthdaybonus` asserted absent and refused; existing birthday rule can't be re-activated; birthday route → 404.
-- `web/src/app/features/events/event-simulator.page.ts`, `web/src/app/core/events/event-types.service.ts` — scheduled-type fallback removed; comment.
+- `web/src/pages/event-simulator/model/useEventSimulatorPage.ts`, `web/src/entities/event-type/api/event-type.api.ts` — scheduled-type fallback removed; comment.
 - `scripts/loyalty_schema.sql` (regenerated), `scripts/loyalty_schema_reference.md` — `customer_birthdays` removed with a note.
 - `LoyaltySaaSApi.md`, `docs/SCOPE_BASELINE.md`, `docs/SOW.md`, `.claude/rules/backend-consumer.md`, `.claude/rules/backend-api.md` — docs in step.
 - `docs/scope-changes/2026-10-05-remove-complaints-and-stamps.md` — this record.

@@ -54,7 +54,7 @@ These are properties of `dEngage.Common.Hosting` 6.43.0 that the assessment didn
 | File | Change | Why |
 |---|---|---|
 | `NuGet.Config` | new | Private dEngage feed (same as platform repos) |
-| `.dockerignore` | new | Keep `.env`, dev settings, launch settings, portals and build output out of image builds |
+| `.dockerignore` | new | Keep `.env`, dev settings, launch settings, the portal's local build output and other build output out of image builds |
 | `build.json` | new | Shared pipeline: two images (`dengage.loyalty.api`, `dengage.loyalty.consumer`) |
 | `bitbucket-pipelines.yml` | new | Shared dEngage pipeline hook (copied from platform repos) |
 | `src/dEngage.Loyalty.Api/Dockerfile` | new | Platform image pattern (noble 9.0 base, `dengageuser` 1566) |

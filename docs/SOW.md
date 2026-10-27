@@ -33,7 +33,7 @@ lets tenant staff configure programs and support customers.
 Two deployable applications make up the system:
 
 - **Backend** (`src/`) — .NET, event-driven, Postgres + Redis + RabbitMQ.
-- **Admin portal** (`web/`) — Angular, the operational UI for both platform operators and
+- **Admin portal** (`web/`) — Vue 3, the operational UI for both platform operators and
   tenant staff.
 
 ## 2. In-scope capabilities
@@ -171,8 +171,8 @@ breakdown was removed by CR 2026-10-05.)
   any tenant-scoped screen renders for a platform admin with none selected).
 - Contextual sidebar sub-navigation that adapts to "inside a program" vs. "inside a platform
   tenant."
-- Partial localization scaffolding: English and Turkish string tables exist for navigation,
-  auth, and error/interstitial pages (see §3 for what this does *not* cover).
+- Localization scaffolding: every user-facing string is a translation key; English is the only
+  locale so far (see §3).
 
 ## 3. Explicitly out of scope / known limitations (as-built)
 
@@ -235,9 +235,9 @@ decision: accept as out-of-scope, or raise as a Scope Change Request.
 - **Account Types cannot be deleted**, only created and edited.
 - **Reports and Settings** appear as feature-flagged placeholders in the portal's sidebar but
   have no implementation behind them.
-- **Global search (topbar)** is a visual placeholder, not functional.
-- **Partial i18n**: only navigation, auth, and error/interstitial strings are translated
-  (en/tr); the majority of admin-portal screens have hard-coded English copy.
+- **Global search** is not implemented.
+- **English only**: every screen's strings are translation keys, but only the English locale
+  exists; Turkish needs a second locale file.
 - ~~**Card Buckets and Streak Campaigns** are not surfaced as summary cards on the Program
   Overview page~~ — added by CR 2026-10-05.
 
@@ -255,8 +255,9 @@ decision: accept as out-of-scope, or raise as a Scope Change Request.
   self-scheduling `BackgroundService` + idempotent-SQL pattern as the pre-existing
   points-expiration and streak-maintenance jobs — no new scheduling mechanism was introduced.
   (The CR-10 birthday-bonus job was removed by CR 2026-10-05 addendum A.)
-- **Frontend**: Angular 22, standalone/zoneless/signals, feature-based module boundaries,
-  Tailwind v4 design system, decimal-string money handling.
+- **Frontend**: Vue 3 + TypeScript (Vite), Feature-Sliced Design with lint-enforced
+  boundaries, Pinia + Vue Query, shadcn-vue on Reka UI with Tailwind v4, API types generated from
+  the C# source, decimal-string money handling.
 
 ## 5. Roles & responsibilities
 

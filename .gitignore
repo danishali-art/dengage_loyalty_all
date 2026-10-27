@@ -7,13 +7,8 @@ bin/
 obj/
 *.user
 
-# Angular / Node — node_modules in any folder (web/, webVue3/, ...)
+# Node — node_modules in any folder; web/.gitignore covers the portal's build and test output
 node_modules/
-web/node_modules/
-web/dist/
-web/.angular/
-web/test-results/
-web/playwright-report/
 npm-debug.log
 
 # Visual Studio

@@ -84,8 +84,8 @@ but accurate for Rules as of this branch's start).
   taxonomy and rule-type metadata are now defined once (`RuleEngine.Metadata.RuleTypeCatalog`,
   `Shared.Events.EventTypes`), consumed directly by the engine (`RulesValidators`, `RuleMatcher`
   via `RuleTypeCatalog.IsCompatible`) and exposed read-only through
-  `GET .../rules/metadata`, which the Angular rule builder now calls instead of hardcoding
-  options — the same pattern already used for `RewardTypeRegistry` → Angular.
+  `GET .../rules/metadata`, which the portal's rule builder now calls instead of hardcoding
+  options — the same pattern already used for `RewardTypeRegistry` → the portal.
 - **Ledger stays append-only and the system of record; Redis stays a cache.** The prior gap
   (limit counters incremented in Redis outside the posting DB transaction) violated engine
   guarantee #3 and is closed: a new Postgres `rule_limit_counters` table is the durable counter
@@ -116,12 +116,12 @@ on this branch:
 | M8 | CR-08 | `RuleSettings` (rounding/posting/holdDays/expiryOverrideDays/reversible/testMode/notifyOnAward); `held_postings` table + `DelayedPostingPromotionJob`/Worker; test-mode bypass threaded through `LedgerPoster`. |
 | M9 | CR-09 | `RuleVersioningService` (insert-new-version-on-edit, `rule_versions`); `BudgetReservationService` (reserve-inside-the-posting-transaction, provider-aware Postgres `FOR UPDATE`/SQLite fallback); `BirthdayBonusJob` (deterministic idempotent `eventId`, Feb 29 → Feb 28 in non-leap years). |
 | M10 | CR-10 | Confirmed already satisfied (engine stores only `contactKey`/balances/postings/counters, no profile data); net-new `POST customers/{ref}/birthday` (`customer_birthdays` table) as the one deliberate exception to the Customers module's read-only scope. |
-| M11 | CR-11 | Angular rule builder rebuilt: `rule.model.ts` (discriminated calculation/limits/configuration shapes matching backend `[JsonPropertyName]` casing exactly), `rules.service.ts` (`getMetadata`/`approve`), `rule-form.page.ts` (metadata-driven cascading trigger→type→target, per-type calculation fields, expanded limits/configuration sections, `ConditionTreeEditor` integration), `rules-list.page.ts` (pending-approval status handling + approve action), new `shared/forms/condition-tree-dsl.ts` + `shared/ui/condition-tree-editor.ts` (grouped AND/OR editor, parallel to and not replacing the flat `condition-dsl.ts`/`ConditionsEditor` Streak Campaigns still use). |
+| M11 | CR-11 | Portal rule builder rebuilt: `entities/rule/model/types.ts` (discriminated calculation/limits/configuration shapes matching backend `[JsonPropertyName]` casing exactly), `entities/rule/api/rule.api.ts` (`getMetadata`/`approve`), `RuleForm.vue` (metadata-driven cascading trigger→type→target, per-type calculation fields, expanded limits/configuration sections, `ConditionTreeEditor` integration), `RulesPage.vue` (pending-approval status handling + approve action), new `shared/lib/dsl/condition-tree-dsl.ts` + `ConditionTreeEditor.vue` (grouped AND/OR editor, parallel to and not replacing the flat `condition-dsl.ts`/`ConditionClauseListEditor.vue` Streak Campaigns still use). |
 
 Verification: `dEngage.Loyalty.Engine.Tests` 53/53 passing; `dEngage.Loyalty.IntegrationTests`
 33/36 passing (3 pre-existing Docker/Testcontainers-dependent E2E failures, unrelated to this
-branch, confirmed unavailable in this environment both before and after this change); Angular
-`ng build`/`ng lint` clean across the whole app.
+branch, confirmed unavailable in this environment both before and after this change); portal
+`npm run build`/`npm run lint` clean across the whole app.
 
 ## 4. Blast radius
 
@@ -157,11 +157,11 @@ follow-on work:
    new `ConditionTree`/`ConditionLeaf` model, changing `CreateCardBucketRequest.AdditionalConditions`
    from `List<ConditionClause>` (`{field, op, value}`, bare scalar) to `List<ConditionLeaf>`
    (`{field, operator, value:{type,data,currency,inferred}}`) server-side — but the Card Buckets
-   Angular page (`card-bucket-form.page.ts`, `card-bucket.model.ts`) still imported the old flat
-   `ConditionClause` type and the flat `ConditionsEditor`, so its "additional conditions" escape
-   hatch would have serialized the wrong JSON shape end-to-end. Fixed: `card-bucket.model.ts` now
+   portal page (`CardBucketForm.vue`, `entities/card-bucket/model/types.ts`) still imported the old flat
+   `ConditionClause` type and the flat clause editor, so its "additional conditions" escape
+   hatch would have serialized the wrong JSON shape end-to-end. Fixed: `entities/card-bucket/model/types.ts` now
    imports `ConditionLeaf` from the new `condition-tree-dsl.ts`; a new, narrowly-scoped
-   `shared/ui/condition-leaf-list-editor.ts` replaces `ConditionsEditor` there — a flat list with
+   `ConditionLeafListEditor.vue` replaces the flat clause editor there — a flat list with
    no AND/OR grouping UI, matching the backend's own behavior (`CardBucketConditionMapper` always
    folds `AdditionalConditions` into a single AND group; offering OR-grouping in that form would
    promise something the API can't represent). `ConditionTreeEditor` (the full grouped editor)

@@ -28,10 +28,10 @@ decisions from §5 as follows:
    `RewardName` (`reward_log.reward_name`), since it stores the reward's name, not a category.
 
 Implemented on branch `feature/reward-type-taxonomy`; see the diff for the actual change (schema,
-migration `RewardTypeTaxonomy`, API, event payloads). The Angular `programs/rewards` list/form
+migration `RewardTypeTaxonomy`, API, event payloads). The portal's rewards list/form
 was updated in the same branch: `RewardType` + per-type `typeConfig` fields replace
 `externalCouponType`, following the existing discriminated-config pattern from
-`programs/account-types` (`reward.model.ts`, `reward-form.dialog.ts`, `rewards-list.page.ts`).
+the account types (`entities/reward/model/types.ts`, `RewardForm.vue`, `RewardsPage.vue`).
 
 ## 1. Why this change is being proposed
 

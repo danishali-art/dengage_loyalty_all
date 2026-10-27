@@ -21,11 +21,11 @@
 - `Api.Framework/Controllers/LoyaltyApiMiddleware` replaces the Nancy bridge, the bootstrapper's `OnError` hook, the `BeforeRequest` auth hook and the 404/405 status handler: for every `/api` request it sets the correlation id, resolves the JWT or API key into the principal, and turns exceptions, unmatched routes and wrong verbs into the API's ProblemDetails body.
 - `JsonResponses` now returns `IActionResult`s that write the body with `JsonConventions.Options` and the exact Content-Type the API always sent (`application/json`, `application/problem+json`).
 - Removed: the `Nancy` package, `CompositionRootNancyBootstrapper`, `NancyAspNetCoreMiddleware`, `NancyModuleTypeRegistry`, `AmbientServiceProviderAccessor`, `AuthenticationPipelineHook`, `ApiStatusCodeHandler`, `TenantScopedModule` and `AddNancyModule<T>()`. Controllers are discovered by `MapControllers()`; there's nothing to register per resource any more.
-- Vue portal OpenAPI generator (`webVue3/tools/openapi`): reads controllers (`[Route]`, `[HttpGet("…")]`, primary-constructor parameters) instead of Nancy `MapGet(...)` calls. Its unit-test fixtures were converted too.
+- Vue portal OpenAPI generator (`web/tools/openapi`): reads controllers (`[Route]`, `[HttpGet("…")]`, primary-constructor parameters) instead of Nancy `MapGet(...)` calls. Its unit-test fixtures were converted too.
 
 ### 1.2 Decisions
 - **On `dEngage.Common.AspNetCore` (revised 2026-10-21 at the user's request; first committed on plain ASP.NET Core MVC).** Both HTTP hosts register `AddDengageCommonAspNetCoreModule` and build their pipeline with `UseExternalApiDengageCommonDefaults` (forwarded headers, trace id, log events, controller debug view, Swagger, CORS, controllers; platform internal endpoints off outside Development), through `UseLoyaltyApi`. Three things are deliberately changed on it, because the defaults would break the wire contract or leak secrets:
-  - **Its `GeneralExceptionFilter` is removed.** It answers errors with `{ "message": … }`; loyalty's ProblemDetails body (with the `code` the portals and `Api.Client` switch on) is written by `LoyaltyApiMiddleware`, which runs after routing (`preAuthenticationAction`).
+  - **Its `GeneralExceptionFilter` is removed.** It answers errors with `{ "message": … }`; loyalty's ProblemDetails body (with the `code` the portal and `Api.Client` switch on) is written by `LoyaltyApiMiddleware`, which runs after routing (`preAuthenticationAction`).
   - **Its request/response logger is off** (`useRequestResponseLogger: false`). It logs every header and the first 1 KB of every body: portal JWTs, raw API keys (also in the create-key response), login passwords and customer data would land in Graylog/Seq. The log-event middleware (path, method, IP, timing) stays on.
   - **Its Newtonsoft formatters are never used**: requests are read and responses written by `JsonResponses` with `JsonConventions` (System.Text.Json, decimals as strings), so the bodies are unchanged.
   - Swagger is served only when `SwaggerSettings:IsActive` is `true` (the platform's default is off), for example in a local `appsettings.Development.json`.
@@ -60,8 +60,8 @@ Windows note: the first full test run had 26 end-to-end failures, all `TimeoutEx
 | `src/dEngage.Loyalty.Api.Framework/Bootstrap/{CompositionRootNancyBootstrapper,NancyAspNetCoreMiddleware,NancyModuleTypeRegistry,AmbientServiceProviderAccessor,AuthenticationPipelineHook}.cs`, `ErrorHandling/NotFoundStatusCodeHandler.cs`, `Modules/TenantScopedModule.cs` | deleted | Nancy plumbing |
 | `src/dEngage.Loyalty.Api.Framework/dEngage.Loyalty.Api.Framework.csproj` | changed | `Nancy` package removed |
 | `src/dEngage.Loyalty.IntegrationTests/**` | comments | Nancy wording |
-| `webVue3/tools/openapi/{csharp-parse,build-spec,build-spec.spec}.ts`, `webVue3/openapi/overrides.ts` | changed | Generator reads controllers; `excludeControllers` |
-| `webVue3/src/**`, `web/src/app/core/**` | comments | `…Module.cs` → `…Controller.cs`, "Nancy API" → "loyalty API" |
+| `web/tools/openapi/{csharp-parse,build-spec,build-spec.spec}.ts`, `web/openapi/overrides.ts` | changed | Generator reads controllers; `excludeControllers` |
+| `web/src/**`, `web/src/shared/**` | comments | `…Module.cs` → `…Controller.cs`, "Nancy API" → "loyalty API" |
 | `CLAUDE.md`, `.claude/rules/*.md` | changed | How to add a route now |
 
 ## 2. D9 — `Public.Api` split (done)
@@ -71,7 +71,7 @@ Windows note: the first full test run had 26 end-to-end failures, all `TimeoutEx
 - **API keys only.** JWT registration moved out of `AddLoyaltyApiFramework` into `AddLoyaltyJwtAuthentication`, which only the admin Api calls. Without it the middleware ignores a bearer token, so Public.Api has no JWT signing key and never accepts a portal token. No CORS (server-to-server).
 - **Admin Api** keeps the portal's event routes: `simulate` (admin JWT), `types`, and the status lookup (the simulator polls it). The 8 ingestion routes are gone from it; posting to one there now returns 405 `method_not_allowed`.
 - **Shared code:** `EventsAppService` and the event validators moved to `Api.Framework/Events/` (registered by `AddLoyaltyApiFramework`); the request/response records moved to `dEngage.Loyalty.Contract` (`PublicApiEvents.cs`) as the public contract, ready for the `Api.Client` package. `HealthChecks` moved to `Api.Framework/Bootstrap/` for both hosts.
-- `run.ps1` starts Public.Api too; both portals' opt-in real-backend Playwright specs (`customers.e2e.spec.ts`) post their event to Public.Api (`PUBLIC_API_URL`, default `http://localhost:5175`).
+- `run.ps1` starts Public.Api too; the portal's opt-in real-backend Playwright spec (`customers.e2e.spec.ts`) post their event to Public.Api (`PUBLIC_API_URL`, default `http://localhost:5175`).
 
 ### 2.2 Not done (and why)
 - **Balance / wallet lookup on Public.Api.** The assessment lists it for Public.Api, but no such API-key endpoint exists today, so there was nothing to move. Adding one is new public API surface (which fields, per contact key, rate limits), so it needs its own scope decision. With webhooks dropped (D15), it is how a loyalty-only client would read current state.
@@ -102,8 +102,8 @@ Windows note: the first full test run had 26 end-to-end failures, all `TimeoutEx
 | `src/dEngage.Loyalty.IntegrationTests/Api/PublicApiSplitApiTests.cs` | new | Split tests |
 | `src/dEngage.Loyalty.IntegrationTests/Api/{PointsTransferRoute,LoyaltyConfig}ApiTests.cs` and 2 others | changed | Post through Public.Api; namespaces |
 | `dEngage.Loyalty.sln`, `build.json`, `.gitignore`, `run.ps1` | changed | New project, image, local dev settings file, local stack |
-| `webVue3/openapi/openapi.json`, `webVue3/src/shared/api/generated/schema.d.ts` | regenerated | Ingestion routes no longer on the admin Api |
-| `web/e2e/customers.e2e.spec.ts`, `webVue3/e2e/customers.e2e.spec.ts`, `webVue3/playwright.config.ts` | changed | Event posted to Public.Api |
+| `web/openapi/openapi.json`, `web/src/shared/api/generated/schema.d.ts` | regenerated | Ingestion routes no longer on the admin Api |
+| `web/e2e/customers.e2e.spec.ts`, `web/e2e/customers.e2e.spec.ts`, `web/playwright.config.ts` | changed | Event posted to Public.Api |
 | `CLAUDE.md`, `.claude/rules/{backend,backend-api,backend-api-framework,01-workflow-and-debugging}.md` | changed | Two HTTP hosts |
 
 ## 3. `dEngage.Loyalty.Api.Client` package (done)

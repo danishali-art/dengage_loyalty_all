@@ -1,6 +1,6 @@
-# The Vue admin portal (webVue3), packaged like the dEngage panel (adminpanel's
+# The admin portal (web/), packaged like the dEngage panel (adminpanel's
 # dengage.adminpanel.frontend): a Node build stage, then OpenResty serving the static build and
-# forwarding /api to the loyalty Api. The Angular portal (web/) is not part of any image.
+# forwarding /api to the loyalty Api.
 #
 # Build context: the repo root, as for every dEngage image:
 #   docker build -t dengage.loyalty.frontend -f dengage.loyalty.frontend/Dockerfile .
@@ -11,10 +11,10 @@ WORKDIR /repo
 # `npm run build` first runs the OpenAPI drift check (api:check), which regenerates the spec from
 # the backend C# source in src/, so the build fails when the portal is behind the API.
 COPY src ./src
-COPY webVue3/package.json webVue3/package-lock.json ./webVue3/
-WORKDIR /repo/webVue3
+COPY web/package.json web/package-lock.json ./web/
+WORKDIR /repo/web
 RUN npm ci
-COPY webVue3 ./
+COPY web ./
 RUN npm run build
 
 
@@ -37,7 +37,7 @@ RUN sed -i 's/\r$//' /app/start.sh /app/rotate_logs.sh
 RUN mkdir -p /dengage && chown -R ${user}:root /dengage
 
 WORKDIR /app
-COPY --chown=${user}:root --from=build /repo/webVue3/dist ./www
+COPY --chown=${user}:root --from=build /repo/web/dist ./www
 
 # OpenResty opens its default logs/error.log before it reads nginx.conf.
 RUN mkdir -p /tmp/cache/ /app/logs

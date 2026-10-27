@@ -63,7 +63,7 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
 - The job runs nightly at 01:00 UTC from `Consumer/PointsExpiringDetectorWorker.cs`.
 - Existing gaps:
   - A PATCH cannot set it back to null, because `ProgramsAppService.cs:90` treats null as "unchanged".
-  - The portal input uses `min="0"` while the server requires `> 0` (`program-overview.page.ts:91-92`, `ProgramsValidators.cs:13,25`).
+  - The portal input uses `min="0"` while the server requires `> 0` (`ProgramOverviewPage.vue`, `ProgramsValidators.cs:13,25`).
 
 ### 2.2 Tier qualifying account
 - The setting is `Program.QualifyingAccountTypeId`: an optional FK to `account_types` (`Program.cs:14`, `ProgramConfiguration.cs:20-26`).
@@ -86,7 +86,7 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
   - **CASH** requires `currency` (any string) and `decimals`.
   - **`expiration_days` is never validated.**
 - `Type` cannot be changed, and there is no delete. Edits to account types write **no** ConfigVersion rows.
-- Portal: `web/src/app/features/programs/account-types/account-type-form.dialog.ts`.
+- Portal: `web/src/features/account-type-edit/ui/AccountTypeForm.vue`.
   - The POINTS block is at `:46-88`.
   - The CASH block (`:90-105`) has a free-text currency field (placeholder SAR, max 3 characters) and an Expiration (days) field.
 - **CASH `expiration_days` is stored but never used.** `PointsExpirationJob.cs:20-31` processes `type = 'POINTS'` only.
@@ -100,7 +100,7 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
   | `Processing/WinnerSelector.cs:191-197` `ApplyRounding` | Fixed 2 decimals. Applies **only** when a rule explicitly sets `Configuration.Rounding` |
   | `Consumer/Handlers/PointsRedeemHandler.cs:41` | Redemption rounds to a fixed 2 decimals |
 
-- On the portal side, `web/src/app/shared/money/decimal.ts` (`multiplyFloor`) already accepts a `decimalPlaces` argument.
+- On the portal side, `web/src/shared/lib/money/decimal.ts` (`multiplyFloor`) already accepts a `decimalPlaces` argument.
 
 ### 2.5 Exclusivity group and Stack mode (CR-06)
 - **Where the fields are defined:**
@@ -113,9 +113,9 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
 - **API** (`RulesValidators.cs:91-98, 126-130`; `RulesAppService.cs:114-118, 201-207`):
   - `ExclusivityGroup` is required when a rule is not stackable.
   - A non-stackable rule is always stored with `StackMode = Additive`.
-- **Portal** (`rule-form.page.ts:175-203`): a "Stackable" checkbox, plus a Stack mode select (shown when stackable) or an Exclusivity group input (shown when not stackable).
+- **Portal** (`RuleForm.vue`): a "Stackable" checkbox, plus a Stack mode select (shown when stackable) or an Exclusivity group input (shown when not stackable).
 - **Tests**: `IntegrationTests/Engine/StackingResolutionWorkedExampleTests.cs` depends on both named groups and a Multiplier rule.
-- **The API already returns `stackable`** on every list response and supports a `?stackable=` filter (`RulesAppService.cs:19,56`, `RulesModule.cs:29`). The rules list page doesn't show it yet (`rules-list.page.ts:103-110`).
+- **The API already returns `stackable`** on every list response and supports a `?stackable=` filter (`RulesAppService.cs:19,56`, `RulesModule.cs:29`). The rules list page doesn't show it yet (`RulesPage.vue`).
 
 ### 2.6 Rule versioning
 - `Api/Rules/RuleVersioningService.cs:26-53` (`ArchiveAndBumpAsync`) copies the rule's pre-edit state into `rule_versions` and bumps `Rule.CurrentVersion`.
@@ -124,7 +124,7 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
 
 ### 2.7 Program status
 - `programs.status` can be `active`, `inactive` or `deleted` (`Shared/Constants/ProgramStatus.cs`). **There is no draft state.**
-- The portal shows the status as a radio group (`program-overview.page.ts:59-69`). The create dialog always sends `active` (`create-program.dialog.ts:63`).
+- The portal shows the status as a radio group (`ProgramOverviewPage.vue`). The create dialog always sends `active` (`CreateProgramForm.vue`).
 - **Correction to SOW §3 and the baseline's "Known limitation" note.** Status *is* enforced on the main evaluation path:
   - `Consumer/CampaignEvaluationService.cs:24-26` evaluates only active programs.
   - `Consumer/RuleSyncService.cs:138-141` and `RuleEngine/Processing/BirthdayBonusJob.cs:55` also filter on active.
@@ -144,7 +144,7 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
   - the program, tiers, rewards and account types uncached, on every event
 
 ### 2.9 Portal i18n
-- `web/public/i18n/en.json` and `tr.json` hold only nav, action and common keys.
+- `web/src/shared/i18n/locales/en.json` holds only nav, action and common keys.
 - Every label on the program, account type and rule screens is hard-coded English.
 
 ## 3. Proposed direction
@@ -161,8 +161,8 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
   - `CreateProgramRequest` and `UpdateProgramRequest` drop `WarningDays`. A request that still sends it gets 400 `field_moved_to_account_type`, so it isn't silently ignored.
   - `ProgramResponse` keeps the field (deprecated, always null) for one release.
 - **Portal:**
-  - Remove the input at `program-overview.page.ts:91-92`.
-  - Add "Expiry warning (days before)" to the POINTS block of `account-type-form.dialog.ts`, enabled only when Expiration (days) is set.
+  - Remove the input at `ProgramOverviewPage.vue`.
+  - Add "Expiry warning (days before)" to the POINTS block of `AccountTypeForm.vue`, enabled only when Expiration (days) is set.
 - **Side benefit:** because it now lives in config, the warning can be cleared again. This fixes the PATCH-null gap described in §2.1.
 
 ### 3.2 Item 1b: Tier qualifying flag on account type
@@ -187,7 +187,7 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
   - The AccountType request and response DTOs gain `isTierQualifying`.
 - **Deprecation:** `programs.qualifying_account_type_id` stays (FK kept) but nothing writes it. It is dropped together with `warning_days` in a later CR.
 - **Portal:**
-  - Remove the select at `program-overview.page.ts:75-88`.
+  - Remove the select at `ProgramOverviewPage.vue`.
   - Add a "Tier qualifying account" toggle to the POINTS account type form, disabled while the program is active.
   - The account types list shows a "Tier qualifying" badge.
 
@@ -209,20 +209,20 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
   - (g) Should other rule types and redemption (`PointsRedeemHandler` rounds to 2 decimals) also use `decimals`?
 
 ### 3.4 Item 3: Remove Expiration (days) for CASH
-- **Portal:** remove the input from the CASH block, and remove `expiration_days` from `CashConfig` in `account-type.model.ts`.
+- **Portal:** remove the input from the CASH block, and remove `expiration_days` from `CashConfig` in `entities/account-type/model/types.ts`.
 - **Validation:** the CASH validator rejects `expiration_days` with 400.
 - **Data migration:** remove the key from existing CASH configs (`config = config - 'expiration_days' WHERE type = 'CASH'`).
 - **Runtime effect: none.** No job reads it. `CustomersAppService.ReadExpirationDays` will return null for CASH wallets. That is correct, but the customer 360 view will visibly change.
 
 ### 3.5 Item 4: CASH currency dropdown
 - **Shared list:** add `src/dEngage.Loyalty.Shared/Constants/SupportedCurrencies.cs` (D7 list, `Default = "SAR"`). The CASH validator checks against it.
-- **Portal:** a select control defaulting to SAR, with the list copied in `account-type.model.ts`. Following the `RewardTypeRegistry` pattern, it is a static copy; there is no new endpoint.
+- **Portal:** a select control defaulting to SAR, with the list copied in `entities/account-type/model/types.ts`. Following the `RewardTypeRegistry` pattern, it is a static copy; there is no new endpoint.
 - **Immutability:** once created, the currency can't be changed, just like `Type` (§5 e). Changing the currency of a wallet that already holds a balance would reinterpret real credit.
 - **Existing data:** the migration **reports** CASH account types whose currency isn't on the list and **doesn't change them**. They can still be read, and they are only re-validated when edited.
 - **Out of scope:** reward `typeConfig.currency` and the condition-tree `currency` field keep accepting free text.
 
 ### 3.6 Item 5: Retire Exclusivity group and Stack mode
-- **Portal:** remove the Stack mode and Exclusivity group controls, keeping only "Stackable with other rules" (`rule-form.page.ts:175-203, 531-533, 583-585, 693-694, 740-742, 888-890`). Update the priority hint at `:128`.
+- **Portal:** remove the Stack mode and Exclusivity group controls, keeping only "Stackable with other rules" (`RuleForm.vue`). Update the priority hint at `:128`.
 - **API:**
   - The DTO fields stay, so the response shape doesn't change. Responses always return `exclusivityGroup: null` and `stackMode: "Additive"`.
   - The validators become **stricter**: a non-null `exclusivityGroup` or a `stackMode` other than `Additive`/null returns 400 `stacking_field_retired`.
@@ -245,12 +245,12 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
   - Add `WinnerSelectorTests` for the fallback grouping.
 
 ### 3.7 Item 6: "Stackable" column in the rules list
-- `rules-list.page.ts`: add a `stackable` entry to `columns` (`:103-110`) and a matching `<td>` in the row template (`:50-75`).
+- `RulesPage.vue`: add a `stackable` entry to `columns` (`:103-110`) and a matching `<td>` in the row template (`:50-75`).
 - The cell shows a status pill reading **"Stackable"** or **"Exclusive"**, using both text and tone, never colour alone.
 - Optionally add a Stackable filter that uses the existing `?stackable=` parameter. There is no backend change.
 
 ### 3.8 Item 7: Active/Inactive toggle
-- Replace the radio group at `program-overview.page.ts:59-69` with a toggle. It sends `PATCH status`, and optimistic UI with rollback is acceptable here.
+- Replace the radio group at `ProgramOverviewPage.vue` with a toggle. It sends `PATCH status`, and optimistic UI with rollback is acceptable here.
 - The toggle is **disabled while the program is Draft**. Its tooltip reads "Publish the program first".
 - Server: `ProgramsAppService.UpdateAsync` returns 409 `program_not_published` when a draft program is set to `active`.
 - Toggling does **not** create a version (D8), and does **not** mark the program as having unpublished changes.
@@ -347,16 +347,16 @@ Approved 2026-09-28. D1–D8 below were approved as proposed. The §5 open decis
   5. `PATCH status=active` on a draft program returns 409.
 
   Response shapes only gain fields; none are removed.
-- **Portal** (`web/src/app/features/programs/`):
+- **Portal** (`web/src/pages/program-overview/`):
 
   | Area | Files |
   |---|---|
-  | Program | `program.model.ts`, `program-overview.page.ts`, `create-program.dialog.ts`, `programs-list.page.ts`, `programs.service.ts` (publish) |
-  | Account types | `account-types/account-type.model.ts`, `account-type-form.dialog.ts`, `account-types-list.page.ts` |
-  | Rules | `rules/rule.model.ts`, `rule-form.page.ts`, `rules-list.page.ts` |
+  | Program | `entities/program/model/types.ts`, `ProgramOverviewPage.vue`, `CreateProgramForm.vue`, `ProgramsListPage.vue`, `entities/program/api/program.api.ts` (publish) |
+  | Account types | `entities/account-type/model/types.ts`, `AccountTypeForm.vue`, `AccountTypesPage.vue` |
+  | Rules | `entities/rule/model/types.ts`, `RuleForm.vue`, `RulesPage.vue` |
   | History | `history/` page and version dialog |
-  | Shared | `shared/money/decimal.ts` (simulator parity), if the preview shows earn amounts |
-  | i18n | New keys for **new** strings only, in `en.json` and `tr.json`. Existing hard-coded strings are left alone; no drive-by migration |
+  | Shared | `shared/lib/money/decimal.ts` (simulator parity), if the preview shows earn amounts |
+  | i18n | New keys for **new** strings only, in `en.json`. Existing hard-coded strings are left alone; no drive-by migration |
 - **Tests:**
   - `Engine.Tests`: SpendRuleHandler decimals, WinnerSelector fallback grouping, tier resolution from the flag.
   - `IntegrationTests`:
@@ -419,7 +419,7 @@ Each phase is checked with:
 - `dotnet build dEngage.Loyalty.sln`
 - `dotnet test src/dEngage.Loyalty.Engine.Tests`
 - `dotnet test src/dEngage.Loyalty.IntegrationTests` (requires Docker)
-- `npx ng lint`, `npm test` and `npx ng build --configuration development` (from `web/`)
+- `npm run lint`, `npm test` and `npm run build` (from `web/`)
 - A manual run with `.\run.ps1` and the Event Simulator. Check that:
   - spend earn respects `decimals`
   - a draft program's rules don't fire
@@ -454,7 +454,7 @@ started. §5 was resolved with the recommended defaults, except §5 f (keep per-
 | §3.3 / §5 d | Precision from `decimals`, direction from rule `Rounding` | Spend rules round **down** to `decimals`; an explicit rule `Rounding` is applied at the wallet's precision for Spend rules instead of the fixed 2 places. Other rule types keep 2 places (§5 g). | Spend already floored before `Rounding` applied, so in practice direction was always "down". Kept that behaviour and fixed only the precision. |
 | §3.6 | Replace `StackingResolutionWorkedExampleTests` | **Kept**, and a new post-1.3.CL worked example was added (`StackingWithoutGroupsCl13Tests`) | The Multiplier code path stays in `WinnerSelector` until the clean-up CR (§8), so the existing test still documents real engine behaviour and still passes. Nothing was deleted or weakened. |
 | §3.5 | The migration **reports** CASH currencies not on the whitelist | The report is a pre-deploy query (§10.3), not part of the migration | The idempotent deploy script wraps every migration in `DO $EF$ … $EF$`, where a nested reporting `DO` block is fragile. The migration changes data only. |
-| §4 i18n | New keys for new strings | Done, en + tr (76 keys each, at parity) | Strings that already existed in touched files were **not** migrated to keys (§8 out of scope), although `frontend.md` asks for it when a string is touched. |
+| §4 i18n | New keys for new strings | Done (76 keys, at parity) | Strings that already existed in touched files were **not** migrated to keys (§8 out of scope), although `frontend.md` asks for it when a string is touched. |
 
 Additional fixes needed along the way:
 - **Test fixture.** `CustomWebApplicationFactory` and `PostgresWebApplicationFactory` faked Redis with `Mock.Of<IConnectionMultiplexer>()`. Its `GetDatabase()` returned null, so any API route that refreshes the rule cache returned 500 under test. Rule create/edit already did this, but no API test covered it until now. The fakes now use `DefaultValue.Mock`.
@@ -468,8 +468,8 @@ Additional fixes needed along the way:
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | 58 passed | **65 passed** |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker, Testcontainers) | 36 passed | **84 passed**, including 10 Postgres E2E tests |
 | `npm test` (portal) | 30 passed | **46 passed** |
-| `npx ng build --configuration development` | OK | OK |
-| `npx ng lint` | 3 errors (pre-existing: `confirm.service.ts` ×2, `dashboard.page.ts`) | the same 3, **no new errors** |
+| `npm run build` | OK | OK |
+| `npm run lint` | pre-existing errors only | the same, **no new errors** |
 | Regenerated `scripts/loyalty_schema.sql` applied twice to an empty Postgres 16 | — | both runs OK (idempotent), all 3 `…Cl13` migrations recorded |
 | **Live end-to-end run**: real Api + Consumer + RabbitMQ + Redis + Postgres (throwaway containers, all 3 migrations applied) | — | **31/31 checks passed**, no errors in either log |
 
@@ -596,19 +596,19 @@ No files were deleted. Paths under `src/` are relative to the project folder.
 
 | File | Change | Reason |
 |---|---|---|
-| `features/programs/account-types/account-type.model.ts` | Changed | Currency list, `warning_days`, `isTierQualifying`, no CASH expiry |
-| `features/programs/account-types/account-type-form.dialog.ts` | Changed | Decimals info button; warning days with server-matching validation; tier toggle; currency select (locked on edit); CASH expiry removed |
-| `features/programs/account-types/account-type-form.dialog.spec.ts` | Created | Dialog behaviour (10 tests) |
-| `features/programs/account-types/account-types-list.page.ts` | Changed | "Tier qualifying" badge |
-| `features/programs/program.model.ts`, `programs.service.ts` | Changed | Publication fields; `publish()`; create without status |
-| `features/programs/create-program.dialog.ts` | Changed | Stops sending `status` |
-| `features/programs/program-overview.page.ts` | Changed | Moved fields removed (read-only tier wallet + link); Active switch; Draft/Published badge; Publish action |
-| `features/programs/program-overview.page.spec.ts` | Created | Publish/toggle behaviour (6 tests) |
-| `features/programs/programs-list.page.ts` | Changed | Draft / unpublished-changes pill |
-| `features/programs/history/program-history.page.ts`, `program-history.model.ts`, `view-version.dialog.ts` | Changed | Published-versions section; `published` change type; sectioned snapshot view |
-| `features/programs/rules/rule-form.page.ts`, `rule.model.ts` | Changed | Exclusivity group / stack mode removed |
-| `features/programs/rules/rules-list.page.ts` | Changed | Stackable column |
-| `web/public/i18n/en.json`, `web/public/i18n/tr.json` | Changed | 47 new keys each |
+| `entities/account-type/model/types.ts` | Changed | Currency list, `warning_days`, `isTierQualifying`, no CASH expiry |
+| `AccountTypeForm.vue` | Changed | Decimals info button; warning days with server-matching validation; tier toggle; currency select (locked on edit); CASH expiry removed |
+| `account-type.schema.spec.ts` | Created | Dialog behaviour (10 tests) |
+| `AccountTypesPage.vue` | Changed | "Tier qualifying" badge |
+| `entities/program/model/types.ts`, `entities/program/api/program.api.ts` | Changed | Publication fields; `publish()`; create without status |
+| `CreateProgramForm.vue` | Changed | Stops sending `status` |
+| `ProgramOverviewPage.vue` | Changed | Moved fields removed (read-only tier wallet + link); Active switch; Draft/Published badge; Publish action |
+| `ProgramOverviewPage.vue` | Created | Publish/toggle behaviour (6 tests) |
+| `ProgramsListPage.vue` | Changed | Draft / unpublished-changes pill |
+| `ProgramHistoryPage.vue`, `entities/config-version/model/types.ts`, `ConfigVersionDetailView.vue` | Changed | Published-versions section; `published` change type; sectioned snapshot view |
+| `RuleForm.vue`, `entities/rule/model/types.ts` | Changed | Exclusivity group / stack mode removed |
+| `RulesPage.vue` | Changed | Stackable column |
+| `web/src/shared/i18n/locales/en.json` | Changed | 47 new keys |
 
 **Docs and rules**
 
@@ -641,17 +641,17 @@ Approved 2026-09-28 by the developer as a small addendum to item 6. It is a port
 
 | File | Change | Reason |
 |---|---|---|
-| `web/src/app/features/programs/rules/rule-grouping.ts` | Created | Pure grouping logic that mirrors `WinnerSelector` |
-| `web/src/app/features/programs/rules/rule-grouping.spec.ts` | Created | 5 tests |
-| `web/src/app/features/programs/rules/rules-list.page.ts` | Changed | Grouped layout |
-| `web/src/app/features/programs/rules/rules.service.ts` | Changed | `listAll` |
-| `web/public/i18n/en.json`, `tr.json` | Changed | 7 new keys each |
+| `web/src/entities/rule/model/rule-grouping.ts` | Created | Pure grouping logic that mirrors `WinnerSelector` |
+| `web/src/entities/rule/model/rule-grouping.spec.ts` | Created | 5 tests |
+| `web/src/pages/rules/model/useRulesPage.ts` | Changed | Grouped layout |
+| `web/src/entities/rule/api/rule.api.ts` | Changed | `listAll` |
+| `web/src/shared/i18n/locales/en.json` | Changed | 7 new keys |
 | `docs/SCOPE_BASELINE.md` | Changed | Frontend rules row |
 
 **Verified:**
 - `npm test`: 51 passed (46 before).
-- `ng build`: OK.
-- `ng lint`: only the same 3 errors that existed before.
+- `npm run build`: OK.
+- `npm run lint`: only errors that existed before.
 
 **Not verified:** a click-through in the browser.
 
@@ -667,7 +667,7 @@ I checked the list against `WinnerSelector.cs` and changed the labels to match i
   - Inactive rules get no label, because they don't compete.
 - **Stackable rules all fire.** The engine posts them lowest priority first, but each is capped only by its own limits, so the order never changes the amounts. The hint text now says so.
 - The ranking lives in `rankExclusiveRules` in `rule-grouping.ts`, with 3 more tests (54 portal tests in total).
-- `en.json` and `tr.json` have 3 new keys each, and 3 existing hint texts were reworded.
+- `en.json` has 3 new keys, and 3 existing hint texts were reworded.
 
 ### 10.7 Follow-up: rule Limits section regrouped and validated (not a scope change)
 
@@ -705,8 +705,8 @@ Requested 2026-09-28. The API shape, the engine and the stored data are unchange
 | Portal tests | 78 passed (24 new) |
 | Integration tests | 105 passed (21 new) |
 | Engine tests | 65 passed |
-| `ng build` | OK |
-| `ng lint` | only the same 3 errors that existed before |
+| `npm run build` | OK |
+| `npm run lint` | only errors that existed before |
 
 Not verified: a click-through in the browser.
 
@@ -718,8 +718,8 @@ The running dev Api and Consumer lock their `bin` folders, so the backend was bu
 |---|---|
 | `src/dEngage.Loyalty.Api/Rules/RulesValidators.cs` | Changed: `RuleLimitsValidator` |
 | `src/dEngage.Loyalty.IntegrationTests/Api/RuleLimitsValidatorTests.cs` | Created |
-| `web/src/app/features/programs/rules/rule-limits.ts` | Created |
-| `web/src/app/features/programs/rules/rule-limits.spec.ts` | Created |
-| `web/src/app/features/programs/rules/rule-form.page.ts` | Changed: grouped section, string controls, group validator, request building |
-| `web/public/i18n/en.json`, `tr.json` | Changed: 55 new keys each |
+| `web/src/entities/rule/model/rule-limits.ts` | Created |
+| `web/src/entities/rule/model/rule-limits.spec.ts` | Created |
+| `web/src/features/rule-edit/model/useRuleForm.ts` | Changed: grouped section, string controls, group validator, request building |
+| `web/src/shared/i18n/locales/en.json` | Changed: 55 new keys |
 | `docs/SCOPE_BASELINE.md` | Changed: Rules row |

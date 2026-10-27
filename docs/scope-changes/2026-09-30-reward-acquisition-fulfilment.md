@@ -79,11 +79,11 @@ Approved 2026-10-01. A1–A7 are approved as written. The remaining open decisio
 - **No compatibility rule** between Acquisition and RewardType. Any pair is accepted.
 - **Pre-taxonomy rows:** rewards created before 2026-09-17 were backfilled with `reward_type = 'points_bonus'` (column default in migration `RewardTypeTaxonomy`). **All of them fall under A1.**
 
-### 2.2 Portal form (`web/src/app/features/programs/rewards/reward-form.dialog.ts`)
+### 2.2 Portal form (`web/src/features/reward-edit/ui/RewardForm.vue`)
 
 - **Field order:** Reward type comes first, then Acquisition. The select options are hardcoded, and so are the English labels (no i18n keys).
 - **Cashback currency:** a free-text `<input maxlength="3">`.
-- **Reference implementation for item 4:** `account-type-form.dialog.ts:201-220` uses `SUPPORTED_CURRENCIES` and `DEFAULT_CURRENCY` from `account-type.model.ts`, which mirror `SupportedCurrencies.cs`, with i18n keys.
+- **Reference implementation for item 4:** `AccountTypeForm.vue` uses `SUPPORTED_CURRENCIES` and `DEFAULT_CURRENCY` from `entities/account-type/model/types.ts`, which mirror `SupportedCurrencies.cs`, with i18n keys.
 
 ### 2.3 How rewards are fulfilled today (item 5)
 
@@ -123,7 +123,7 @@ Approved 2026-10-01. A1–A7 are approved as written. The remaining open decisio
 
 ### 2.7 Event simulator (item 7)
 
-The simulator is `web/src/app/features/events/event-simulator.page.ts`. The claims in the change log were verified against the handlers:
+The simulator is `web/src/pages/event-simulator/model/useEventSimulatorPage.ts`. The claims in the change log were verified against the handlers:
 
 | Claim | Verified |
 |---|---|
@@ -154,7 +154,7 @@ The simulator is `web/src/app/features/events/event-simulator.page.ts`. The clai
 | Configured by | POINTS account type `config.redemption` (`rate`, `min_points`, `target_account_type_id`) | POINTS account type `config.transfer.daily_limit` | Reward definition (`PointsPrice`, `PointsAccountTypeId`) |
 | Ledger effect | Points debit + cash credit (`points × rate`, always rounded to 2 dp) in one transaction | Sender debit + receiver credit in one transaction | Points debit |
 | Insufficient balance | **Throws** → inbox `failed` → DLQ. No failure event. | `loyalty.points.transfer_failed`; inbox `processed` | `loyalty.reward.purchase_failed`; inbox `processed` |
-| Rule types allowed at the trigger (`RuleTypeCatalog.IsCompatible`) | RedemptionRule (correct) | **RedemptionRule + TransferRule** (wrong: RedemptionRule shouldn't be allowed) | **None**. The portal falls back to a hidden SpendRule (`rule-form.page.ts:926-930`) and the API rejects it on save (`RulesValidators.cs:40-44`). |
+| Rule types allowed at the trigger (`RuleTypeCatalog.IsCompatible`) | RedemptionRule (correct) | **RedemptionRule + TransferRule** (wrong: RedemptionRule shouldn't be allowed) | **None**. The portal falls back to a hidden SpendRule (`RuleForm.vue`) and the API rejects it on save (`RulesValidators.cs:40-44`). |
 | Do those rules post? | No. `EvaluationEvent.Amount` reads only `amount` (`EvaluationEvent.cs:21-26`), so RedemptionRule computes 0. | No. `TransferRuleProcessor` returns early when the amount is 0 (`:40`). | n/a |
 
 **Why the trigger → rule-type mapping is loose.** `RuleTypeCatalog.IsCompatible` matches on the event category and the kinds of field present. RedemptionRule only needs "a Number field", and `points.transfer` has one (`points_amount`). No rule type is tied to a specific event.
@@ -207,9 +207,9 @@ The two keys differ, so nothing stops the second posting.
 - **Edit mode:** both fields stay disabled (immutable).
 - **Retired rows** open read-only with a "retired type" notice.
 - **Model types** (`frontend.md`: string unions must match the backend registries exactly):
-  - The `RewardType` / `RewardAcquisition` unions in `reward.model.ts` keep **all** values, because the API still returns retired rows.
+  - The `RewardType` / `RewardAcquisition` unions in `entities/reward/model/types.ts` keep **all** values, because the API still returns retired rows.
   - A separate `CREATABLE_REWARD_TYPES` / `CREATABLE_ACQUISITIONS` constant drives the form. It mirrors the registry's creatable set.
-- **i18n:** every string in the touched dialog and list page moves to keys in **both** `en.json` and `tr.json` (`rewards.acquisition.*`, `rewards.type.*`, ...), following `account-type-form.dialog.ts` (`frontend.md` i18n rule: touched strings are migrated).
+- **i18n:** every string in the touched dialog and list page moves to keys in **both** `en.json` (`rewards.acquisition.*`, `rewards.type.*`, ...), following `AccountTypeForm.vue` (`frontend.md` i18n rule: touched strings are migrated).
 
 ### 3.3 Item 4: cashback configuration shape
 
@@ -311,7 +311,7 @@ The two keys differ, so nothing stops the second posting.
   - `order.refunded`: add "values as strings", because `refund_ratio`, `amount` and `original_amount` go through `GetString()`.
   - The `birthdaybonus` and `points.expired` cases can never be selected once they are filtered out. Drop them rather than keep dead markup.
   - `reward.purchase`: mention `reward_id`, and that `reward_name` is the full prefixed name (for example `fintech_cashback_50`).
-  - **All new and touched strings go to keys in both `en.json` and `tr.json`** (`frontend.md` i18n rule). The page is hardcoded English today, and the strings it touches are migrated as part of this change. Keep the `<code>` markup outside the translated text.
+  - **All new and touched strings go to keys in both `en.json`** (`frontend.md` i18n rule). The page is hardcoded English today, and the strings it touches are migrated as part of this change. Keep the `<code>` markup outside the translated text.
 
 ### 3.9 Item 8: burn events and burn rules
 
@@ -382,11 +382,11 @@ The two keys differ, so nothing stops the second posting.
 - **`points.redeem` success:** a new additive outbound event `loyalty.points.redeemed` (points, cash amount, `rule_id` if any). Today success publishes nothing.
 - **`reward.purchase`:** stays driven by the reward definition, with **no rule** (§3.7). The only changes are `reward_id` and the program-prefixed reward names (§3.10).
 
-**5. Portal (`programs/rules/rule-form.page.ts`, bug fix).**
+**5. Portal (`RuleForm.vue`, bug fix).**
 - When `typeOptions()` is empty, show "No rule type applies to this trigger" and disable Save. Remove the hidden `RULE_TYPES[0]` fallback, which is what currently shows POINTS/CASH targets for `reward.purchase`.
 - In the trigger dropdown, label `reward.purchase` as "configured via Rewards" (or omit it).
-- The RedemptionRule form gains a CASH wallet picker for `cashAccountTypeId`, and shows the CR-04 approval state. `rule.model.ts` gains `cashAccountTypeId?: string | null` in the calculation type. It uses camelCase to match the existing `RuleCalculation` keys (`minRedeem`, `maxPerDay`), not the snake_case used in reward `typeConfig`.
-- New strings go to `en.json` and `tr.json`.
+- The RedemptionRule form gains a CASH wallet picker for `cashAccountTypeId`, and shows the CR-04 approval state. `entities/rule/model/types.ts` gains `cashAccountTypeId?: string | null` in the calculation type. It uses camelCase to match the existing `RuleCalculation` keys (`minRedeem`, `maxPerDay`), not the snake_case used in reward `typeConfig`.
+- New strings go to `en.json`.
 
 **6. Program status (O14).** Under 1.3.CL the generic engine only evaluates published + active programs, but the burn handlers don't check program status (SOW §3). Once a burn rule is resolved, it will naturally come only from published + active programs (the rule cache loads only those). The **fallback** path (no rule) stays ungated unless O14 decides otherwise.
 
@@ -442,7 +442,7 @@ The two keys differ, so nothing stops the second posting.
 - **Portal:**
   - Create program dialog: a slug field prefilled from the name, with a format hint. It is disabled after publish, with a "locked" hint.
   - Reward form: the name input shows `{slug}_` as a fixed, non-editable prefix, and the admin types only the suffix.
-  - All strings go to `en.json` and `tr.json`.
+  - All strings go to `en.json`.
 
 **Why a prefix instead of (or in addition to) other options.** The prefix makes the owning program visible in every integration payload and log line. That is the benefit the developer chose it for. The partial unique index is the database-level guarantee behind it.
 
@@ -459,14 +459,14 @@ The two keys differ, so nothing stops the second posting.
 | **Consumer** | `Handlers/RewardPurchaseHandler.cs`, `Program.cs` (DI) | `reward_id`, approval check, cashback credit in the same transaction. The name lookup is unchanged and becomes unambiguous through the A5 index. |
 | **Ledger** | No code change; new reason value only | Append-only preserved; deterministic keys (§3.5) |
 | **Outbound events** | `loyalty.reward.earned`, `loyalty.tier.changed` | **Additive** fields. **Breaking:** stamp-sourced `reward.earned` stops (O1) |
-| **Portal** | `programs/rewards/reward.model.ts`, `reward-form.dialog.ts`, `rewards-list.page.ts`, `rewards.service.ts`; `programs/streak-campaigns/streak-campaign-form.page.ts`; `events/event-simulator.page.ts`; `en.json`, `tr.json` | Field order, filtered options, currency and wallet pickers, approve action, retired-row display, simulator help |
-| **A5: program slug** | `Schema/Entities/Program.cs`, `ProgramConfiguration.cs`, `RewardDefinitionConfiguration.cs` (partial unique index), new migration (slug add → backfill → NOT NULL); `Api/Programs/ProgramsDtos.cs`, `ProgramsValidators.cs`, `ProgramsAppService.cs` (slug lock on publish, snapshot); `Api/Rewards/RewardsAppService.cs` (prefix check on create and rename); portal `programs/program.model.ts`, `create-program.dialog.ts`, `programs.service.ts`, `rewards/reward-form.dialog.ts`, `en.json`, `tr.json` | New error codes `reward_name_prefix_required`, `slug_locked`, `slug_taken` (map them in `DomainErrorTranslator` if raised below the API) |
+| **Portal** | `entities/reward/model/types.ts`, `RewardForm.vue`, `RewardsPage.vue`, `entities/reward/api/reward.api.ts`; `StreakCampaignForm.vue`; `useEventSimulatorPage.ts`; `en.json` | Field order, filtered options, currency and wallet pickers, approve action, retired-row display, simulator help |
+| **A5: program slug** | `Schema/Entities/Program.cs`, `ProgramConfiguration.cs`, `RewardDefinitionConfiguration.cs` (partial unique index), new migration (slug add → backfill → NOT NULL); `Api/Programs/ProgramsDtos.cs`, `ProgramsValidators.cs`, `ProgramsAppService.cs` (slug lock on publish, snapshot); `Api/Rewards/RewardsAppService.cs` (prefix check on create and rename); portal `programs/entities/program/model/types.ts`, `CreateProgramForm.vue`, `entities/program/api/program.api.ts`, `RewardForm.vue`, `en.json` | New error codes `reward_name_prefix_required`, `slug_locked`, `slug_taken` (map them in `DomainErrorTranslator` if raised below the API) |
 | **Item 8 (P1): RuleEngine** | `Metadata/RuleTypeCatalog.cs` (per-event allowlist) | Trigger → rule-type mapping |
 | **Item 8 (P5, deferred): RuleEngine** | New `Processing/IBurnRuleResolver.cs` + implementation; `RuleEngine.cs` (drop the burn dispatch); `Models/EvaluationEvent.cs` (`points_amount`); `Models/RuleCalculation.cs` (`cashAccountTypeId`); `Shared/Constants/RuleTypes.cs` (`UsesWinnerSelectorPipeline`) | Single posting path; RedemptionRule cash leg |
 | **Item 8: Consumer** | `Handlers/PointsRedeemHandler.cs`, `PointsTransferHandler.cs`, `Program.cs` | **P1:** `redeem_failed` / `redeemed` events in `PointsRedeemHandler`. **P5 (deferred):** resolve the rule, fall back to account-type config, wallet-decimals rounding, DI for the resolver. |
 | **Item 8: API** | `Rules/RulesValidators.cs` | **P1:** trigger allowlist via `RuleTypeCatalog` (the allowlist itself lives in `Metadata/RuleTypeCatalog.cs`, which also ships in P1). **P5 (deferred):** RedemptionRule calculation fields per A6, and the CASH approval extension in `Rules/RulesAppService.cs`. |
 | **Item 8 (P1): migration** | Disable rules that break the allowlist, and bump `updated_at` | Pre-deploy query required |
-| **Item 8: Portal** | `programs/rules/rule-form.page.ts`, `rule.model.ts`, `en.json`, `tr.json` | **P1:** empty-type state and the `reward.purchase` trigger label. **P5 (deferred):** cash wallet picker, approval state. |
+| **Item 8: Portal** | `RuleForm.vue`, `entities/rule/model/types.ts`, `en.json` | **P1:** empty-type state and the `reward.purchase` trigger label. **P5 (deferred):** cash wallet picker, approval state. |
 | **Tests** (`backend-tests.md`) | **Engine.Tests:** resolver winner selection, `Compute` table tests, tier lock, downgrade skip, wallet-decimals rounding (`[Theory]`, exact `decimal` asserts).<br>**IntegrationTests/Api:** reward matrix (valid case + each invalid case, including "field set when it must not be"), approval incl. self-approval, `reward_id`, each new error code → its HTTP status, a **tenant B cannot read or modify tenant A** test for rewards, wallets and tiers.<br>**IntegrationTests/E2E:** purchase + cashback, streak + tier/cashback, redeem/transfer with and without a rule. **Every ledger path asserts idempotency:** same event twice → one posting, one budget reservation, one limit increment.<br>**Every bug fix** (portal fallback, trigger allowlist, redeem failure) gets a test that fails without the fix.<br>**Also:** `TestCli/RewardTest.cs` (RW01 uses stamp + `free_product`, RW02 uses `discount`: both must be rewritten); portal specs. | |
 | **Docs** | `SCOPE_BASELINE.md`, `SOW.md` §2.2/§3, `scripts/loyalty_schema_reference.md` (regenerate, never hand-edit), `scripts/loyalty_schema.sql` / `provision_tenant.sql` (keep in step if provisioning depends on the new columns), `LoyaltySaaSApi.md` (missing → regenerate first), `.claude/rules/01-workflow-and-debugging.md` pitfalls table (the "Redeem / transfer … inactive program" and burn-rule rows change meaning) | |
 
@@ -574,7 +574,7 @@ Verification, per `.claude/rules/01-workflow-and-debugging.md`:
 - `dotnet build dEngage.Loyalty.sln`.
 - `dotnet test src/dEngage.Loyalty.Engine.Tests`.
 - `dotnet test src/dEngage.Loyalty.IntegrationTests` (needs Docker).
-- `npx ng lint`, `npm test` and `npx ng build --configuration development` in `web/`.
+- `npm run lint`, `npm test` and `npm run build` in `web/`.
 - A manual run through `.\run.ps1`:
   1. Create a CASH wallet and a cashback reward, then approve it as a second admin.
   2. Send `reward.purchase` → check the points debit, the cash credit and the event.
@@ -632,10 +632,11 @@ Implemented: §3.8 (Event Simulator), §3.9 step 1 (trigger → rule-type allowl
 | `dotnet build dEngage.Loyalty.sln` | **Cannot run:** the solution references a missing project `src/dEngage.Loyalty.LifeSim` (pre-existing, unrelated). Every real project was built individually instead: all succeed. Api and IntegrationTests were built into a scratch output folder because the running Api process (and Visual Studio) locks `src/dEngage.Loyalty.Api/bin`. |
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | 77 passed, 0 failed (includes 12 new `RuleTypeCatalogTests` cases) |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (incl. E2E, Docker) | 114 passed, 0 failed (includes 4 new `BurnTriggerRuleTypesApiTests` and 5 new `PointsRedeemOutcomeE2ETests`). The E2E tests apply all migrations to Postgres, so the new migration's SQL was executed. |
-| `npx ng lint` | No findings in changed files. 3 pre-existing errors in untouched files (`core/ui/confirm.service.ts` x2, `features/dashboard/dashboard.page.ts`). |
-| `npm test` | 81 passed, 0 failed (includes 3 new `rule-form.page.spec.ts` cases) |
-| `npx ng build --configuration development` | Succeeded |
-| Manual run (`.un.ps1`) | Not done. The Api is already running from your session, and P1 has no flow the automated tests don't cover. |
+| `npm run lint` | No findings in changed files. 3 pre-existing errors in untouched files (`useAppConfirm.ts` x2, `DashboardPage.vue`). |
+| `npm test` | 81 passed, 0 failed (includes 3 new `RuleEditPage.spec.ts` cases) |
+| `npm run build` | Succeeded |
+| Manual run (`.
+un.ps1`) | Not done. The Api is already running from your session, and P1 has no flow the automated tests don't cover. |
 
 Tooling: `dotnet-ef` 8.0.31 was installed globally (approved by the developer) to generate the migration.
 
@@ -654,11 +655,11 @@ Tooling: `dotnet-ef` 8.0.31 was installed globally (approved by the developer) t
 | `src/dEngage.Loyalty.Engine.Tests/RuleTypeCatalogTests.cs` | Created | Allowlist table tests |
 | `src/dEngage.Loyalty.IntegrationTests/Api/BurnTriggerRuleTypesApiTests.cs` | Created | API validation, metadata, `publishable` |
 | `src/dEngage.Loyalty.IntegrationTests/E2E/PointsRedeemOutcomeE2ETests.cs` | Created | Redeem outcome events, redelivery, config errors (Postgres) |
-| `web/src/app/core/events/event-types.service.ts` | Changed | `publishable` on `EventTypesCatalog` |
-| `web/src/app/features/events/event-simulator.page.ts` | Changed | Publishable types, per-event field help, i18n |
-| `web/src/app/features/programs/rules/rule-form.page.ts` | Changed | Omit rule-less triggers, empty state, no hidden fallback, Save disabled |
-| `web/src/app/features/programs/rules/rule-form.page.spec.ts` | Created | Trigger-list tests |
-| `web/public/i18n/en.json`, `web/public/i18n/tr.json` | Changed | Simulator and rule-form keys |
+| `web/src/entities/event-type/api/event-type.api.ts` | Changed | `publishable` on `EventTypesCatalog` |
+| `web/src/pages/event-simulator/model/useEventSimulatorPage.ts` | Changed | Publishable types, per-event field help, i18n |
+| `web/src/features/rule-edit/model/useRuleForm.ts` | Changed | Omit rule-less triggers, empty state, no hidden fallback, Save disabled |
+| `web/src/pages/rule-edit/ui/RuleEditPage.spec.ts` | Created | Trigger-list tests |
+| `web/src/shared/i18n/locales/en.json` | Changed | Simulator and rule-form keys |
 | `docs/SCOPE_BASELINE.md` | Changed | Events, Rules, Consumer, `events`, `programs/rules` rows; revision row |
 | `docs/SOW.md` | Changed | P1 items marked "Built"; status line |
 | `docs/scope-changes/2026-09-30-reward-acquisition-fulfilment.md` | Changed | Approval record, this implementation record |
@@ -698,9 +699,9 @@ Implemented: §3.1 (taxonomy, matrix, retired values, migration), §3.2 (form or
 | Backend build | Every project builds individually (the solution file still references the missing `LifeSim` project, §11.5). Api and IntegrationTests built into a scratch folder because the running Api locks its `bin`. |
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | 79 passed, 0 failed (2 new: `StreakRewardDefinitionTests`) |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (incl. E2E, Docker) | 150 passed, 0 failed. New: 28 `RewardCatalogCr0930ApiTests` (matrix, retired values, currency/wallet/decimals, tenant isolation, approval, re-approval, currency lock, slug rules, tier ownership, in-use guards, streak eligibility, `reward_id` validator), 7 `RewardFulfilmentE2ETests` (cashback once on redelivery, by `reward_id`, refused when the program isn't live, pending not sellable, tier upgrade + lock + idempotency, never down, nightly downgrade honours the lock), 1 `StampCompletionCr0930Tests` (O1). |
-| `npm test` | 92 passed, 0 failed (11 new in `reward.model.spec.ts`; `program-overview.page.spec.ts` fixture gained `slug`) |
-| `npx ng lint` | No findings in changed files; the same 3 pre-existing errors in untouched files. |
-| `npx ng build --configuration development` | Succeeded |
+| `npm test` | 92 passed, 0 failed (11 new in `reward.spec.ts`; `ProgramOverviewPage.vue` fixture gained `slug`) |
+| `npm run lint` | No findings in changed files; the same 3 pre-existing errors in untouched files. |
+| `npm run build` | Succeeded |
 | `scripts/loyalty_schema.sql` | Regenerated; applied twice to an empty Postgres 16: both runs OK (idempotent), both `…Cr0930` migrations recorded, `programs.slug` NOT NULL with its default. |
 | Data migration on realistic data | Fresh Postgres migrated to `ProgramPublicationCl13`, seeded with edge cases, then migrated to latest: slugs derived and de-duplicated (`fin-tech`, `fin-tech-a00000`, `program-x`, `shop-n-code-co`); stamp / points_bonus / wallet-less cashback / points-bought tier upgrade deactivated; valid rewards kept active and `status = active`; the published program marked changed; a raw-SQL program insert got a default slug. |
 | TestCli `RewardTest` | **Builds, not run.** It needs the full local stack with the seeded Starbucks tenant. |
@@ -736,12 +737,12 @@ Implemented: §3.1 (taxonomy, matrix, retired values, migration), §3.2 (form or
 | `src/dEngage.Loyalty.IntegrationTests/Engine/StampCompletionCr0930Tests.cs` | Created | O1 |
 | `src/dEngage.Loyalty.TestCli/RewardTest.cs` | Changed | RW01 (stamp without definition), RW02/RW03 (cashback reward instead of the retired discount) |
 | `scripts/loyalty_schema.sql` | Regenerated (`dotnet ef migrations script --idempotent`) | Schema script in step |
-| `web/src/app/features/programs/program.model.ts`, `create-program.dialog.ts`, `program-overview.page.ts` | Changed | Program slug |
-| `web/src/app/features/programs/program-overview.page.spec.ts` | Changed | Fixture gains `slug` |
-| `web/src/app/features/programs/rewards/reward.model.ts`, `reward-form.dialog.ts`, `rewards-list.page.ts`, `rewards.service.ts` | Changed | New catalog, cashback wallet/currency, tier lock, approval, prefixed names, retired view-only. Prettier also reformatted untouched lines in these files (project rule: run prettier on changed files). |
-| `web/src/app/features/programs/rewards/reward.model.spec.ts` | Created | Matrix / retired table tests |
-| `web/src/app/features/programs/streak-campaigns/streak-campaign-form.page.ts` | Changed | Eligible-reward picker |
-| `web/public/i18n/en.json`, `web/public/i18n/tr.json` | Changed | 49 new keys each |
+| `web/src/entities/program/model/types.ts`, `CreateProgramForm.vue`, `ProgramOverviewPage.vue` | Changed | Program slug |
+| `web/src/pages/program-overview/ui/ProgramOverviewPage.vue` | Changed | Fixture gains `slug` |
+| `web/src/entities/reward/model/types.ts`, `RewardForm.vue`, `RewardsPage.vue`, `entities/reward/api/reward.api.ts` | Changed | New catalog, cashback wallet/currency, tier lock, approval, prefixed names, retired view-only. Prettier also reformatted untouched lines in these files (project rule: run prettier on changed files). |
+| `web/src/entities/reward/model/reward.spec.ts` | Created | Matrix / retired table tests |
+| `web/src/features/streak-campaign-edit/model/useStreakCampaignForm.ts` | Changed | Eligible-reward picker |
+| `web/src/shared/i18n/locales/en.json` | Changed | 49 new keys |
 | `docs/SCOPE_BASELINE.md`, `docs/SOW.md` | Changed | Rows updated; items marked built; revision rows |
 | `.claude/rules/01-workflow-and-debugging.md` | Changed | Pitfalls: cashback gating exception; "reward paid nothing" diagnosis |
 | `docs/scope-changes/2026-09-30-reward-acquisition-fulfilment.md` | Changed | This record |
@@ -778,8 +779,8 @@ Not changed: `LoyaltySaaSApi.md` is still missing, so the API additions (`slug`,
 ### 12.3 What was built
 
 - **API** (`AccountTypeConfigValidators.cs`): POINTS `transfer`, when present, must be an object with a numeric `daily_limit` > 0. CASH and STAMP configs with `transfer` are rejected ("only POINTS can be transferred between customers"). No handler change: `PointsTransferHandler` already enforced the limit.
-- **Portal** (`account-type-form.dialog.ts`): for POINTS, an "Allow points transfer between customers" checkbox and a "Daily transfer limit (points)" field (min 1; validated only while enabled). The form now starts from the stored config minus the keys it owns, so settings it doesn't show survive a save. New strings in `en.json` and `tr.json`.
-- **Model** (`account-type.model.ts`): `PointsConfig.transfer`.
+- **Portal** (`AccountTypeForm.vue`): for POINTS, an "Allow points transfer between customers" checkbox and a "Daily transfer limit (points)" field (min 1; validated only while enabled). The form now starts from the stored config minus the keys it owns, so settings it doesn't show survive a save. New strings in `en.json`.
+- **Model** (`entities/account-type/model/types.ts`): `PointsConfig.transfer`.
 
 ### 12.4 Verification
 
@@ -788,7 +789,7 @@ Not changed: `LoyaltySaaSApi.md` is still missing, so the API additions (`slug`,
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (incl. E2E, Docker) | 162 passed, 0 failed. New: 9 `AccountTypeTransferConfigApiTests` (valid limit, 5 invalid shapes, CASH and STAMP refused, change and remove on an existing wallet), 2 `PointsTransferLimitE2ETests` (transfers up to exactly the limit succeed and the next is refused with `daily_limit_exceeded`; a wallet without the setting refuses with `transfer_not_configured`). |
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | 79 passed (built into a scratch folder; the running Consumer locks its own output). |
 | `npm test` | 96 passed (4 new). The save regression test was verified to **fail without the fix** (temporarily removed, then restored). |
-| `npx ng lint` / `npx ng build --configuration development` | No findings in changed files (same 3 pre-existing errors elsewhere) / succeeded. |
+| `npm run lint` / `npm run build` | No findings in changed files (same 3 pre-existing errors elsewhere) / succeeded. |
 | Manual check in the running portal | Not done here. The Api must be restarted to pick up the validator change. |
 
 ### 12.5 Files
@@ -796,10 +797,10 @@ Not changed: `LoyaltySaaSApi.md` is still missing, so the API additions (`slug`,
 | File | Change | Why |
 |---|---|---|
 | `src/dEngage.Loyalty.Api/AccountTypes/AccountTypeConfigValidators.cs` | Changed | Transfer validation; CASH/STAMP refuse it |
-| `web/src/app/features/programs/account-types/account-type-form.dialog.ts` | Changed | Transfer checkbox + limit; keep unknown settings on save |
-| `web/src/app/features/programs/account-types/account-type.model.ts` | Changed | `PointsConfig.transfer` |
-| `web/src/app/features/programs/account-types/account-type-form.dialog.spec.ts` | Changed | 4 tests incl. the save regression |
-| `web/public/i18n/en.json`, `web/public/i18n/tr.json` | Changed | 5 keys each |
+| `web/src/features/account-type-edit/ui/AccountTypeForm.vue` | Changed | Transfer checkbox + limit; keep unknown settings on save |
+| `web/src/entities/account-type/model/types.ts` | Changed | `PointsConfig.transfer` |
+| `web/src/entities/account-type/model/account-type.schema.spec.ts` | Changed | 4 tests incl. the save regression |
+| `web/src/shared/i18n/locales/en.json` | Changed | 5 keys |
 | `src/dEngage.Loyalty.IntegrationTests/Api/AccountTypeTransferConfigApiTests.cs` | Created | API validation tests |
 | `src/dEngage.Loyalty.IntegrationTests/E2E/PointsTransferLimitE2ETests.cs` | Created | Limit enforced end to end |
 | `docs/SCOPE_BASELINE.md`, `docs/SOW.md` | Changed | AccountTypes rows, SOW §2.2 and §3, revision rows |
