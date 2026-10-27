@@ -6,7 +6,7 @@ paths:
 
 # dEngage.Loyalty.Api and Public.Api — HTTP API hosts
 
-- **Api** (`http://localhost:5173`): the admin/configuration REST API the portals call (JWT), plus
+- **Api** (`http://localhost:5173`): the admin/configuration REST API the portal calls (JWT), plus
   the portal's event routes (`simulate`, `types`, status). **Reference slice to copy: `Rewards/`.**
 - **Public.Api** (`http://localhost:5175`): event ingestion from client systems, `X-Api-Key`
   only. It never registers JWT (`AddLoyaltyJwtAuthentication`), so a portal token is ignored
@@ -38,9 +38,9 @@ such types in the resource folder.
 - The app service and validators are primary-constructor parameters. Actions take only a
   `CancellationToken`: no `[FromBody]` / `[FromRoute]` / `[FromQuery]` and no `[ApiController]`
   (see `backend-api-framework.md`).
-- The Vue portal's OpenAPI generator (`webVue3/tools/openapi`) reads these files: keep the file
+- The portal's OpenAPI generator (`web/tools/openapi`) reads these files: keep the file
   name `<Resource>Controller.cs`, one action attribute per method, and the helpers below. After a
-  route or DTO change run `npm run api:spec && npm run api:types` in `webVue3`.
+  route or DTO change run `npm run api:spec && npm run api:types` in `web/`.
 - Every action starts with an auth guard:
   - tenant routes → `var tenantId = RequireTenantScope(RouteParam("tenantId"));`
   - platform routes → `RequirePlatformAdmin();`

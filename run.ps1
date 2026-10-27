@@ -1,4 +1,4 @@
-# Starts the full loyalty-update stack: infra containers, Api, Public.Api, Consumer, and the Angular web app.
+# Starts the full loyalty-update stack: infra containers, Api, Public.Api, Consumer, and the admin portal.
 # Each service opens in its own PowerShell window so you can watch its logs live.
 # Run from the repo root:  .\run.ps1
 
@@ -30,14 +30,14 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root'; dotne
 Write-Host "Starting Consumer (background worker) ..." -ForegroundColor Cyan
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root'; dotnet run --project src\dEngage.Loyalty.Consumer"
 
-Write-Host "Starting web (http://localhost:4200) ..." -ForegroundColor Cyan
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\web'; npx ng serve --port 4200"
+Write-Host "Starting admin portal (http://localhost:4201) ..." -ForegroundColor Cyan
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\web'; npm run dev"
 
 Write-Host ""
 Write-Host "All services launching in separate windows:" -ForegroundColor Green
 Write-Host "  Api           -> http://localhost:5173"
 Write-Host "  Public.Api    -> http://localhost:5175  (event ingestion, X-Api-Key)"
-Write-Host "  Web portal    -> http://localhost:4200"
+Write-Host "  Admin portal  -> http://localhost:4201"
 Write-Host "  RabbitMQ mgmt -> http://localhost:15672  (guest/guest)"
 Write-Host ""
-Write-Host "Give the Api/Consumer/Web windows a few seconds to finish their first build before hitting the URLs above."
+Write-Host "Give the Api/Consumer/portal windows a few seconds to finish their first build before hitting the URLs above."

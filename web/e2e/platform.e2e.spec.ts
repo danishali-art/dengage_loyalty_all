@@ -1,23 +1,20 @@
-import { Page, test, expect } from '@playwright/test';
-import { PLATFORM_ADMIN, loginAs, uniqueTenantId } from './fixtures';
+import { test, expect, type Page } from '@playwright/test';
+import { PLATFORM_ADMIN, loginAs, requireBackend, uniqueTenantId } from './fixtures';
 
-/**
- * Clicks a button that opens a CDK dialog, then gives the freshly-mounted dialog component one
- * settled render before the caller starts filling it in. A dialog is a brand-new zoneless OnPush
- * component instance each time it opens — its reactive-forms bindings aren't wired up until that
- * first change-detection pass runs, so typing into it in the same tick a real user never could
- * (a scripted `.fill()` immediately after the open click) can race that pass and have the value
- * silently dropped once a later action triggers the delayed first render.
- */
-async function openDialog(page: Page, buttonName: string): Promise<void> {
-  await page.getByRole('button', { name: buttonName }).click();
-  await page.waitForTimeout(300);
-}
+/** Tenant provisioning, against the real backend. */
+test.describe('Platform — tenant provisioning (real backend)', () => {
+  requireBackend();
 
-test.describe('Platform — tenant provisioning', () => {
+  /** Toasts sit over the page header's actions; wait each one out before the next header click. */
+  async function toast(page: Page, text: string): Promise<void> {
+    await expect(page.locator('[data-sonner-toast]', { hasText: text })).toBeVisible();
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0, { timeout: 10_000 });
+  }
+
   test('platform_admin creates a tenant, an API key, and a tenant admin', async ({ page }) => {
+    test.setTimeout(90_000);
     const main = page.locator('main');
-    const sidebar = page.locator('nav[aria-label="Primary"]');
+    const sidebar = page.getByRole('navigation', { name: 'Primary' });
 
     await loginAs(page, PLATFORM_ADMIN.email, PLATFORM_ADMIN.password);
     await expect(page).toHaveURL(/\/select-tenant$/);
@@ -26,40 +23,31 @@ test.describe('Platform — tenant provisioning', () => {
     await expect(page.getByRole('heading', { name: 'Tenants' })).toBeVisible();
 
     const tenantId = uniqueTenantId('e2e_platform');
-    await openDialog(page, 'New tenant');
+    await page.getByRole('button', { name: 'New tenant' }).click();
     await page.getByLabel('Tenant id').fill(tenantId);
     await page.getByLabel('Display name').fill(`E2E Platform ${tenantId}`);
     await page.getByRole('button', { name: 'Create tenant' }).click();
-
-    await expect(page.getByText(`Tenant "E2E Platform ${tenantId}" created`)).toBeVisible();
-    await page.getByRole('cell', { name: `E2E Platform ${tenantId}` }).click();
+    await toast(page, `Tenant "E2E Platform ${tenantId}" created`);
     await expect(page).toHaveURL(new RegExp(`/platform/tenants/${tenantId}$`));
-
-    // The Sidebar's contextual sub-nav should now show this tenant's sections.
     await expect(sidebar.getByRole('link', { name: 'API Keys' })).toBeVisible();
 
-    // --- API key (reached via the Overview page's summary card) ---
     await main.getByRole('link', { name: /API Keys/ }).click();
     await expect(page).toHaveURL(new RegExp(`/platform/tenants/${tenantId}/api-keys$`));
-
-    await openDialog(page, 'New key');
+    await page.getByRole('button', { name: 'New key' }).click();
     await expect(page.getByText('Copy this key now')).toBeVisible();
-    await page.getByRole('button', { name: 'Done' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
     await expect(main.getByText(/^lk_/)).toBeVisible();
 
-    // --- Tenant admin (reached via the Sidebar's contextual sub-nav) ---
     await sidebar.getByRole('link', { name: 'Tenant Admins' }).click();
     await expect(page).toHaveURL(new RegExp(`/platform/tenants/${tenantId}/admin-users$`));
-
-    await openDialog(page, 'New admin');
+    await page.getByRole('button', { name: 'New admin' }).click();
     const adminEmail = `${tenantId}@e2e.local`;
     await page.getByLabel('Email').fill(adminEmail);
     await page.getByLabel('Temporary password').fill('E2eTenantAdminPass123!');
     await page.getByRole('button', { name: 'Create admin' }).click();
-    await expect(page.getByText(`Admin "${adminEmail}" created`)).toBeVisible();
+    await toast(page, `Admin "${adminEmail}" created`);
     await expect(page.getByRole('cell', { name: adminEmail })).toBeVisible();
 
-    // --- Back to Overview for Suspend / reactivate ---
     await sidebar.getByRole('link', { name: 'Overview' }).click();
     await expect(page).toHaveURL(new RegExp(`/platform/tenants/${tenantId}$`));
     await page.getByRole('button', { name: 'Suspend' }).click();

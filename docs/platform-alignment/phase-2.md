@@ -115,7 +115,7 @@ WHERE parameter_name = 'RateLimit.EventIngestionPerMinute'
 |---|---|
 | Job run times, job intervals, RuleSync intervals | The event-throughput change owns the background jobs (single-runner redesign, its Phase 1 / Q10); moving their schedules now would conflict with that rewrite |
 | Event retention (12 months), max streak periods, max condition window | They are tied together (the retention must cover the longest streak window); changing one safely needs cross-checks against existing streak and rule configurations, i.e. a product decision |
-| Supported currencies / default currency | Validated statically in several API validators and listed in the portals; a cross-stack change (backend, both portals, `LoyaltySaaSApi.md`) |
+| Supported currencies / default currency | Validated statically in several API validators and listed in the portal; a cross-stack change (backend, portal, `LoyaltySaaSApi.md`) |
 | Generic event types, isolated tenants (D12), JWT expiry, CORS | Startup or topology values (queue bindings, token options); they stay in appsettings |
 | Cross-pod cache invalidation | There is no application write path (rows are changed with SQL, like `sys.global_config`), so the 1-minute cache is the propagation mechanism |
 | Admin API / portal screen for settings | New capability; not in the assessment's D4 |
@@ -184,8 +184,8 @@ The Api reads these settings on every event ingestion and has no fallback. **App
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | ✅ 146/146 (includes the D13 boundary test, which now also covers `Contract`) |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker) | ✅ 336/336 |
 | `dotnet pack src/dEngage.Loyalty.Contract -c Release` | ✅ `dEngage.Loyalty.Contract.1.0.0.nupkg`: `lib/netstandard2.0/dEngage.Loyalty.Contract.dll`, one dependency (`System.Text.Json` 9.0.9) |
-| Portal: `npm run api:spec`, `npm run api:types`, `npm run api:check` (webVue3) | ✅ identical spec (55 paths, 112 schemas), no content change in the generated files |
-| Portal: `npx vitest run` (webVue3) | ✅ 41 files, 228 tests (a run started in parallel with the Docker test suite reported timeouts; run on its own it is clean) |
+| Portal: `npm run api:spec`, `npm run api:types`, `npm run api:check` (web) | ✅ identical spec (55 paths, 112 schemas), no content change in the generated files |
+| Portal: `npx vitest run` (web) | ✅ 41 files, 228 tests (a run started in parallel with the Docker test suite reported timeouts; run on its own it is clean) |
 | Shared pipeline publishing the package | ❌ not run (no Bitbucket access here) |
 
 Windows note: `npm run api:check` reports `openapi.json` / `schema.d.ts` as out of date right after a git checkout on Windows, because git checks them out with CRLF and the generator writes LF. Running `npm run api:spec && npm run api:types` fixes it without any content change.
@@ -200,7 +200,7 @@ Windows note: `npm run api:check` reports `openapi.json` / `schema.d.ts` as out 
 | `dEngage.Loyalty.sln` | changed | New project |
 | 81 `.cs` files across `src/` | changed | `using` / qualified names only |
 | `build.json` | changed | Publish `dEngage.Loyalty.Contract` |
-| `webVue3/tools/openapi/build-spec.ts`, `webVue3/openapi/overrides.ts` | changed | Generator scans Contract; source notes |
+| `web/tools/openapi/build-spec.ts`, `web/openapi/overrides.ts` | changed | Generator scans Contract; source notes |
 | `.claude/rules/backend.md`, `backend-schema-shared.md`, `backend-api.md`, `CLAUDE.md`, `docs/SCOPE_BASELINE.md` | changed | Project graph, Contract rules, new paths |
 | `docs/platform-alignment/phase-2.md` | changed | This section |
 

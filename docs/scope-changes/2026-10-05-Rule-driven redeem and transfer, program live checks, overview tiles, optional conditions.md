@@ -106,7 +106,7 @@
   | `order.refunded` reversal | **No.** | **No**, on purpose (P-4) |
   | Ledger and tier jobs: points expiration, expiring-soon detector, tier downgrade, streak maintenance, delayed-posting promotion | **No.** | Unchanged (O14 skipped) |
 
-- Wallet settings ([AccountTypeConfigValidators.cs:49-72](../../src/dEngage.Loyalty.Api/AccountTypes/AccountTypeConfigValidators.cs#L49-L72), [account-type-form.dialog.ts](../../web/src/app/features/programs/account-types/account-type-form.dialog.ts)):
+- Wallet settings ([AccountTypeConfigValidators.cs:49-72](../../src/dEngage.Loyalty.Api/AccountTypes/AccountTypeConfigValidators.cs#L49-L72), [AccountTypeForm.vue](../../web/src/features/account-type-edit/ui/AccountTypeForm.vue)):
   - both are already optional ("Allow redemption to another wallet", "Allow transfer");
   - when enabled, redemption requires `rate`, `min_points` and `target_account_type_id`, and transfer requires `daily_limit` > 0.
 - [RuleTypeCatalog.cs](../../src/dEngage.Loyalty.RuleEngine/Metadata/RuleTypeCatalog.cs): `points.redeem` allows only RedemptionRule, `points.transfer` only TransferRule.
@@ -116,11 +116,11 @@
 - [RulesAppService.cs](../../src/dEngage.Loyalty.Api/Rules/RulesAppService.cs) (`:99-123`, `:187-196`) requires CASH approval only when the rule's **target** is CASH.
 
 ### 2.2 Item 3: overview tiles
-- [program-overview.page.ts:245-255](../../web/src/app/features/programs/program-overview.page.ts#L245-L255): the `cards` array holds Account types, Tiers, Rules, Rewards and History.
+- [ProgramOverviewPage.vue](../../web/src/pages/program-overview/ui/ProgramOverviewPage.vue#L245-L255): the `cards` array holds Account types, Tiers, Rules, Rewards and History.
 - `programs.routes.ts` already has the `streak-campaigns` and `card-buckets` routes.
 
 ### 2.3 Item 4: conditions (root cause)
-- [rule-form.page.ts:746](../../web/src/app/features/programs/rules/rule-form.page.ts#L746) initialises `conditions` with `emptyTree()`. This is **one group containing one blank condition**, not "no conditions".
+- [RuleForm.vue](../../web/src/features/rule-edit/model/useRuleForm.ts#L746) initialises `conditions` with `emptyTree()`. This is **one group containing one blank condition**, not "no conditions".
 - `submit()` runs `validateConditionTree` on it. `validateConditionLeaf` rejects the blank leaf with "field is required", so Save is blocked.
 - The backend ([GroupedConditionDsl.cs](../../src/dEngage.Loyalty.RuleEngine/GroupedConditionDsl.cs) `Validate`) accepts `conditions: null` but would also reject a blank field path. So the only real "no conditions" value is `null`, and the portal never sends it.
 - This affects **every trigger**.
@@ -211,8 +211,8 @@
 - The migration is generated with `dotnet ef migrations add` and carries the data step as SQL. Applied migrations are not edited.
 
 ### 3.2 Item 3: overview tiles
-- Add two entries to the `cards` array in `program-overview.page.ts`, in the same shape as the others: an icon, title and description i18n keys, and a link to `streak-campaigns` / `card-buckets`.
-- New keys go in `en.json` and `tr.json`.
+- Add two entries to the `cards` array in `ProgramOverviewPage.vue`, in the same shape as the others: an icon, title and description i18n keys, and a link to `streak-campaigns` / `card-buckets`.
+- New keys go in `en.json`.
 
 ### 3.3 Item 4: optional conditions (bug fix)
 - On submit, a condition tree whose leaves are **all blank** (no field chosen) is sent as `conditions: null` and skips validation. This uses the existing `hasConditions(tree)` helper in `condition-tree-dsl.ts`.
@@ -264,11 +264,11 @@ How every failure is reported:
 | API: Account types | 1 | none | Settings and their validation unchanged; only their meaning changes |
 | Schema | 1 | **New migration** (P1) `DisableLegacyBurnRulesCrNN` | **Data step only** (R-O11): RedemptionRule/TransferRule rows that are `active` or `pending_approval` → `disabled`, `updated_at` bumped. No schema change, so `loyalty_schema_reference.md` is unchanged. |
 | Ops | 1 | Pre-deploy SQL queries (in the release notes, not in `scripts/*.sql`) | (a) wallets with redemption/transfer settings; (b) the rules R-O11 will disable |
-| Portal: rules | 1, 4 | `programs/rules/rule-form.page.ts`, `rule.model.ts` | Redeem: Cash per point, Minimum redemption, **Redeem into** CASH wallet picker, approval state. Transfer: Daily transfer limit, Ratio/Fee hidden. **Pre-fill from the wallet on create** (S4). Target limited to POINTS. Null-conditions fix. |
-| Portal: account types | 1 | `programs/account-types/account-type-form.dialog.ts` | Relabel the sections as defaults for new rules, plus help text (S5) |
-| Portal: overview | 3 | `programs/program-overview.page.ts` | Two tiles |
-| Portal: event simulator | 1, 5 | `features/events/event-simulator.page.ts` | Help texts: redeem/transfer need an active rule for the wallet; redeem, transfer, purchase and cash events need a live program |
-| Portal: i18n | all | `public/i18n/en.json`, `tr.json` | New and changed strings |
+| Portal: rules | 1, 4 | `RuleForm.vue`, `entities/rule/model/types.ts` | Redeem: Cash per point, Minimum redemption, **Redeem into** CASH wallet picker, approval state. Transfer: Daily transfer limit, Ratio/Fee hidden. **Pre-fill from the wallet on create** (S4). Target limited to POINTS. Null-conditions fix. |
+| Portal: account types | 1 | `AccountTypeForm.vue` | Relabel the sections as defaults for new rules, plus help text (S5) |
+| Portal: overview | 3 | `programs/ProgramOverviewPage.vue` | Two tiles |
+| Portal: event simulator | 1, 5 | `useEventSimulatorPage.ts` | Help texts: redeem/transfer need an active rule for the wallet; redeem, transfer, purchase and cash events need a live program |
+| Portal: i18n | all | `shared/i18n/locales/en.json` | New and changed strings |
 | Tests | all | `Engine.Tests` (resolver, bypass, rounding); `IntegrationTests` (redeem/transfer paths, approval, validators); portal specs (`rule-form` pre-fill, condition null) | See §7 |
 | Docs | all | `SCOPE_BASELINE.md`, `SOW.md`, `LoyaltySaaSApi.md`, `01-workflow-and-debugging.md`, `backend-consumer.md`, `backend-rule-engine.md` | |
 
@@ -385,7 +385,7 @@ P0 can ship independently, before the review of P1 concludes.
 ### 12.1 What was built
 
 **P0 (items 3 and 4):**
-- **Overview tiles:** Programs › Overview links to Streak Campaigns and Card Buckets. All tile labels moved to i18n keys (en/tr), as the frontend rules require for touched strings.
+- **Overview tiles:** Programs › Overview links to Streak Campaigns and Card Buckets. All tile labels moved to i18n keys, as the frontend rules require for touched strings.
 - **Optional conditions:** an untouched rule form (only blank conditions) saves `conditions: null`. A partly filled tree still blocks saving with the existing messages. This is the shared helper `conditionsForSave` in `condition-tree-dsl.ts`. No backend change.
 
 **P1 (items 1 and 5):**
@@ -419,8 +419,8 @@ P0 can ship independently, before the review of P1 concludes.
 | `dotnet test src/dEngage.Loyalty.Engine.Tests` | **95/95 passed** (incl. 12 new `BurnRulePipelineTests`) |
 | `dotnet test src/dEngage.Loyalty.IntegrationTests` (Docker, Testcontainers) | **249/249 passed** (full suite). New: `BurnRuleCalculationApiTests`, `CashEventsProgramLiveE2ETests`; rewritten: `PointsRedeemOutcomeE2ETests`, `PointsTransferLimitE2ETests` |
 | Portal `npm test` (vitest) | **145/145 passed** (new: `condition-tree-dsl.spec.ts`, `burn-rule-defaults.spec.ts`; updated: `rule-grouping.spec.ts`) |
-| Portal `npx ng lint` | Only the 3 errors that existed before, in `confirm.service.ts` and `dashboard.page.ts`; none in changed files |
-| Portal `npx ng build --configuration development` | Succeeds |
+| Portal `npm run lint` | Only errors that existed before; none in changed files |
+| Portal `npm run build` | Succeeds |
 | Migration against a real DB | Applied by every Testcontainers E2E run (`MigrateAsync`), and **applied to the dev DB (`loyalty_dev`) on 2026-10-05** with `dotnet ef database update`. The pre-deploy query listed one rule (fintech › FinPay Rewards › "point redemption", RedemptionRule v2, active); it is now `disabled`, and FinPay Rewards shows unpublished changes. |
 | Manual run in the portal / simulator | **Not done** — to do with the go-live checklist (§7) |
 
@@ -493,19 +493,19 @@ ORDER BY 1, 2, 3;
 | `src/dEngage.Loyalty.IntegrationTests/E2E/CashEventsProgramLiveE2ETests.cs` | Created | Item 5 for cash events |
 | `src/dEngage.Loyalty.IntegrationTests/Api/BurnRuleCalculationApiTests.cs` | Created | Validation, tenancy and approval through the API |
 | `src/dEngage.Loyalty.IntegrationTests/Api/BurnTriggerRuleTypesApiTests.cs` | Changed | Fixture sends a valid calculation per type |
-| `web/src/app/shared/forms/condition-tree-dsl.ts` | Changed | `conditionsForSave` (item 4) |
-| `web/src/app/shared/forms/condition-tree-dsl.spec.ts` | Created | Item 4 tests |
-| `web/src/app/features/programs/program-overview.page.ts` | Changed | Two tiles; tile strings to i18n (item 3) |
-| `web/src/app/features/programs/rules/rule-form.page.ts` | Changed | Item 4 save; redeem/transfer fields; wallet pre-fill |
-| `web/src/app/features/programs/rules/rule.model.ts` | Changed | `cashAccountTypeId`; field notes |
-| `web/src/app/features/programs/rules/burn-rule-defaults.ts` | Created | Wallet → rule pre-fill |
-| `web/src/app/features/programs/rules/burn-rule-defaults.spec.ts` | Created | Pre-fill tests |
-| `web/src/app/features/programs/rules/rule-grouping.ts` | Changed | RedemptionRule outside winner selection |
-| `web/src/app/features/programs/rules/rule-grouping.spec.ts` | Changed | Covers RedemptionRule |
-| `web/src/app/features/programs/account-types/account-type-form.dialog.ts` | Changed | Sections relabelled as defaults; strings to i18n |
-| `web/src/app/features/programs/account-types/account-type.model.ts` | Changed | Field notes (defaults only) |
-| `web/src/app/features/events/event-simulator.page.ts` | Changed | `reward_id` optional for `reward.purchase` |
-| `web/public/i18n/en.json`, `web/public/i18n/tr.json` | Changed | New and updated strings |
+| `web/src/shared/lib/dsl/condition-tree-dsl.ts` | Changed | `conditionsForSave` (item 4) |
+| `web/src/shared/lib/dsl/condition-tree-dsl.spec.ts` | Created | Item 4 tests |
+| `web/src/pages/program-overview/ui/ProgramOverviewPage.vue` | Changed | Two tiles; tile strings to i18n (item 3) |
+| `web/src/features/rule-edit/model/useRuleForm.ts` | Changed | Item 4 save; redeem/transfer fields; wallet pre-fill |
+| `web/src/entities/rule/model/types.ts` | Changed | `cashAccountTypeId`; field notes |
+| `web/src/features/rule-edit/model/burn-rule-defaults.ts` | Created | Wallet → rule pre-fill |
+| `web/src/features/rule-edit/model/burn-rule-defaults.spec.ts` | Created | Pre-fill tests |
+| `web/src/entities/rule/model/rule-grouping.ts` | Changed | RedemptionRule outside winner selection |
+| `web/src/entities/rule/model/rule-grouping.spec.ts` | Changed | Covers RedemptionRule |
+| `web/src/features/account-type-edit/ui/AccountTypeForm.vue` | Changed | Sections relabelled as defaults; strings to i18n |
+| `web/src/entities/account-type/model/types.ts` | Changed | Field notes (defaults only) |
+| `web/src/pages/event-simulator/model/useEventSimulatorPage.ts` | Changed | `reward_id` optional for `reward.purchase` |
+| `web/src/shared/i18n/locales/en.json` | Changed | New and updated strings |
 | `LoyaltySaaSApi.md` | Changed | Rule calculation, approval, outcomes, cash failure events |
 | `docs/SCOPE_BASELINE.md` | Changed | AccountTypes, Rules, gating, Consumer, portal rows; changelog |
 | `docs/SOW.md` | Changed | §2.2, §2.4, §3; version 1.7 |

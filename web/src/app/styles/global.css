@@ -1,0 +1,120 @@
+/*
+ * App-wide styles. Tailwind v4 + the shadcn-vue theme variables (used by the primitives in
+ * shared/ui/primitives), mapped onto the portal's brand tokens. The `--app-*` tokens are what
+ * component scoped styles use.
+ */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+:root {
+  --app-brand: #125cfa;
+  --app-brand-dark: #0e4ad1;
+  --app-brand-light: #e8f0fe;
+  --app-heading: #3e72cc;
+  --app-navy: #1c2c48;
+  --app-page: #eef1f6;
+  /* Text colours (muted, and each status -fg on its -bg) keep at least 4.5:1 (WCAG AA) on white,
+     on --app-page and on their own background; the e2e axe checks enforce it. */
+  --app-muted: #5f6b7a;
+  --app-text: #1f2937;
+  --app-text-soft: #4b5563;
+  --app-border: #e5e7eb;
+  --app-success-fg: #15803d;
+  --app-success-bg: #f0fdf4;
+  --app-success-border: #dcfce7;
+  --app-warn-fg: #b45309;
+  --app-warn-bg: #fff7ed;
+  --app-warn-border: #ffedd5;
+  --app-danger-fg: #b91c1c;
+  --app-danger-bg: #fef2f2;
+  --app-danger-border: #fecaca;
+  --app-streak-fg: #7c3aed;
+  --app-streak-bg: #f3e8ff;
+  --app-streak-border: #e9d5ff;
+  --app-shadow-card: 0 1px 3px rgba(16, 30, 54, 0.06);
+  --app-radius: 0.75rem;
+  --app-font: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+
+  /* shadcn-vue theme variables (light only — the dark-mode flag is off). */
+  --radius: 0.5rem;
+  --background: #ffffff;
+  --foreground: var(--app-text);
+  --card: #ffffff;
+  --card-foreground: var(--app-text);
+  --popover: #ffffff;
+  --popover-foreground: var(--app-text);
+  --primary: var(--app-brand);
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: var(--app-text);
+  --muted: #f3f4f6;
+  --muted-foreground: var(--app-muted);
+  --accent: var(--app-brand-light);
+  --accent-foreground: var(--app-brand);
+  --destructive: var(--app-danger-fg);
+  --border: var(--app-border);
+  --input: var(--app-border);
+  --ring: var(--app-brand);
+}
+
+@theme inline {
+  --font-sans: var(--app-font);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    font-family: var(--app-font);
+    font-size: 14px;
+    color: var(--app-text);
+    background: var(--app-page);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app {
+    height: 100%;
+  }
+
+  a {
+    color: var(--app-brand);
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+  }
+}

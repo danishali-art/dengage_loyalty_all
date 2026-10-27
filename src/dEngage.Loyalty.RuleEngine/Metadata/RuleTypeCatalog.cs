@@ -5,7 +5,7 @@ namespace dEngage.Loyalty.RuleEngine.Metadata;
 
 // CR-03 (docs/scope-change-rules): the single compatibility source of truth — used by both
 // RulesValidators (Api, structural check at create/update time) and, going forward, the
-// rules/metadata endpoint the Angular rule builder (CR-11) reads instead of hardcoding its own
+// rules/metadata endpoint the portal's rule builder (CR-11) reads instead of hardcoding its own
 // RULE_TYPES/EVENT_TRIGGERS arrays. TIER_POINTS is deferred (see plan) — no rule type here lists
 // it as a valid target. CR 2026-10-05: StampRule and ExpiryRule are retired and STAMP is no
 // longer a target, so neither the API nor the rule builder offers them.

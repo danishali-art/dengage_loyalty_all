@@ -17,15 +17,14 @@
 .github/
 .claude/
 
-# Front-ends: only the Vue portal (webVue3) is built into an image (dengage.loyalty.frontend).
-# The Angular portal (web/) is never deployed.
-web/
+# Admin portal (web/): its source goes into the dengage.loyalty.frontend image; its local build
+# and test output doesn't.
 **/node_modules/
-webVue3/dist/
-webVue3/coverage/
-webVue3/test-results/
-webVue3/playwright-report/
-webVue3/**/*.tsbuildinfo
+web/dist/
+web/coverage/
+web/test-results/
+web/playwright-report/
+web/**/*.tsbuildinfo
 
 # Docs, scripts, data dumps and local infra
 docs/

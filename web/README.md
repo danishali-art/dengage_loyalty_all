@@ -1,59 +1,87 @@
-# Portal
+# Loyalty Admin Portal
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.6.
+The admin portal for the loyalty platform (Vue 3).
+Architecture and conventions: [CLAUDE.md](CLAUDE.md) and [../.claude/rules/frontend.md](../.claude/rules/frontend.md).
 
-## Development server
+## Run it
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Node 24 (npm 11). From this folder:
 
 ```bash
-ng generate component component-name
+npm install
+npm run dev        # http://localhost:4201
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+The API calls go to `/api`, which Vite proxies to the backend at `http://localhost:5173` — start
+it with `..\run.ps1` (or the Api project alone). Without a backend the portal loads, but sign-in
+fails with an error from the proxy.
+
+## Checks
 
 ```bash
-ng generate --help
+npm run api:check && npm run type-check && npm run lint && npm test && npm run build
 ```
 
-## Building
-
-To build the project run:
+## End-to-end tests (Playwright)
 
 ```bash
-ng build
+npx playwright install chromium       # once, or set PW_CHANNEL=msedge to use an installed Edge
+npm run e2e                           # shell + platform flows, /api mocked in the browser
+E2E_BACKEND=1 npm run e2e             # also the real-backend flows (Api on :5173; customers needs the Consumer)
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+They reuse a dev server already running on `:4201`, or start one.
 
-## Running unit tests
+## Adding a UI component
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+The UI kit is [shadcn-vue](https://www.shadcn-vue.com) (Reka UI + Tailwind v4). Generate the
+primitive into `src/shared/ui/primitives/`, then wrap it in an `App*` component in `src/shared/ui`:
 
 ```bash
-ng test
+npx shadcn-vue@2.8.2 add <component>
 ```
 
-## Running end-to-end tests
+Pages and features use the wrappers only (lint enforces it).
 
-For end-to-end (e2e) testing, run:
+## After a backend DTO or route change
 
 ```bash
-ng e2e
+npm run api:spec && npm run api:types
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Commit `openapi/openapi.json` and `src/shared/api/generated/schema.d.ts` with the change. The build
+(and `npm run api:check`) fails until they match the C# source.
 
-## Additional Resources
+## Deployment (image `dengage.loyalty.frontend`)
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Packaged like the dEngage panel (`adminpanel`): [`../dengage.loyalty.frontend/`](../dengage.loyalty.frontend/)
+holds the Dockerfile, the nginx template and the start-up scripts, and `build.json` registers the
+image for the shared Bitbucket pipeline. Build context is the repo root, because the build's
+`api:check` reads the backend source in `src/`:
+
+```bash
+docker build -t dengage.loyalty.frontend -f dengage.loyalty.frontend/Dockerfile .
+docker run -p 8090:8080 -e BACKEND_URL=http://host.docker.internal:5173 dengage.loyalty.frontend
+```
+
+One image serves every environment. OpenResty serves the build and forwards `/api/*` to the Api,
+so the browser only ever calls its own origin (no CORS, no API address in the bundle).
+
+| Environment variable | Default | Meaning |
+|---|---|---|
+| `BACKEND_URL` | `http://127.0.0.1:8080` | The admin Api (`dengage.loyalty.api`), scheme, host and port only. `/api/*` and `/ping` go there. |
+| `LISTEN_PORT` | `8080` | Port nginx listens on. |
+| `HOST_NAME_LIST` | any host | Space-separated host names to serve; other hosts get no answer (444), except `/ping`. |
+| `LOG_DIRECTORY` | `/dengage/log/dengage.loyalty.frontend` | `error.log`, `api.log` (API requests, no auth headers), `rejected_access.log`. Rotated by size. |
+| `OUTPUT_DIRECTORY` | `LOG_DIRECTORY` | Where rotated logs go. |
+
+Optional files mounted at `/dengage/config` (as the panel's `adminpanel-frontend.*`):
+`loyalty-frontend.app-config.json` replaces `app-config.json` (feature flags, page sizes) at
+start-up, and `loyalty-frontend.{server,http,global}-extra.conf` are included into the nginx
+config. `/dengage/startup-scripts/loyalty-frontend.sh` runs before nginx starts.
+
+`/ping` answers with the Api's `/health`. `index.html` and `app-config.json` are never cached;
+the hashed files under `/assets/` are cached for a year.
+
+Serve the portal on its own host name (for example `loyalty.<env>.dengage.com`): both this portal
+and the dEngage panel send `/api/*` to their own backend.

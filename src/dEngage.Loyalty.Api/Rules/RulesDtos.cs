@@ -42,7 +42,7 @@ public sealed record RuleResponse(
 public sealed record SetRuleStatusRequest(string Status);
 
 // CR-03: single compatibility source of truth (RuleEngine.Metadata.RuleTypeCatalog /
-// Shared.Events.EventTypes) served to the Angular rule builder (CR-11) instead of it
+// Shared.Events.EventTypes) served to the portal's rule builder (CR-11) instead of it
 // hardcoding RULE_TYPES/EVENT_TRIGGERS arrays. Built-in events only — tenant-approved generic
 // event types have no category/field metadata yet (see EventTypes.Describe) and are always
 // compatible with every rule type.

@@ -1,52 +1,52 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { loginAs } from './fixtures';
+import { mockApi } from './mock-api';
 
 const PROGRAMS_URL = /\/programs(\?.*)?$/;
 
 /**
- * These are fast shell/routing smoke tests that intentionally don't need a backend — they
- * force stub auth mode via a config override, independent of the app's real deployed
- * `authMode` (which defaults to "http" so the rest of the suite exercises the real API).
- *
- * Stub mode signs in with a locally-generated, unsigned JWT — fine when nothing validates it,
- * but a real API (which this test run always has alongside it, for the other specs) correctly
- * rejects it with 401, which would otherwise bounce these tests back to /login. So every
- * `/api/**` call is stubbed too, keeping this suite genuinely backend-independent.
+ * Shell and routing smoke tests. They sign in through the real
+ * login form, but `/api` is answered by `mockApi`, so no backend is needed.
  */
-async function useStubAuth(page: Page): Promise<void> {
-  await page.route('**/app-config.json', async (route) => {
-    const response = await route.fetch();
-    const body = await response.json();
-    await route.fulfill({ response, json: { ...body, authMode: 'stub' } });
+test.describe('shell + auth + tenancy', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockApi(page);
   });
-  await page.route('**/api/v1/**', async (route) => {
-    await route.fulfill({ json: { data: [], page: 1, pageSize: 25, total: 0 } });
-  });
-}
 
-test.describe('P0 shell + auth + tenancy', () => {
+  test('an anonymous visit is sent to the login page with a return url', async ({ page }) => {
+    await page.goto('/customers');
+    await expect(page).toHaveURL(/\/login\?returnUrl=\/customers$/);
+  });
+
   test('a tenant_admin lands on Programs with the app chrome rendered', async ({ page }) => {
-    await useStubAuth(page);
-    await page.goto('/?stubRole=tenant_admin');
+    await loginAs(page, 'ops@novapay.test', 'any-password');
 
     await expect(page).toHaveURL(PROGRAMS_URL);
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Programs');
-    // tenant_admin -> tenant is fixed from the JWT claim, shown as a static label
+    // tenant_admin: the tenant is fixed by the JWT claim and shown as a static label.
     await expect(page.getByText('novapay')).toBeVisible();
+    // Platform screens are platform_admin only.
+    await expect(page.getByRole('link', { name: 'Platform' })).toHaveCount(0);
   });
 
   test('a platform_admin with no tenant is sent to the tenant picker', async ({ page }) => {
-    await useStubAuth(page);
-    await page.goto('/?stubRole=platform_admin');
+    await loginAs(page, 'platform@loyalty.test', 'any-password');
 
     await expect(page).toHaveURL(/\/select-tenant$/);
     await expect(page.getByRole('heading', { name: /select a tenant/i })).toBeVisible();
   });
 
+  test('a tenant_admin is refused the platform screens', async ({ page }) => {
+    await loginAs(page, 'ops@novapay.test', 'any-password');
+    await page.goto('/platform/tenants');
+    await expect(page).toHaveURL(/\/forbidden$/);
+    await expect(page.getByText('403')).toBeVisible();
+  });
+
   test('unknown routes redirect to the 404 page', async ({ page }) => {
-    await useStubAuth(page);
-    await page.goto('/?stubRole=tenant_admin');
+    await loginAs(page, 'ops@novapay.test', 'any-password');
     await expect(page).toHaveURL(PROGRAMS_URL);
     await page.goto('/does-not-exist');
     await expect(page).toHaveURL(/\/not-found$/);
@@ -54,13 +54,10 @@ test.describe('P0 shell + auth + tenancy', () => {
   });
 
   test('Programs screen has no critical accessibility violations', async ({ page }) => {
-    await useStubAuth(page);
-    await page.goto('/?stubRole=tenant_admin');
+    await loginAs(page, 'ops@novapay.test', 'any-password');
     await expect(page).toHaveURL(PROGRAMS_URL);
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-    const serious = results.violations.filter(
-      (v) => v.impact === 'critical' || v.impact === 'serious',
-    );
+    const serious = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
     expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
   });
 });

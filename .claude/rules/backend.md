@@ -76,8 +76,8 @@ Per-project rules are in their own files and load when you touch that project:
   libraries are allowed only in the future dEngage connector projects. `CoreDependencyBoundaryTests`
   checks the resolved dependency closure.
 - **Images:** `src/dEngage.Loyalty.{Api,Consumer}/Dockerfile`, built with the repo root as context
-  (`.dockerignore` keeps `.env`, `appsettings.Development.json`, launch settings and the portals
-  out). `build.json` + `bitbucket-pipelines.yml` hook into the shared dEngage pipeline.
+  (`.dockerignore` keeps `.env`, `appsettings.Development.json`, launch settings and the portal's
+  local build output out). `build.json` + `bitbucket-pipelines.yml` hook into the shared dEngage pipeline.
 
 ## Project reference graph (actual — keep it acyclic)
 ```

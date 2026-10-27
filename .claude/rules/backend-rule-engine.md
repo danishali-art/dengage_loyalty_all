@@ -82,7 +82,7 @@ transaction) → `ILedgerPoster` (budget reservation + posting in **one transact
 - `ConditionClause` / `ConditionEvaluator` → **Streak Campaigns only** (flat AND). This is not
   drift. Don't merge the two or migrate streaks without a scope change.
 - Any change to operators, fields or validation must be mirrored in
-  `web/src/app/shared/forms/condition-tree-dsl.ts` (and the streak validators) in the same change,
+  `web/src/shared/lib/dsl/condition-tree-dsl.ts` (and the streak validators next to it) in the same change,
   with matching table tests.
 - Field namespaces are `event.*`, `profile.*` and `agg.*`. `profile.*` values are snapshotted on
   the posting at award time.

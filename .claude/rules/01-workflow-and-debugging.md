@@ -17,12 +17,11 @@
 | Engine unit tests | `dotnet test src/dEngage.Loyalty.Engine.Tests` |
 | API / E2E tests (Docker needed for Testcontainers) | `dotnet test src/dEngage.Loyalty.IntegrationTests` |
 | New migration | `dotnet ef migrations add <Name>CrNN -p src/dEngage.Loyalty.Schema` (design-time factory lives in Schema) |
-| Portal lint / test / build (from `web/`) | `npx ng lint` · `npm test` · `npx ng build --configuration development` |
+| Portal (from `web/`) | `npm run api:check` · `npm run type-check` · `npm run lint` · `npm test` · `npm run build` |
 | Portal format (from `web/`) | `npx prettier --write <changed files>` |
-| Vue 3 portal (from `webVue3/`) | `npm run api:check` · `npm run type-check` · `npm run lint` · `npm test` · `npm run build` |
-| Vue 3 portal dev server (from `webVue3/`) | `npm run dev` (`:4201`, `/api` → `:5173`; not started by `run.ps1`) |
-| Vue 3 portal e2e (from `webVue3/`) | `npm run e2e` (mocked `/api`, no backend) · `E2E_BACKEND=1 npm run e2e` (also the real-backend ports) |
-| Full local stack | `.\run.ps1` (infra, Api `:5173`, Public.Api `:5175`, Consumer, web `:4200`) |
+| Portal dev server (from `web/`) | `npm run dev` (`:4201`, `/api` → `:5173`) |
+| Portal e2e (from `web/`) | `npm run e2e` (mocked `/api`, no backend) · `E2E_BACKEND=1 npm run e2e` (also the real-backend specs) |
+| Full local stack | `.\run.ps1` (infra, Api `:5173`, Public.Api `:5175`, Consumer, portal `:4201`) |
 If you can't run a check (for example Docker is down), say so. Don't skip it silently.
 
 ## Cross-stack changes (API or data shape)
@@ -31,13 +30,13 @@ Changing a field, enum value, endpoint or validation rule means updating all of 
    if the route changes.
 2. Entity, configuration and migration in `src/dEngage.Loyalty.Schema` if it is persisted.
 3. Engine or consumer handlers if the field travels on an event (in **snake_case**).
-4. Portal: `web/src/app/features/<feature>/<name>.model.ts`, the service, the form and list
-   pages, and the i18n keys in `en.json` and `tr.json`.
-5. Enum-like registries on both sides, for example `RewardTypeRegistry.cs` ↔ the `RewardType` union.
-6. Tests on both sides, plus `LoyaltySaaSApi.md` and `docs/SCOPE_BASELINE.md`.
-7. Vue 3 portal: from `webVue3/`, `npm run api:spec && npm run api:types` and commit the regenerated
+4. Portal: from `web/`, `npm run api:spec && npm run api:types` and commit the regenerated
    `openapi/openapi.json` + `src/shared/api/generated/schema.d.ts`; update `openapi/overrides.ts` if
-   an allowed-values list changed; then fix whatever the type-check flags in ported screens.
+   an allowed-values list changed; then fix whatever the type-check flags — the entity's
+   `model/` (schema, mapper), its forms and list pages, and the i18n keys in `en.json`.
+5. Enum-like registries on both sides, for example `RewardTypeRegistry.cs` ↔ the portal's
+   `openapi/overrides.ts` allowed values.
+6. Tests on both sides, plus `LoyaltySaaSApi.md` and `docs/SCOPE_BASELINE.md`.
 Treat existing fields as frozen. Prefer adding new fields over renaming or removing old ones.
 Call out any breaking change explicitly.
 
@@ -83,12 +82,12 @@ Call out any breaking change explicitly.
 | A reward is bought or earned but no cash is credited / no tier changes | The reward is still **pending approval** (cashback needs a second admin — `reward_not_approved` in the inbox error, or the streak grants nothing), the program isn't published + active (cashback only), the cash wallet / target tier is gone, the program has no tier-qualifying account, or the customer is already at or above the target tier (`outcome: already_at_or_above` on `loyalty.reward.earned`). All fulfilment goes through `IRewardFulfilmentService` (CR 2026-09-30). |
 | Amounts slightly off or rounded in the portal | A decimal parsed into a JS `number` somewhere. It must stay a `DecimalString`. |
 | API returns 400 with a `snake_case_code` | A domain `InvalidOperationException` went through `DomainErrorTranslator`. A new code may need its prefix mapped. |
-| Portal shows no data but the API works | The API or Consumer isn't running, or the proxy target changed (`web/proxy.conf.json` → `:5173`). **There is no API mock layer.** `useApiMock` exists in the environments but nothing reads it, despite what `web/CLAUDE.md` says. |
+| Portal shows no data but the API works | The API or Consumer isn't running, or the dev proxy target changed (`web/vite.config.ts`, `/api` → `:5173`). The only API mock is `web/e2e/mock-api.ts`, used by the mocked e2e suites. |
 | Integration tests fail on startup | Docker isn't running, so the Testcontainers for Postgres, Redis and RabbitMQ can't start. |
-| `webVue3` build or `npm run api:check` fails: "out of date with the backend C# source" | A backend DTO or route changed. Run `npm run api:spec && npm run api:types` in `webVue3/` and commit both generated files (Cross-stack step 7). |
-| `npm run api:spec` throws "Unknown type", "cannot find the request type", or "Overrides match no C# member" | The generator met a C# shape it can't map, or an override's member was renamed. Fix the mapping in `webVue3/tools/openapi/` or the entry in `openapi/overrides.ts` (with its C# source). Never hand-edit `openapi.json`. |
+| Portal build or `npm run api:check` fails: "out of date with the backend C# source" | A backend DTO or route changed. Run `npm run api:spec && npm run api:types` in `web/` and commit both generated files (Cross-stack step 4). |
+| `npm run api:spec` throws "Unknown type", "cannot find the request type", or "Overrides match no C# member" | The generator met a C# shape it can't map, or an override's member was renamed. Fix the mapping in `web/tools/openapi/` or the entry in `openapi/overrides.ts` (with its C# source). Never hand-edit `openapi.json`. |
 | A Vue e2e click on a page-header button times out with "…subtree intercepts pointer events" | A toast (top right, below the topbar) is covering it. Wait the toast out first (`toast()` in `e2e/platform.spec.ts`). |
-| A Vue e2e axe check fails on `color-contrast` | A text colour is below 4.5:1 on its background. Fix the token in `webVue3/src/app/styles/global.css`; don't drop the check. |
+| A portal e2e axe check fails on `color-contrast` | A text colour is below 4.5:1 on its background. Fix the token in `web/src/app/styles/global.css`; don't drop the check. |
 
 ## How to answer developer prompts
 - Ground every answer in this codebase: cite files as clickable paths and follow the existing

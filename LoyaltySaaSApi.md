@@ -4,7 +4,7 @@
 
 When an endpoint or DTO changes, update this file in the same change (`.claude/rules/00-project-guardrails.md` §5).
 
-A machine-readable contract (OpenAPI 3.1) is **generated from the same C# source** at `webVue3/openapi/openapi.json` (`npm run api:spec` in `webVue3/`, scope change 2026-10-12). It describes shapes, not behaviour; this file stays the human-readable reference for rules and error codes.
+A machine-readable contract (OpenAPI 3.1) is **generated from the same C# source** at `web/openapi/openapi.json` (`npm run api:spec` in `web/`). It describes shapes, not behaviour; this file stays the human-readable reference for rules and error codes.
 
 ## Conventions
 
