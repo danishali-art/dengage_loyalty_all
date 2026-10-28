@@ -58,7 +58,7 @@ Layers, top to bottom: `app → pages → widgets → features → entities → 
   (guardrails §2, Tenancy). Lists use `placeholderData: keepPreviousData`. Mutations update the
   detail with `setQueryData` and invalidate the lists. Logout and a 401 call `queryClient.clear()`.
 - **Pinia owns client state only:** `shared/model` holds `useSessionStore` (token → principal) and
-  `useTenantContextStore` (active tenant id). Never put API responses in a store. The open program
+  `useTenantContextStore` (active tenant id), plus `useLocaleStore` (the portal's language). Never put API responses in a store. The open program
   comes from the route + `useProgramQuery`, not from a store.
 - Retries: only transient failures (0/502/503/504) on queries, once. Mutations never retry.
 - Cursor-paged lists (Customer 360) put the page's cursor in the query key and record the next
@@ -124,8 +124,13 @@ Layers, top to bottom: `app → pages → widgets → features → entities → 
 - Toasts go through `notify.*` (works outside components). Confirmations go through `useAppConfirm().ask()`.
 
 ## i18n
-- vue-i18n, English only for now (`shared/i18n/locales/en.json`). Keys are dotted and grouped by
-  screen (`programs.list.col.name`); placeholders are `{x}`, and `@ | { } $` are escaped.
+- vue-i18n, English and Turkish (`shared/i18n/locales/en.json`, `tr.json`). Every new key goes in
+  **both** files, with the same `{x}` placeholders (`locales.spec.ts` fails otherwise). Keys are
+  dotted and grouped by screen (`programs.list.col.name`); `@ | { } $` are escaped.
+- The active language lives in `useLocaleStore` (`shared/model`). Format dates and numbers with
+  `intlLocale()` from `@/shared/i18n`, never the browser's locale (`undefined`). A form schema whose
+  messages must follow a language switch while it's open is a `computed` (see `useLoginForm`).
+- JS upper-casing of translated text uses `toLocaleUpperCase(intlLocale())` (Turkish i → İ).
 - `vue/no-bare-strings-in-template` is on. Every user-facing string is a key. Outside components
   use `translate(key, params)`.
 

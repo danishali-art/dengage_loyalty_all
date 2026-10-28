@@ -1,0 +1,1349 @@
+{
+  "app": {
+    "title": "Sadakat",
+    "home": "Sadakat ana sayfa"
+  },
+  "nav": {
+    "dashboard": "Pano",
+    "programs": "Programlar",
+    "customers": "Müşteriler",
+    "events": "Olaylar",
+    "reports": "Raporlar",
+    "settings": "Ayarlar",
+    "platform": "Platform",
+    "primary": "Ana menü",
+    "program": {
+      "overview": "Genel bakış"
+    },
+    "tenant": {
+      "overview": "Genel bakış",
+      "apiKeys": "API Anahtarları",
+      "admins": "Kiracı Yöneticileri"
+    }
+  },
+  "action": {
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "add": "Ekle",
+    "retry": "Tekrar dene",
+    "new": "Yeni",
+    "close": "Kapat"
+  },
+  "common": {
+    "loading": "Yükleniyor…",
+    "empty": "Henüz burada bir şey yok",
+    "error": "Bir şeyler ters gitti",
+    "active": "Etkin",
+    "inactive": "Etkin değil",
+    "genericError": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+    "networkError": "Sunucuya ulaşılamıyor. Bağlantınızı kontrol edip tekrar deneyin.",
+    "status": {
+      "active": "Etkin",
+      "disabled": "Devre dışı",
+      "deleted": "Silindi",
+      "pending_approval": "Onay bekliyor"
+    }
+  },
+  "locale": {
+    "label": "Dil"
+  },
+  "auth": {
+    "signOut": "Çıkış yap",
+    "login": {
+      "title": "Sadakat'e giriş yapın",
+      "email": "E-posta",
+      "password": "Şifre",
+      "submit": "Giriş yap",
+      "errors": {
+        "email": "Geçerli bir e-posta adresi girin.",
+        "password": "Şifrenizi girin.",
+        "generic": "Giriş başarısız. Bilgilerinizi kontrol edin."
+      }
+    }
+  },
+  "tenant": {
+    "switch": "Kiracı değiştir",
+    "select": {
+      "title": "Bir kiracı seçin",
+      "body": "Hangi kiracıyı yönetmek istediğinizi seçin."
+    },
+    "none": "Kiracı yok",
+    "picker": {
+      "searchPlaceholder": "Ada veya kiracı kimliğine göre ara…",
+      "empty": "Kiracı bulunamadı",
+      "emptyHint": "Farklı bir arama deneyin.",
+      "listLabel": "Kiracılar",
+      "current": "Geçerli",
+      "select": "Seç"
+    }
+  },
+  "notFound": {
+    "title": "Sayfa bulunamadı",
+    "body": "Aradığınız sayfa yok ya da taşınmış."
+  },
+  "forbidden": {
+    "title": "Erişim engellendi",
+    "body": "Bu sayfayı görüntüleme izniniz yok."
+  },
+  "accountTypes": {
+    "decimals": {
+      "info": "Harcama kurallarıyla kazanılan puanlar bu kadar ondalık basamağa aşağı yuvarlanır (0–4)."
+    },
+    "warningDays": {
+      "label": "Süre sonu uyarısı (kaç gün önce)",
+      "placeholder": "Devre dışı",
+      "hint": "Müşteriler, puanlarının süresi dolmadan bu kadar gün önce \"yakında sona eriyor\" bildirimi alır.",
+      "needsExpiry": "Önce puan geçerlilik süresini ayarlayın — uyarı için bir son kullanma tarihi gerekir.",
+      "positive": "0'dan büyük, tam sayı olarak bir gün sayısı girin.",
+      "beforeExpiry": "Puan geçerlilik süresinden (gün) az olmalıdır."
+    },
+    "tierQualifying": {
+      "label": "Seviye belirleyen hesap",
+      "hint": "Bu cüzdandaki puanlar seviyeye sayılır. Program başına yalnızca bir tane olabilir; program etkinken kilitlidir.",
+      "badge": "Seviye belirleyen"
+    },
+    "currency": {
+      "label": "Para birimi",
+      "locked": "Para birimi oluşturulduktan sonra değiştirilemez."
+    },
+    "cash": {
+      "noExpiry": "Nakit bakiyeler gerçek alacaktır ve süresi hiç dolmaz."
+    },
+    "transfer": {
+      "label": "Yeni transfer kuralları için varsayılan günlük limit",
+      "hint": "Transfer olayları bu değeri değil kuralları kullanır. Bu cüzdan için yeni bir transfer kuralı bu değerle başlar; sonradan değiştirmek mevcut kuralları değiştirmez.",
+      "dailyLimit": "Günlük transfer limiti (puan)",
+      "dailyLimitHint": "Bir müşterinin günde (UTC) gönderebileceği en fazla puan; yeni transfer kurallarına kopyalanır.",
+      "dailyLimitError": "En az 1 puanlık bir limit girin."
+    },
+    "redemption": {
+      "label": "Yeni kullanım kuralları için varsayılan kullanım değerleri",
+      "hint": "Puan kullanım olayları bu değerleri değil kuralları kullanır. Bu cüzdan için yeni bir kullanım kuralı bu değerlerle başlar; sonradan değiştirmek mevcut kuralları değiştirmez.",
+      "cashPerPoint": "Puan başına nakit",
+      "minimum": "En az kullanım",
+      "redeemInto": "Aktarılacak cüzdan",
+      "selectWallet": "Bir cüzdan seçin…",
+      "noTarget": "Puanların aktarılabileceği başka bir hesap türü yok — önce bir tane (örn. CASH) oluşturun."
+    },
+    "add": "Hesap türü ekle",
+    "created": "\"{name}\" hesap türü oluşturuldu",
+    "saved": "Hesap türü kaydedildi",
+    "empty": "Henüz hesap türü yok",
+    "emptyHint": "Bu programda kazanılacak bir şey olması için bir tane oluşturun.",
+    "form": {
+      "newHeading": "Yeni hesap türü",
+      "editHeading": "Hesap türünü düzenle",
+      "create": "Oluştur",
+      "name": "Hesap adı",
+      "type": "Hesap türü",
+      "typeLocked": "Tür oluşturulduktan sonra değiştirilemez.",
+      "decimals": "Ondalık basamak",
+      "expirationDays": "Puan geçerlilik süresi (gün)",
+      "never": "Hiçbir zaman",
+      "errors": {
+        "nameRequired": "Bir hesap adı girin.",
+        "nameTooLong": "En fazla {max} karakter kullanın.",
+        "decimals": "0 ile 4 arasında bir tam sayı kullanın.",
+        "expiration": "0'dan büyük, tam sayı bir gün sayısı girin ya da boş bırakın.",
+        "number": "Bir sayı girin (en fazla 4 ondalık basamak).",
+        "redemptionTarget": "Kullanılan puanların hangi cüzdana aktarılacağını seçin."
+      }
+    }
+  },
+  "programs": {
+    "tierQualifying": {
+      "none": "Yok — seviye sistemi kapalı",
+      "movedHint": "Hesap türünde ayarlanır (Hesap Türleri → Seviye belirleyen hesap).",
+      "manage": "Hesap türlerini yönet ›"
+    },
+    "status": {
+      "label": "Durum",
+      "hint": "Etkin olmayan programlarda puan kazanma ve harcama hemen durur. Değiştirmek için yayınlamak gerekmez.",
+      "draftHint": "Etkinleştirmeden önce programı yayınlayın.",
+      "activated": "Program etkinleştirildi",
+      "deactivated": "Program devre dışı bırakıldı"
+    },
+    "publication": {
+      "draft": "Taslak",
+      "draftShort": "Taslak",
+      "published": "Yayında v{version}",
+      "unpublishedChanges": "Yayınlanmamış değişiklikler",
+      "publish": "Yayınla",
+      "publishChanges": "Değişiklikleri yayınla",
+      "upToDate": "Son yayından bu yana hiçbir şey değişmedi.",
+      "confirmTitle": "Program yayınlansın mı?",
+      "confirmMessage": "Bu işlem, \"{name}\" programının tüm hesap türleri, seviyeleri, ödülleri ve kurallarıyla yeni bir sürümünü kaydeder.",
+      "done": "{version}. sürüm olarak yayınlandı"
+    },
+    "defaultRounding": {
+      "label": "Varsayılan yuvarlama",
+      "hint": "Programdan devralan kuralların ödüllerini yuvarlama yönü. Hassasiyeti cüzdanın ondalık basamakları belirler."
+    },
+    "slug": {
+      "label": "Program kısa adı",
+      "createHint": "Bu programın her ödül adı bununla başlar (örn. fintech_cashback_50). Küçük harf, rakam ve kısa çizgi kullanın, alt çizgi kullanmayın. Addan türetilmesi için boş bırakın.",
+      "draftHint": "Bu programın her ödül adı bununla başlar. Yalnızca program yayınlanana kadar değiştirilebilir.",
+      "locked": "Program yayınlandıktan sonra sabittir — entegrasyonlar bununla başlayan ödül adları gönderir."
+    },
+    "overview": {
+      "cards": {
+        "accountTypes": {
+          "label": "Hesap Türleri",
+          "description": "Bir müşterinin sahip olabileceği cüzdanlar"
+        },
+        "tiers": {
+          "label": "Seviyeler",
+          "description": "Otomatik statü seviyeleri"
+        },
+        "rules": {
+          "label": "Kurallar",
+          "description": "Neyin ne kadar kazandırdığı"
+        },
+        "rewards": {
+          "label": "Ödüller",
+          "description": "Müşterilerin kullandığı ödüller"
+        },
+        "streakCampaigns": {
+          "label": "Seri Kampanyaları",
+          "description": "Tekrarlanan etkinlik için ödüller"
+        },
+        "cardBuckets": {
+          "label": "Kart Grupları",
+          "description": "Kart harcama kategorileri"
+        },
+        "history": {
+          "label": "Geçmiş",
+          "description": "Ne zaman ne değişti"
+        }
+      },
+      "manage": "Yönet ›",
+      "fallbackHeading": "Program",
+      "infoHeading": "Program bilgileri",
+      "saved": "Program kaydedildi",
+      "notFound": "Program bulunamadı",
+      "notFoundBody": "Silinmiş olabilir ya da başka bir kiracıya ait olabilir."
+    },
+    "list": {
+      "heading": "Sadakat Programları",
+      "new": "Yeni program",
+      "caption": "Programlar",
+      "empty": "Henüz program yok — başlamak için bir tane oluşturun.",
+      "col": {
+        "name": "Ad",
+        "status": "Durum",
+        "accountTypes": "Hesap Türleri",
+        "rules": "Kurallar"
+      }
+    },
+    "create": {
+      "heading": "Yeni program",
+      "submit": "Program oluştur",
+      "done": "\"{name}\" programı oluşturuldu"
+    },
+    "form": {
+      "name": "Program adı",
+      "description": "Açıklama",
+      "errors": {
+        "nameRequired": "Bir program adı girin.",
+        "nameTooLong": "En fazla {max} karakter kullanın.",
+        "slugLength": "{min} ile {max} arasında karakter kullanın.",
+        "slugPattern": "Küçük harf, rakam ve tek kısa çizgi kullanın."
+      }
+    },
+    "delete": {
+      "confirmTitle": "Program silinsin mi?",
+      "confirmMessage": "\"{name}\" ve yapılandırması kaldırılacak. Bu işlem geri alınamaz.",
+      "done": "\"{name}\" programı silindi",
+      "mustBeInactive": "Programın silinebilmesi için önce devre dışı bırakılması gerekir."
+    }
+  },
+  "rules": {
+    "priority": {
+      "hint": "Aynı hedef hesaptaki münhasır kuralların ikisi birden çalışacaksa yüksek sayı kazanır."
+    },
+    "stackable": {
+      "label": "Diğer kurallarla birleştirilebilir",
+      "hint": "Birleştirilebilir kurallar ödüllerini her zaman üstüne ekler. Münhasır kurallar hedef hesap başına yarışır — en yüksek öncelikli eşleşme kazanır.",
+      "column": "Birleştirilebilir",
+      "yes": "Birleştirilebilir",
+      "no": "Münhasır"
+    },
+    "groups": {
+      "intro": "Kurallar, motorun onları uyguladığı şekilde gruplanır. Her olay için her tetikleyici → hesap kartı ayrı çözülür: hesap başına bir münhasır kural kazanabilir ve eşleşen tüm birleştirilebilir kurallar üstüne eklenir. Soluk gösterilen kurallar etkin değildir ve yarışmaz.",
+      "onAccount": "hesapta",
+      "exclusiveHint": "Bu hesapta olay başına tek kazanan: motor etkin kuralları en yüksek öncelikten aşağı doğru dener ve yalnızca ilk eşleşeni ödüllendirir. Alttakiler yalnızca üsttekiler eşleşmediğinde çalışır.",
+      "stackableHint": "Eşleşen her kural çalışır ve ödülünü kazananın üstüne ekler. Öncelik yalnızca kayıt sırasını belirler — tutarları değiştirmez.",
+      "outside": "Kazanan seçimine dahil değil",
+      "outsideHint": "Kullanım, Transfer ve İptal kuralları kendi başlarına uygulanır — diğer kurallarla ne yarışır ne de üstüne eklenir. Bir kullanım ya da transfer için cüzdanın en yüksek öncelikli etkin kuralı uygulanır.",
+      "trigger": "Tetikleyici",
+      "retiredAccount": "Kullanımdan kaldırılmış cüzdan",
+      "rank": {
+        "top": "Eşleştiğinde kazanır",
+        "tie": "En yüksek öncelikte eşitlik — motor kural kimliğine göre seçer",
+        "fallback": "Yedek"
+      }
+    },
+    "limits": {
+      "heading": "Limitler (isteğe bağlı)",
+      "intro": "Bu kuralın sınırsız ödeme yapmasını engelleyen üst sınırlar. Limit olmaması için alanı boş bırakın.",
+      "none": "Limit yok",
+      "units": {
+        "points": "puan",
+        "amount": "tutar",
+        "hours": "saat",
+        "count": "müşteri"
+      },
+      "groups": {
+        "customer": {
+          "title": "Müşteri başına",
+          "hint": "Bir müşterinin bu kuraldan ne kadar kazanabileceği."
+        },
+        "event": {
+          "title": "Olay başına",
+          "hint": "Kural ödeme yapmadan önce her olayda kontrol edilir."
+        },
+        "rule": {
+          "title": "Kuralın tamamı",
+          "hint": "Tüm müşteriler için toplam üst sınırlar."
+        },
+        "period": {
+          "title": "Dönem aralığı",
+          "hint": "Yukarıdaki \"dönem başına\" üst sınırlarında kullanılır."
+        },
+        "breach": {
+          "title": "Bir üst sınıra ulaşıldığında",
+          "hint": "Kural bütçelerine ve müşteri başına dönemlik üst sınıra uygulanır. Bekleme süresi, en düşük tutar ve en fazla müşteri her zaman atlar."
+        }
+      },
+      "perCustomerTotal": {
+        "label": "Toplam",
+        "hint": "Bir müşterinin kazanabileceği toplam puan."
+      },
+      "perCustomerPerDay": {
+        "label": "Günlük",
+        "hint": "Her gün (UTC) sıfırlanır."
+      },
+      "perCustomerPerPeriod": {
+        "label": "Dönemlik",
+        "hint": "Aşağıda seçilen her dönemde sıfırlanır."
+      },
+      "maxPerEvent": {
+        "label": "Olay başına en fazla ödül",
+        "hint": "Daha büyük ödüller bu değere düşürülür."
+      },
+      "minEventAmount": {
+        "label": "En düşük olay tutarı",
+        "hint": "Daha küçük olaylar yok sayılır.",
+        "genericHint": "Yalnızca bu olay bir tutar taşıyorsa çalışır — kiracı tanımlı olaylar taşımayabilir; tutar yoksa kural hiç çalışmaz."
+      },
+      "cooldownHours": {
+        "label": "Bekleme süresi",
+        "hint": "Aynı müşteriye verilen ödüller arasındaki bekleme, örn. 1.5."
+      },
+      "ruleBudgetTotal": {
+        "label": "Bütçe, toplam",
+        "hint": "Bu kuralın toplamda ödeyebileceği puan."
+      },
+      "ruleBudgetPerPeriod": {
+        "label": "Bütçe, dönemlik",
+        "hint": "Aşağıda seçilen her dönemde sıfırlanır."
+      },
+      "maxCustomers": {
+        "label": "En fazla farklı müşteri",
+        "hint": "Bu sayıda müşteriden sonra yeni kimse kazanamaz."
+      },
+      "period": {
+        "label": "Dönem",
+        "choose": "Seçin…",
+        "Day": "Gün",
+        "Week": "Hafta",
+        "Month": "Ay",
+        "Year": "Yıl"
+      },
+      "resetWindow": {
+        "label": "Sıfırlanma",
+        "Calendar": "Her takvim döneminin başında (UTC)",
+        "Rolling": "Kayan — şu ana kadarki son tam dönemi sayar"
+      },
+      "onBreach": {
+        "Clamp": "Kırp — yalnızca üst sınırdan kalanı öde",
+        "Skip": "Atla — hiçbir şey ödeme"
+      },
+      "errors": {
+        "format": {
+          "points": "En fazla 4 ondalık basamaklı bir sayı girin (örn. 250 veya 12.5).",
+          "amount": "En fazla 4 ondalık basamaklı bir tutar girin (örn. 100 veya 49.99).",
+          "hours": "En fazla 2 ondalık basamaklı saat girin (örn. 24 veya 1.5).",
+          "count": "Bir tam sayı girin (örn. 1000)."
+        },
+        "positive": "0'dan büyük olmalıdır — limit olmaması için boş bırakın.",
+        "atLeastOne": "En az 1 olmalıdır — limit olmaması için boş bırakın.",
+        "aboveCustomerTotal": "Müşteri başına toplamdan fazla olamaz.",
+        "aboveBudgetTotal": "Toplam bütçeden fazla olamaz.",
+        "periodRequired": "Dönemlik üst sınırlar için bir dönem seçin."
+      }
+    },
+    "calc": {
+      "heading": "Hesaplama",
+      "intro": "Bu kural çalıştığında ne kadar ödül verdiği, düştüğü veya düzelttiği.",
+      "headingRedeem": "Kullanım koşulları",
+      "introRedeem": "Müşterinin puan kullandığı koşullar: puan başına nakit, en az tutar ve ödemenin yapıldığı nakit cüzdanı.",
+      "headingTransfer": "Transfer koşulları",
+      "introTransfer": "Müşterinin puan transfer ettiği koşullar: günlük transfer limiti.",
+      "rateNeedsAmount": "Yalnızca bu olay bir tutar taşıyorsa çalışır — kiracı tanımlı olaylar taşımayabilir; tutar yoksa kural hiçbir ödül vermez.",
+      "none": "Yok",
+      "prefillHint": "Cüzdanın varsayılanlarından önceden dolduruldu. Kural bu değerleri korur: cüzdanı sonradan değiştirmek bu kuralı değiştirmez.",
+      "redeem": {
+        "cashPerPoint": "Puan başına nakit",
+        "cashPerPointRequired": "Puan başına ödenen nakdi girin (0'dan büyük).",
+        "minimum": "En az kullanım (isteğe bağlı)",
+        "redeemInto": "Aktarılacak nakit cüzdanı",
+        "redeemIntoPlaceholder": "Bir nakit cüzdanı seçin…",
+        "redeemIntoRequired": "Kullanılan puanların ödeneceği nakit cüzdanını seçin.",
+        "noCashWallets": "Bu programda henüz nakit cüzdanı yok — önce Hesap türleri altında bir tane oluşturun.",
+        "approvalHint": "Kullanım kuralı gerçek para öder; bu nedenle uygulanmadan önce ikinci bir yöneticinin onaylaması gerekir — puan başına nakit veya cüzdan değiştiğinde de yeniden."
+      },
+      "transfer": {
+        "dailyLimit": "Günlük transfer limiti (puan)",
+        "dailyLimitRequired": "Bir müşterinin günde gönderebileceği en fazla puanı girin (0'dan büyük)."
+      }
+    },
+    "config": {
+      "heading": "Yapılandırma",
+      "intro": "Bu kuralın hesap defteri kayıtları için kayıt davranışı ve yuvarlama.",
+      "rounding": {
+        "label": "Yuvarlama",
+        "inherit": "Programdan devral",
+        "inheritWith": "Programdan devral ({direction})",
+        "down": "Aşağı",
+        "nearest": "En yakın",
+        "up": "Yukarı"
+      },
+      "posting": {
+        "label": "Kayıt",
+        "Immediate": "Hemen",
+        "Delayed": "Gecikmeli"
+      },
+      "holdDays": {
+        "label": "Bekletme günü",
+        "required": "Gecikmeli kayıt için bekletme günü zorunludur.",
+        "min": "Bekletme günü en az 1 olmalıdır."
+      },
+      "expiryOverride": {
+        "label": "Puanların geçerlilik süresi (gün, isteğe bağlı)",
+        "placeholderDays": "Cüzdan varsayılanı: {days}",
+        "placeholderNever": "Cüzdan varsayılanı: hiçbir zaman",
+        "min": "Puanların süresi en az 1 gün sonra dolmalıdır.",
+        "hint": "Bu kuralla kazanılan puanların süresi, kaydedildikten bu kadar gün sonra dolar — cüzdanın süresinden kısa ya da uzun olabilir, cüzdanın süresi olmasa bile."
+      },
+      "reversible": "Geri alınabilir",
+      "notifyOnAward": "Ödülde bildir"
+    },
+    "type": {
+      "none": "Bu tetikleyiciyle kullanılabilecek bir kural türü yok. reward.purchase gibi olaylar kurallarla değil Ödüller ile yapılandırılır."
+    },
+    "heading": "Kurallar",
+    "list": {
+      "add": "Yeni kural",
+      "empty": "Henüz kural yok",
+      "emptyHint": "Puan kazandırmaya başlamak için bir tane oluşturun.",
+      "activate": "Kuralı etkinleştir",
+      "disable": "Kuralı devre dışı bırak",
+      "activated": "Kural etkinleştirildi",
+      "disabled": "Kural devre dışı bırakıldı",
+      "approve": "Onayla",
+      "approved": "Kural onaylandı ve etkinleştirildi",
+      "approveFailed": "Bu kural onaylanamadı.",
+      "col": {
+        "name": "Ad",
+        "type": "Tür",
+        "priority": "Öncelik",
+        "status": "Durum"
+      },
+      "delete": {
+        "title": "Kuralı sil",
+        "message": "\"{name}\" silinsin mi? Bu işlem geri alınamaz.",
+        "done": "Kural silindi"
+      }
+    },
+    "form": {
+      "newHeading": "Yeni kural",
+      "editHeading": "Kuralı düzenle",
+      "newCrumb": "Yeni",
+      "editCrumb": "Düzenle",
+      "notFound": "Bu kural artık yok.",
+      "created": "Kural oluşturuldu",
+      "saved": "Kural kaydedildi",
+      "fixFields": "Lütfen işaretli alanları düzeltin.",
+      "basics": "Temel bilgiler",
+      "basicsIntro": "Bu kuralı neyin çalıştırdığı ve aynı cüzdandaki diğer kurallara göre sıralaması.",
+      "name": "Ad",
+      "priority": "Öncelik",
+      "trigger": "Tetikleyici olay",
+      "triggerHint": "Aşağıdaki Koşullar bölümünde hangi olay alanlarının kullanılabileceğini belirler.",
+      "selectTrigger": "Bir tetikleyici seçin…",
+      "otherTriggers": "Diğer",
+      "type": "Kural türü",
+      "typeLocked": "Kural türü oluşturulduktan sonra değiştirilemez.",
+      "target": "Hedef hesap",
+      "selectAccount": "Bir hesap seçin…",
+      "reversalTarget": "ReversalRule hedef hesabını orijinal kayıttan devralır — burada yapılandırılacak bir şey yok.",
+      "activeFrom": "Başlangıç",
+      "activeFromHint": "Kuralın hemen etkin olması için boş bırakın.",
+      "activeTo": "Bitiş",
+      "activeToHint": "Bitiş tarihi olmaması için boş bırakın.",
+      "changeTrigger": {
+        "title": "Tetikleyici olay değiştirilsin mi?",
+        "message": "Bu kuralın koşulları mevcut tetikleyici için yazılmıştır. Kullanılabilir alanlar olaya bağlı olduğundan, değiştirmek koşulları temizler.",
+        "confirm": "Tetikleyiciyi değiştir"
+      },
+      "calc": {
+        "rate": "Oran (1 harcama başına kazanılan birim)",
+        "amount": "Sabit tutar",
+        "mode": "İptal modu",
+        "modeProportional": "Orantılı — iptal edilen tutarla ölçeklenir",
+        "modeFull": "Tam — orijinal kaydın tamamını iptal eder",
+        "negative": "Bakiye eksiye düşecekse",
+        "allowNegative": "Eksiye izin ver",
+        "clampToZero": "Sıfırda sınırla",
+        "reasonLabel": "Neden kodu",
+        "reason": {
+          "goodwill": "İyi niyet",
+          "correction": "Düzeltme",
+          "dispute": "İtiraz",
+          "migration": "Taşıma"
+        },
+        "fallbackAmount": "Yedek tutar (isteğe bağlı)",
+        "fallbackPlaceholder": "Olaydaki operator.amount değerini kullanır",
+        "retired": "Bu kural türü kullanımdan kaldırıldı: kural görüntülenebilir, değiştirilemez."
+      },
+      "errors": {
+        "nameRequired": "Ad zorunludur.",
+        "tooLong": "En fazla {max} karakter olmalıdır.",
+        "required": "Birini seçin.",
+        "priority": "Öncelik 0 veya daha büyük bir tam sayı olmalıdır.",
+        "positive": "0'dan büyük, en fazla 4 ondalıklı bir sayı girin.",
+        "decimal": "En fazla 4 ondalıklı bir sayı girin."
+      }
+    }
+  },
+  "history": {
+    "published": {
+      "heading": "Yayınlanan sürümler",
+      "empty": "Henüz yayınlanmadı.",
+      "by": "Yayınlayan: {by}"
+    },
+    "changes": {
+      "heading": "Değişiklik günlüğü"
+    },
+    "snapshot": {
+      "Program": "Program",
+      "AccountTypes": "Hesap türleri",
+      "Tiers": "Seviyeler",
+      "Rewards": "Ödüller",
+      "Rules": "Kurallar",
+      "StreakCampaigns": "Seri kampanyaları"
+    },
+    "heading": "Geçmiş",
+    "intro": "Bu programın yapılandırmasında kaydedilen her değişiklik.",
+    "view": "Görüntüle",
+    "empty": "Henüz geçmiş yok",
+    "emptyHint": "Bundan sonraki her kayıt burada görünecek.",
+    "versionHeading": "Sürüm {version}",
+    "changedBy": "{change}, {by} — {at}",
+    "changedByShort": "{change}, {by}",
+    "change": {
+      "created": "Oluşturuldu",
+      "updated": "Güncellendi",
+      "deleted": "Silindi",
+      "published": "Yayınlandı"
+    }
+  },
+  "events": {
+    "simulator": {
+      "typesHint": "Yerleşik: {builtIn}. Genel (dağıtım genelinde, RabbitMq:GenericEventTypes içinde ayarlanır): {generic}.",
+      "noGeneric": "yapılandırılmış yok",
+      "loadingTypes": "Kullanılabilir olay türleri yükleniyor…",
+      "dataHint": "Alan adları snake_case biçimindedir. Para ve puan değerlerini metin olarak gönderin (örneğin \"150.00\"). Olay olduğu gibi gönderilir; eksik bir alan ancak işlendikten sonra başarısız durum olarak görünür.",
+      "requires": "Gerekli",
+      "placeholderHint": "Göndermeden önce REPLACE_WITH_… değerlerini programınızdaki gerçek kimliklerle değiştirin (cüzdan hesap türü kimliği, sipariş olay kimliği, ödül adı).",
+      "useSample": "Örneğe sıfırla",
+      "optional": "İsteğe bağlı",
+      "help": {
+        "orderCreated": "Müşterinin cüzdanı, eşleşen ilk kazanç kuralı tarafından oluşturulur.",
+        "orderRefunded": "original_event_id, daha önceki bir order.created olayının eventId değeridir. Ayrıca refund_ratio veya original_amount ile birlikte amount gönderin; hepsi metin olarak. Orijinal sipariş hiçbir şey kazandırmadıysa başarısız olur.",
+        "cashAdded": "amount bir metindir ve account_type_id bir CASH cüzdanıdır. Cüzdan yoksa oluşturur. Yayında ve etkin olmayan bir programda hiçbir şey yatırılmaz ve loyalty.cash.add_failed (program_not_live) gönderilir.",
+        "cashSpent": "amount bir metindir ve account_type_id bir CASH cüzdanıdır. Müşterinin yeterli nakdi yoksa insufficient_balance ile başarısız olur. Yayında ve etkin olmayan bir programda hiçbir şey düşülmez ve loyalty.cash.spend_failed (program_not_live) gönderilir.",
+        "pointsRedeem": "points_amount bir metindir ve source_account_type_id bir POINTS cüzdanıdır. Puan başına nakdi, en az tutarı ve nakit cüzdanını o cüzdanın en yüksek öncelikli etkin kullanım kuralı belirler. Kullanılabilir kural yoksa, bakiye çok düşükse veya program yayında değilse olay yine işlenir ve loyalty.points.redeem_failed gönderilir (neden no_rule, rule_limit_reached, below_minimum, insufficient_points veya program_not_live).",
+        "pointsTransfer": "contact_key gönderendir ve points_amount bir metindir. Günlük limiti cüzdanın en yüksek öncelikli etkin transfer kuralı belirler. Kullanılabilir kural yoksa, puan yetersizse, limite ulaşıldıysa veya program yayında değilse loyalty.points.transfer_failed gönderilir.",
+        "rewardPurchase": "reward_name (veya reward_id) etkin bir Puanla satın alma ödülüdür. Müşterinin fiyatı için yeterli puanı olmalı ve program yayında ve etkin olmalıdır; aksi halde loyalty.reward.purchase_failed gönderilir.",
+        "pointsAdjusted": "Yalnızca bir ManualAdjustment kuralı eşleşirse etkisi olur.",
+        "builtInDefault": "Diğer alanlar bu olayı kullanan kurallara bağlıdır (örneğin amount veya channel).",
+        "generic": "Genel bir olay türü bu alanların hepsini gerektirir, yoksa tüketici onu reddeder."
+      },
+      "heading": "Olay Simülatörü",
+      "subtitle": "Nasıl işlendiğini ve hangi kuralların tepki verdiğini görmek için doğrudan RabbitMQ'ya bir test olayı yayınlayın — gerçek bir entegrasyonun kullandığı akışın aynısı.",
+      "event": "Olay",
+      "eventType": "Olay türü",
+      "selectType": "Bir olay türü seçin…",
+      "data": "Olay verisi (JSON)",
+      "send": "Olayı gönder",
+      "sendAnother": "Başka gönder",
+      "result": "Sonuç",
+      "eventId": "Olay kimliği",
+      "checking": "Kontrol ediliyor…",
+      "received": "Alındı",
+      "processed": "İşlendi",
+      "error": "Hata",
+      "refresh": "Durumu yenile",
+      "invalidJson": "Olay verisi geçerli bir JSON ve bir nesne olmalıdır (örn. {'{'} \"contact_key\": \"...\" {'}'}).",
+      "published": "Olay yayınlandı",
+      "acceptedAs": "{id} olarak kabul edildi",
+      "typesFailed": "Kullanılabilir olay türleri yüklenemedi."
+    }
+  },
+  "rewards": {
+    "form": {
+      "newHeading": "Yeni ödül",
+      "editHeading": "Ödülü düzenle",
+      "retiredNotice": "Bu ödül türü kullanımdan kaldırıldı. Geçmiş için saklanır; artık düzenlenemez veya etkinleştirilemez.",
+      "pendingNotice": "İkinci bir yöneticinin onayı bekleniyor — o zamana kadar satın alınamaz veya kazanılamaz.",
+      "name": "Ad",
+      "nameHint": "Entegrasyonlar bu adı gönderir. Her zaman {prefix} ile başlar.",
+      "displayName": "Görünen ad",
+      "acquisition": "Nasıl kazanılır",
+      "acquisitionLocked": "Oluşturulduktan sonra değiştirilemez.",
+      "rewardType": "Ödül türü",
+      "rewardTypeLocked": "Oluşturulduktan sonra değiştirilemez.",
+      "tierNeedsStreak": "Seviye yükseltme yalnızca bir seri ile kazanılabilir.",
+      "pointsPrice": "Puan fiyatı",
+      "pointsAccount": "Puan hesabı",
+      "selectAccount": "Bir hesap seçin…",
+      "streakHint": "Bu ödülü veren bir seri kampanyası tamamlandığında otomatik olarak kazanılır.",
+      "cashbackHeading": "Nakit iade ayrıntıları",
+      "amount": "Tutar",
+      "currencyLocked": "Ödül onaylandıktan sonra sabittir.",
+      "cashWallet": "Ödemenin yapılacağı CASH cüzdanı",
+      "noWalletInCurrency": "Bu programda o para biriminde bir CASH cüzdanı yok.",
+      "approvalHint": "Nakit iade gerçek para öder: satın alınabilmesi veya kazanılabilmesi için ikinci bir yöneticinin onaylaması gerekir.",
+      "tierHeading": "Seviye yükseltme ayrıntıları",
+      "targetTier": "Hedef seviye",
+      "selectTier": "Bir seviye seçin…",
+      "durationDays": "Koruma süresi (gün)",
+      "untilNextReview": "Bir sonraki seviye değerlendirmesine kadar",
+      "durationHint": "Bir sonraki değerlendirmede normal seviye kurallarının uygulanması için boş bırakın. Aksi halde seviye bu kadar gün düşemez.",
+      "close": "Kapat",
+      "create": "Oluştur",
+      "fixFields": "Lütfen işaretli alanları düzeltin.",
+      "genericError": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+      "errors": {
+        "displayNameRequired": "Bir görünen ad girin.",
+        "tooLong": "En fazla {max} karakter kullanın.",
+        "nameSuffix": "Küçük harf, rakam ve alt çizgi kullanın.",
+        "positiveDecimal": "0'dan büyük bir sayı girin (en fazla 4 ondalık basamak).",
+        "required": "Birini seçin.",
+        "durationDays": "1 veya daha fazla, tam sayı bir gün sayısı girin ya da boş bırakın."
+      }
+    },
+    "acquisition": {
+      "points_purchase": "Puanla satın alma",
+      "streak_completion": "Seri tamamlama",
+      "stamp_completion": "Damga kartı tamamlama (kullanımdan kaldırıldı)"
+    },
+    "type": {
+      "cashback": "Nakit iade",
+      "tier_upgrade": "Seviye yükseltme",
+      "points_bonus": "Puan bonusu",
+      "discount": "İndirim",
+      "free_product": "Ücretsiz ürün",
+      "gift_card": "Hediye kartı"
+    },
+    "list": {
+      "retired": "kullanımdan kaldırıldı",
+      "pendingApproval": "Onay bekliyor",
+      "approve": "Onayla",
+      "view": "Görüntüle"
+    },
+    "add": "Ödül ekle",
+    "created": "\"{name}\" ödülü oluşturuldu",
+    "saved": "Ödül kaydedildi",
+    "empty": "Henüz ödül yok",
+    "emptyHint": "Müşterilerin kullanabileceği bir şey olması için bir tane oluşturun.",
+    "col": {
+      "name": "Ad",
+      "type": "Tür",
+      "acquisition": "Kazanım",
+      "status": "Durum"
+    },
+    "approve": {
+      "done": "\"{name}\" ödülü onaylandı",
+      "failed": "Bu ödül onaylanamadı."
+    }
+  },
+  "customers": {
+    "detail": {
+      "copyKey": "İletişim anahtarını kopyala",
+      "notFound": "Müşteri bulunamadı",
+      "notFoundBody": "Bu iletişim anahtarı için henüz bir profil yok.",
+      "lastActivity": "son etkinlik",
+      "title": "Müşteri"
+    },
+    "tab": {
+      "overview": "Genel bakış",
+      "activity": "Hareketler",
+      "events": "Olaylar",
+      "rules": "Kurallar ve üst sınırlar",
+      "streaks": "Seriler",
+      "rewards": "Ödüller",
+      "tiers": "Seviyeler",
+      "cardBuckets": "Kart grupları",
+      "messages": "Gönderilen mesajlar"
+    },
+    "overview": {
+      "noTier": "Seviye yok",
+      "qualifyingOf": "{tier} için {target} niteleyici puanın {points} kadarı",
+      "tierHistory": "Seviye geçmişi",
+      "noTierHistory": "Henüz kaydedilmiş seviye değişikliği yok.",
+      "wallets": "Cüzdanlar",
+      "pending": "{amount} beklemede (tutuluyor)",
+      "expiring": "{amount}, {date} tarihine kadar sona eriyor",
+      "tier": "Seviye",
+      "noPrograms": "Müşterinin hiçbir programda cüzdanı yok."
+    },
+    "col": {
+      "from": "Önceki",
+      "to": "Yeni",
+      "qualifyingPoints": "Niteleyici puan",
+      "date": "Tarih",
+      "wallet": "Cüzdan",
+      "reason": "Neden",
+      "amount": "Tutar",
+      "source": "Kaynak",
+      "eventType": "Olay türü",
+      "status": "Durum",
+      "outcome": "Sonuç",
+      "occurred": "Gerçekleşme",
+      "received": "Alınma",
+      "processed": "İşlenme",
+      "error": "Hata",
+      "rule": "Kural",
+      "details": "Ayrıntılar"
+    },
+    "filter": {
+      "activityLabel": "Hareketleri filtrele",
+      "eventsLabel": "Olayları filtrele",
+      "search": "Ara",
+      "reset": "Sıfırla",
+      "all": "Tümü",
+      "program": "Program",
+      "wallet": "Cüzdan",
+      "reasonGroup": "Neden",
+      "eventType": "Olay türü",
+      "status": "Durum",
+      "from": "Başlangıç",
+      "to": "Bitiş",
+      "eventId": "Olay kimliği",
+      "localTime": "Saatler yerel saatinizdedir.",
+      "rulesLabel": "Kural kararlarını filtrele",
+      "messagesLabel": "Gönderilen mesajları filtrele"
+    },
+    "reasonGroup": {
+      "earn": "Kazanç",
+      "burn": "Harcama",
+      "transfer": "Transfer",
+      "expiry": "Süre sonu",
+      "reward": "Ödül ödemesi",
+      "adjustment": "Düzeltme"
+    },
+    "reason": {
+      "earn": "Kazanıldı",
+      "stamp_earn": "Damga kazanıldı",
+      "stamp_reset": "Damga kartı sıfırlandı",
+      "cash_load": "Nakit yüklendi",
+      "cash_spend": "Nakit harcandı",
+      "points_redeemed": "Puan kullanıldı",
+      "points_redeemed_cash": "Kullanılan puanlardan nakit",
+      "refund": "İade",
+      "points_expired": "Puanların süresi doldu",
+      "reward_purchase": "Ödül satın alındı",
+      "transfer_out": "Giden transfer",
+      "transfer_in": "Gelen transfer",
+      "points_adjusted": "Elle düzeltme",
+      "rule_reversal": "Kural iptali",
+      "reward_cashback": "Nakit iade ödülü"
+    },
+    "source": {
+      "rule": "{name} (v{version})",
+      "streak": "Seri: {name}"
+    },
+    "status": {
+      "pending": "Beklemede",
+      "processed": "İşlendi",
+      "failed": "Başarısız"
+    },
+    "activity": {
+      "empty": "Bu aralıkta hareket yok",
+      "emptyBody": "Tarihleri genişletin veya bir filtreyi temizleyin.",
+      "scheduledJob": "Zamanlanmış iş",
+      "openEvent": "Olay ayrıntılarını aç"
+    },
+    "events": {
+      "empty": "Bu aralıkta olay yok",
+      "emptyBody": "Olaylar Müşteri 360 sürümünden itibaren listelenir; daha eskileri Hareketler sekmesinden açılır.",
+      "sinceDeploy": "Müşteri 360 sürümünden bu yana alınan olayları listeler.",
+      "noPostings": "Kayıt yok"
+    },
+    "loadError": "Bu veriler yüklenemedi. Tekrar deneyin.",
+    "drawer": {
+      "heading": "Olay ayrıntıları",
+      "close": "Olay ayrıntılarını kapat",
+      "notFound": "Bu olay bu müşteriyle ilişkili değil.",
+      "wallets": "İlgili cüzdanlar",
+      "noPostings": "Bu olay hiçbir kayıt oluşturmadı.",
+      "counterparty": "karşı taraf {contactKey}",
+      "heldUntil": "{date} tarihine kadar tutuluyor",
+      "heldPosted": "Tutuldu, {date} tarihinde kaydedildi",
+      "heldCancelled": "{date} tarihinde bir iadeyle iptal edildi — hiç kaydedilmedi",
+      "heldRefunded": "{amount} bir iadeyle geri alındı",
+      "onceOnlySkip": "{name} kuralından ödül yok: bonus zaten {date} tarihinde alındı (olay {eventId})",
+      "event": "Olay",
+      "payload": "Yük",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "masked": "Telefon, kart ve kimlik numarası alanları maskelenmiştir.",
+      "noInbound": "Gelen olay: yok (zamanlanmış iş).",
+      "why": "Neden",
+      "noRuleFires": "Bu olay için hiçbir kural çalışmadı.",
+      "conditions": "Koşullar",
+      "calculation": "Hesaplama",
+      "resolution": "Çözümleme",
+      "effects": "Bu olayın yaptığı diğer her şey",
+      "noEffects": "Seri, ödül veya seviye değişikliği yok.",
+      "streakApplied": "{name} serisine sayıldı",
+      "streakCompleted": "{name} serisi tamamlandı (#{n}), ödül: {reward}",
+      "reward": "Ödül {name} ({status})",
+      "tierChange": "Seviye değişti: {from} → {to}",
+      "messages": "Gönderilen mesajlar",
+      "noMessages": "Bu olay için mesaj gönderilmedi."
+    },
+    "rules": {
+      "caps": "Müşteri başına üst sınırlar",
+      "noCaps": "Müşterinin programlarındaki hiçbir kuralda müşteri başına üst sınır yok.",
+      "capsNote": "Kullanım, hesap defterinden motorun saydığı şekilde sayılır (kazanılan, eksi iadeler). Gün ve dönem aralıkları UTC'dir.",
+      "today": "Bugün: {used} / {cap}",
+      "total": "Toplam: {used} / {cap}",
+      "noFires": "Bu aralıkta bu müşteri için hiçbir kural çalışmadı",
+      "onlyRule": "Yalnızca {name} gösteriliyor.",
+      "allRules": "Tüm kuralları göster",
+      "snapshots": "Anlık görüntüler",
+      "bucketsElsewhere": "Kart grupları, Kart grupları sekmesindedir.",
+      "summary": "{count} kural · {reached} limite ulaştı",
+      "reached": "Limite ulaşıldı",
+      "earning": "Kazanıyor",
+      "windowTotal": "Toplam",
+      "windowToday": "Bugün",
+      "windowPeriod": "Bu dönem ({period})",
+      "noCap": "üst sınır yok",
+      "tightest": "En dar üst sınırın %{percent} kadarı kullanıldı"
+    },
+    "streaks": {
+      "progress": "{target} dönemin {count} kadarı · {completions} tamamlandı",
+      "rule": "Her dönemde gereken",
+      "ruleText": "{period} başına {metric} ≥ {threshold}",
+      "lastMet": "Son karşılanan dönem",
+      "latestPeriod": "Son kaydedilen dönem",
+      "latestPeriodText": "{date} itibarıyla: toplam {sum}, adet {count}",
+      "met": "karşılandı",
+      "notMet": "henüz karşılanmadı",
+      "completedPeriod": "Tamamlanan dönem",
+      "reward": "Ödül",
+      "kind": {
+        "fixed_bonus": "Sabit bonus",
+        "reward_definition": "Ödül tanımı"
+      },
+      "status": {
+        "active": "Etkin",
+        "completed_stopped": "Tamamlandı (durduruldu)"
+      },
+      "empty": "Müşterinin seri ilerlemesi yok",
+      "note": "İlerleme, motorun en son kaydettiği şekilde gösterilir; kaçırılan bir dönem müşterinin bir sonraki olayı geldiğinde uygulanır."
+    },
+    "rewards": {
+      "reward": "Ödül",
+      "how": "Nasıl",
+      "cost": "Maliyet",
+      "payout": "Ödeme",
+      "empty": "Müşterinin ödülü yok",
+      "outcome": {
+        "cash_credited": "Nakit yatırıldı",
+        "tier_upgraded": "Seviye yükseltildi",
+        "none": "Hiçbir şey ödenmedi"
+      }
+    },
+    "tiers": {
+      "periodStart": "Dönem başlangıcı",
+      "graceEnds": "Seviye değerlendirmesi (ek süre sonu)",
+      "lockedUntil": "Ödülle kilitli, şu tarihe kadar",
+      "cause": "Neden",
+      "causes": {
+        "points": "Puan",
+        "reward": "Ödül",
+        "downgrade": "Gece seviye düşürme"
+      },
+      "statusHeading": "Seviye durumu",
+      "review": "Seviye değerlendirmesi",
+      "summary": "{count} program",
+      "toNext": "{tier} seviyesine giden yolun %{percent} kadarı",
+      "topTierShort": "En üst seviye",
+      "points": "Niteleyici puan",
+      "nextTier": "Sonraki seviye",
+      "noneTiered": "Bu müşterinin programlarının hiçbirinde seviye sistemi yok."
+    },
+    "buckets": {
+      "summary": "İşlem başına ödül {reward} · {postings} kayıt",
+      "last": "son {date}",
+      "noCap": "Müşteri başına üst sınır yok · toplam {used} kazanıldı",
+      "showPostings": "Kayıtları göster",
+      "hidePostings": "Kayıtları gizle",
+      "empty": "Müşterinin programlarında kart grubu yok"
+    },
+    "messages": {
+      "created": "Oluşturulma",
+      "reason": "Neden",
+      "published": "Yayınlanma",
+      "dedupKey": "Tekilleştirme anahtarı",
+      "empty": "Bu aralıkta mesaj yok",
+      "retention": "Yayınlanan mesajlar 30 gün saklanır.",
+      "status": {
+        "pending": "Beklemede",
+        "published": "Yayınlandı",
+        "failed": "Başarısız"
+      },
+      "typePlaceholder": "loyalty.points.earned"
+    },
+    "panel": {
+      "memberSince": "Üyelik başlangıcı",
+      "programs": "Programlar ve seviyeler",
+      "noTiers": "Seviye yok",
+      "engagement": "Etkileşim",
+      "streaksInProgress": "Devam eden seriler",
+      "failedEvents": "Başarısız olaylar (7 gün)",
+      "wallets": "Cüzdanlar"
+    },
+    "progress": {
+      "heading": "İlerleme",
+      "topTier": "{points} niteleyici puan · en üst seviye",
+      "none": "Bu programda seviye veya seri yok."
+    },
+    "paging": {
+      "pageView": "Sayfa görünümü"
+    },
+    "list": {
+      "subtitle": "Bir müşteriyi iletişim anahtarıyla bulun ya da tümüne göz atın.",
+      "searchLabel": "Müşteri ara",
+      "searchPlaceholder": "İletişim anahtarına göre ara, örn. cust_1001",
+      "searchHint": "İletişim anahtarının herhangi bir bölümüyle eşleşir. O müşteriyi açmak için tam bir anahtarda Enter'a basın.",
+      "empty": "Henüz müşteri yok",
+      "emptyBody": "Alınan bir olay ilk bakiyelerini oluşturduğunda müşteriler burada görünür.",
+      "noMatch": "Eşleşen müşteri yok",
+      "noMatchBody": "İletişim anahtarını kontrol edin veya aramayı temizleyin.",
+      "col": {
+        "contactKey": "İletişim anahtarı",
+        "firstSeen": "İlk görülme",
+        "lastActivity": "Son etkinlik",
+        "programs": "Programlar",
+        "accounts": "Hesaplar"
+      }
+    }
+  },
+  "ui": {
+    "breadcrumbs": "Sayfa yolu",
+    "confirm": {
+      "ok": "Onayla"
+    },
+    "skipToContent": "İçeriğe geç",
+    "paginator": {
+      "none": "0 sonuç",
+      "range": "{from}–{to} / {total}",
+      "page": "Sayfa {page} / {pages}",
+      "previous": "Önceki sayfa",
+      "next": "Sonraki sayfa",
+      "pageView": "Sayfa görünümü"
+    },
+    "select": {
+      "search": "Ara",
+      "noResults": "Sonuç yok",
+      "clear": "Seçimi temizle"
+    },
+    "toast": {
+      "dismiss": "Kapat"
+    },
+    "filter": {
+      "search": "Ara",
+      "reset": "Sıfırla"
+    }
+  },
+  "tiers": {
+    "heading": "Seviyeler",
+    "intro": "Niteleyici puan eşiğine göre otomatik atanır.",
+    "add": "Seviye ekle",
+    "created": "\"{name}\" seviyesi oluşturuldu",
+    "saved": "Seviye kaydedildi",
+    "empty": "Henüz seviye yok",
+    "emptyHint": "Müşterilerin ulaşmaya çalışacağı bir şey olması için en az iki tane oluşturun.",
+    "col": {
+      "order": "Sıra",
+      "name": "Ad",
+      "minPoints": "En az puan",
+      "qualifying": "Niteleme",
+      "grace": "Ek süre"
+    },
+    "moveUp": "Yukarı taşı",
+    "moveDown": "Aşağı taşı",
+    "qualifying": {
+      "periodic": "Son {days} gün",
+      "lifetime": "Süresiz"
+    },
+    "graceDays": "{days} gün",
+    "delete": {
+      "confirmTitle": "Seviye silinsin mi?",
+      "confirmMessage": "\"{name}\" kaldırılacak. Bu işlem geri alınamaz.",
+      "done": "\"{name}\" seviyesi silindi",
+      "hasAccounts": "Bu seviyeye atanmış müşteri hesapları var.",
+      "programActive": "Seviyelerinin silinebilmesi için programın etkin olmaması gerekir."
+    },
+    "form": {
+      "newHeading": "Yeni seviye",
+      "editHeading": "Seviyeyi düzenle",
+      "create": "Oluştur",
+      "name": "Ad (kısa ad)",
+      "namePlaceholder": "gold",
+      "displayName": "Görünen ad",
+      "displayNamePlaceholder": "Altın",
+      "minPoints": "En az niteleyici puan",
+      "qualifyingModel": "Niteleme modeli",
+      "periodic": "Dönemsel",
+      "periodicHint": "Puanlar kayan bir aralıktan sonra sıfırlanır",
+      "lifetime": "Süresiz",
+      "lifetimeHint": "Puanlar hiç sıfırlanmaz",
+      "modelLocked": "Bu seviyeye müşteri hesapları atandıktan sonra değiştirilemez.",
+      "periodDays": "Niteleme dönemi (gün)",
+      "graceDays": "Ek süre (gün)",
+      "errors": {
+        "nameRequired": "Bir ad girin.",
+        "displayNameRequired": "Bir görünen ad girin.",
+        "tooLong": "En fazla {max} karakter kullanın.",
+        "minPoints": "0 veya daha fazla bir puan sayısı girin (en fazla 4 ondalık basamak).",
+        "periodDays": "0'dan büyük, tam sayı bir gün sayısı girin.",
+        "graceDays": "Tam sayı bir gün sayısı girin (0 veya daha fazla)."
+      }
+    }
+  },
+  "conditions": {
+    "field": "Alan",
+    "operator": "Operatör",
+    "value": "Değer",
+    "fieldPlaceholder": "yük alan yolu",
+    "undeclared": "Bu olayın tanımlı bir alanı değil — yazımı kontrol edin.",
+    "present": "var",
+    "absent": "yok",
+    "noValue": "değer gerekmez",
+    "csv": "virgülle ayrılmış değerler",
+    "min": "en az",
+    "max": "en çok",
+    "add": "Koşul ekle",
+    "remove": "Koşulu kaldır",
+    "tree": {
+      "heading": "Koşullar (isteğe bağlı)",
+      "joinGroups": "Grupları şununla birleştir",
+      "group": "Grup {n}",
+      "match": "eşleşme",
+      "removeGroup": "Grubu kaldır",
+      "addGroup": "Grup ekle",
+      "help": "Bir koşul her zaman bir grubun içindedir. Gruplar yukarıdaki operatörle birleştirilir; bir gruptaki koşullar o grubun kendi operatörüyle birleştirilir."
+    },
+    "leaves": {
+      "heading": "Ek koşullar (isteğe bağlı)",
+      "intro": "Yukarıdaki yapılandırılmış alanlarla birlikte AND ile eşleştirilen ek koşullar. Yukarıdaki formun kapsamadığı her şey için bir çıkış yolu."
+    },
+    "clauses": {
+      "heading": "Koşullar (isteğe bağlı, hepsi eşleşmeli)",
+      "fieldPlaceholder": "alan, örn. order.category",
+      "afterEvent": "olaydan sonra",
+      "hours": "saat"
+    }
+  },
+  "cardBuckets": {
+    "heading": "Kart Grupları",
+    "add": "Yeni grup",
+    "empty": "Henüz kart grubu yok",
+    "emptyHint": "Belirli harcama kalıplarını ödüllendirmek için bir tane oluşturun.",
+    "activate": "Grubu etkinleştir",
+    "disable": "Grubu devre dışı bırak",
+    "activated": "Grup etkinleştirildi",
+    "disabled": "Grup devre dışı bırakıldı",
+    "created": "Grup oluşturuldu",
+    "saved": "Grup kaydedildi",
+    "col": {
+      "name": "Ad",
+      "mcc": "MCC",
+      "amount": "Tutar aralığı",
+      "status": "Durum"
+    },
+    "delete": {
+      "title": "Grubu sil",
+      "message": "\"{name}\" silinsin mi? Bu işlem geri alınamaz.",
+      "done": "Grup silindi"
+    },
+    "days": {
+      "monday": "Pazartesi",
+      "tuesday": "Salı",
+      "wednesday": "Çarşamba",
+      "thursday": "Perşembe",
+      "friday": "Cuma",
+      "saturday": "Cumartesi",
+      "sunday": "Pazar"
+    },
+    "form": {
+      "newHeading": "Yeni kart grubu",
+      "editHeading": "Kart grubunu düzenle",
+      "newCrumb": "Yeni",
+      "editCrumb": "Düzenle",
+      "notFound": "Bu kart grubu artık yok.",
+      "basics": "Temel bilgiler",
+      "match": "Kart işlemlerinde eşleşme",
+      "name": "Ad",
+      "rewardAccount": "Ödül hesabı",
+      "selectAccount": "Bir hesap seçin…",
+      "rewardAmount": "Ödül tutarı",
+      "activeFrom": "Başlangıç",
+      "activeTo": "Bitiş",
+      "mccCodes": "MCC kodları (virgülle ayrılmış, herhangi biri eşleşir)",
+      "mccPlaceholder": "5411, 5541",
+      "amountMin": "En düşük tutar",
+      "amountMax": "En yüksek tutar",
+      "geo": "Coğrafya",
+      "countryIn": "Yalnızca bu ülkeler",
+      "countryNotIn": "Bu ülkeler hariç",
+      "countries": "Ülkeler (ISO kodları, virgülle ayrılmış)",
+      "countriesPlaceholder": "SA, AE",
+      "requireCaptured": "Yalnızca tahsil edilmiş işlemler (ön provizyon hariç)",
+      "hourFrom": "Başlangıç saati (UTC, 0–23)",
+      "hourTo": "Bitiş saati (UTC, 0–23)",
+      "daysOfWeek": "Haftanın günleri",
+      "perCustomerPerDay": "Müşteri başına günlük en fazla ödül",
+      "perCustomerTotal": "Müşteri başına toplam en fazla ödül",
+      "fixFields": "Lütfen işaretli alanları düzeltin.",
+      "errors": {
+        "nameRequired": "Ad zorunludur.",
+        "tooLong": "En fazla {max} karakter olmalıdır.",
+        "required": "Birini seçin.",
+        "positiveDecimal": "0'dan büyük, en fazla 4 ondalıklı bir sayı girin.",
+        "decimal": "En fazla 4 ondalıklı bir sayı girin.",
+        "amountMax": "En yüksek tutar, en düşük tutardan büyük veya ona eşit olmalıdır.",
+        "hour": "0 ile 23 arasında tam bir saat girin."
+      }
+    }
+  },
+  "streaks": {
+    "heading": "Seri Kampanyaları",
+    "add": "Yeni kampanya",
+    "empty": "Henüz seri kampanyası yok",
+    "emptyHint": "Ardışık etkinliği ödüllendirmeye başlamak için bir tane oluşturun.",
+    "activate": "Kampanyayı etkinleştir",
+    "disable": "Kampanyayı devre dışı bırak",
+    "activated": "Kampanya etkinleştirildi",
+    "disabled": "Kampanya devre dışı bırakıldı",
+    "created": "Kampanya oluşturuldu",
+    "saved": "Kampanya kaydedildi",
+    "col": {
+      "name": "Ad",
+      "trigger": "Tetikleyici",
+      "period": "Dönem",
+      "targetPeriods": "Hedef dönem sayısı",
+      "status": "Durum"
+    },
+    "delete": {
+      "title": "Kampanyayı sil",
+      "message": "\"{name}\" silinsin mi? Bu işlem geri alınamaz.",
+      "done": "Kampanya silindi"
+    },
+    "period": {
+      "day": "gün",
+      "week": "hafta",
+      "month": "ay"
+    },
+    "metric": {
+      "sum": "toplam",
+      "count": "adet"
+    },
+    "onComplete": {
+      "restart": "yeniden başlat",
+      "stop": "durdur"
+    },
+    "form": {
+      "newHeading": "Yeni seri kampanyası",
+      "editHeading": "Seri kampanyasını düzenle",
+      "newCrumb": "Yeni",
+      "editCrumb": "Düzenle",
+      "notFound": "Bu seri kampanyası artık yok.",
+      "basics": "Temel bilgiler",
+      "name": "Ad",
+      "trigger": "Tetikleyici olay",
+      "selectTrigger": "Bir tetikleyici seçin…",
+      "targetAccount": "Hedef hesap",
+      "selectAccount": "Bir hesap seçin…",
+      "activeFrom": "Başlangıç",
+      "activeTo": "Bitiş",
+      "streak": "Seri",
+      "period": "Dönem",
+      "targetPeriods": "Hedef dönem sayısı",
+      "weekStart": "Hafta başlangıcı",
+      "metric": "Toplama ölçütü",
+      "threshold": "Dönem başına eşik",
+      "timezone": "Saat dilimi",
+      "onComplete": "Tamamlandığında",
+      "reward": "Ödül",
+      "fixedBonus": "Sabit bonus (hedef hesapta)",
+      "rewardDefinition": "Ödül tanımı",
+      "bonusAmount": "Bonus tutarı",
+      "rewardDefinitionLabel": "Ödül",
+      "selectReward": "Bir ödül seçin…",
+      "noRewards": "Henüz etkin ve onaylı bir seri tamamlama ödülü yok — Ödüller altında bir tane oluşturun.",
+      "fixFields": "Lütfen işaretli alanları düzeltin.",
+      "errors": {
+        "nameRequired": "Ad zorunludur.",
+        "tooLong": "En fazla {max} karakter olmalıdır.",
+        "required": "Birini seçin.",
+        "whole": "Bir tam sayı girin.",
+        "decimal": "En fazla 4 ondalıklı bir sayı girin."
+      }
+    }
+  },
+  "dashboard": {
+    "subtitle": "Tüm programlar genelinde kiracı çapında genel bakış.",
+    "program": "Program",
+    "allPrograms": "Tüm programlar",
+    "from": "Başlangıç",
+    "to": "Bitiş",
+    "clear": "Filtreleri temizle",
+    "tiles": {
+      "programs": "Programlar",
+      "tiers": "Seviyeler",
+      "customerAccounts": "Müşteri hesapları",
+      "totalBalance": "Toplam bakiye",
+      "redemptions": "Kullanımlar",
+      "activeStreaks": "Etkin seriler",
+      "streaksCompleted": "Tamamlanan seriler"
+    }
+  },
+  "platform": {
+    "heading": "Kiracılar",
+    "subtitle": "Platformdaki tüm kiracılar",
+    "tenants": {
+      "new": "Yeni kiracı",
+      "caption": "Kiracılar",
+      "empty": "Henüz kiracı yok.",
+      "col": {
+        "name": "Ad",
+        "id": "Kimlik",
+        "status": "Durum",
+        "created": "Oluşturulma"
+      },
+      "created": "\"{name}\" kiracısı oluşturuldu",
+      "form": {
+        "heading": "Yeni kiracı",
+        "id": "Kiracı kimliği",
+        "idPlaceholder": "novapay",
+        "idHint": "Küçük harf, rakam, alt çizgi. Sonradan değiştirilemez.",
+        "idPattern": "1-50 küçük harf, rakam veya alt çizgi.",
+        "name": "Görünen ad",
+        "nameRequired": "Görünen ad zorunludur.",
+        "tooLong": "En fazla {max} karakter.",
+        "submit": "Kiracı oluştur"
+      }
+    },
+    "status": {
+      "active": "etkin",
+      "suspended": "askıya alındı"
+    },
+    "overview": {
+      "suspend": "Askıya al",
+      "reactivate": "Yeniden etkinleştir",
+      "suspended": "Kiracı askıya alındı",
+      "reactivated": "Kiracı yeniden etkinleştirildi",
+      "status": "Durum",
+      "tenantId": "Kiracı kimliği",
+      "created": "Oluşturulma",
+      "manage": "Yönet",
+      "notFound": "Kiracı bulunamadı",
+      "notFoundBody": "Kaldırılmış olabilir ya da kimlik yanlış.",
+      "cards": {
+        "apiKeys": {
+          "label": "API Anahtarları",
+          "description": "Sunucudan sunucuya olay kimlik bilgileri"
+        },
+        "admins": {
+          "label": "Kiracı Yöneticileri",
+          "description": "Bu kiracıya kimlerin giriş yapıp yönetebileceği"
+        }
+      }
+    },
+    "apiKeys": {
+      "heading": "API Anahtarları",
+      "new": "Yeni anahtar",
+      "caption": "API anahtarları",
+      "empty": "Henüz API anahtarı yok — bu kiracının olay gönderebilmesi için bir tane oluşturun.",
+      "col": {
+        "prefix": "Önek",
+        "created": "Oluşturulma",
+        "lastUsed": "Son kullanım",
+        "actions": "İşlemler"
+      },
+      "prefixValue": "{prefix}…",
+      "neverUsed": "Hiç kullanılmadı",
+      "revoked": "iptal edildi",
+      "revokeKey": "Anahtarı iptal et",
+      "revoke": {
+        "title": "API anahtarını iptal et",
+        "message": "{prefix}… anahtarı iptal edilsin mi? Hâlâ onu kullanan her istemci hemen 401 almaya başlar.",
+        "confirm": "İptal et",
+        "done": "API anahtarı iptal edildi"
+      },
+      "created": {
+        "heading": "API anahtarı oluşturuldu",
+        "warning": "Bu anahtarı şimdi kopyalayın — bir daha gösterilmeyecek.",
+        "copy": "Kopyala",
+        "copied": "Kopyalandı",
+        "prefix": "Önek {prefix} — aşağıdaki listede anahtarı tanımak için bunu kullanın.",
+        "done": "Tamam"
+      }
+    },
+    "admins": {
+      "heading": "Kiracı Yöneticileri",
+      "new": "Yeni yönetici",
+      "caption": "Kiracı yöneticileri",
+      "emptyHeading": "Henüz kiracı yöneticisi yok",
+      "emptyBody": "Birinin giriş yapıp bu kiracıyı yönetebilmesi için bir tane oluşturun.",
+      "col": {
+        "email": "E-posta",
+        "status": "Durum",
+        "created": "Oluşturulma"
+      },
+      "created": "\"{email}\" yöneticisi oluşturuldu",
+      "form": {
+        "heading": "Yeni kiracı yöneticisi",
+        "grants": "{tenant} için giriş erişimi verir.",
+        "email": "E-posta",
+        "emailInvalid": "Geçerli bir e-posta adresi girin.",
+        "tooLong": "En fazla {max} karakter.",
+        "password": "Geçici şifre",
+        "passwordHint": "En az 12 karakter. Kiracı yöneticisiyle ayrı bir kanaldan paylaşın.",
+        "passwordMin": "En az {min} karakter.",
+        "submit": "Yönetici oluştur"
+      }
+    }
+  }
+}

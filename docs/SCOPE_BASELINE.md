@@ -68,7 +68,7 @@ Legend: **Done** (implemented) / **In Progress** / **Not Started** / **Built-but
 
 | Feature | Capability | Status | SOW ref |
 |---|---|---|---|
-| foundation | Vite + TypeScript app; Feature-Sliced Design with lint-enforced boundaries; shadcn-vue (Reka UI + Tailwind v4) wrapped in `shared/ui`; Pinia (client state) + Vue Query (server state, tenant-scoped keys); VeeValidate + Zod; vue-i18n (English); API types generated from an OpenAPI spec built from the C# source, with a drift check that fails the build | Done | §2.8, §4 |
+| foundation | Vite + TypeScript app; Feature-Sliced Design with lint-enforced boundaries; shadcn-vue (Reka UI + Tailwind v4) wrapped in `shared/ui`; Pinia (client state) + Vue Query (server state, tenant-scoped keys); VeeValidate + Zod; vue-i18n — English and Turkish (CR 2026-10-28): a Language submenu in the user menu and a language picker on the login page, saved per browser (falls back to the browser's language, then English), dates and numbers formatted in the chosen language (display only), server-sent error messages stay English; API types generated from an OpenAPI spec built from the C# source, with a drift check that fails the build | Done | §2.8, §4 |
 | auth | Login (no signup/reset/MFA) | Done | §2.8, §3 |
 | dashboard | Tenant overview, filters (complaint breakdown removed by CR 2026-10-05) | Done | §2.6 |
 | customers | Search + read-only 360° profile. Customers list (2026-10-03, UI only): one search box (partial match; Enter on an exact key opens the profile), program count, account count, first seen and last activity per row, standard paginator. CR 2026-10-02 (Customer 360) P1: header + Overview / Activity / Events tabs, filter bar (last 30 days by default, local time sent as UTC), event drawer (eye icon) with the masked payload; no birthday information and no complaints in the view. P2: Overview with a profile panel (contact key, tier per program, member since, last activity, streaks in progress, failed events) and one card per program (wallet cards with pending and expiring soon; tier and streak progress) — redesigned 2026-10-03, UI only; postings are on the Activity tab, Rules & caps, Streaks, Rewards and Tiers tabs. P3: Card buckets (caps, usage, postings) and Messages sent tabs; Messages sent shows each failure message's reason in place of attempts (Addendum C, 2026-10-06) | Done | §2.4 |
@@ -86,8 +86,8 @@ Legend: **Done** (implemented) / **In Progress** / **Not Started** / **Built-but
 | testing | Vitest unit and component specs; Playwright e2e — mocked suites (shell, platform) with axe accessibility checks, and real-backend specs run with `E2E_BACKEND=1` (not yet run) | Done | §4 |
 
 **Not started / placeholder (flagged in sidebar, no implementation):** Reports, Settings,
-global search. See `docs/SOW.md` §3 for the full known-limitations list, including
-English-only localization.
+global search. See `docs/SOW.md` §3 for the full known-limitations list (English-only
+localization was closed by CR 2026-10-28, which added Turkish).
 
 ## Open items for Product Owner review
 
@@ -98,6 +98,8 @@ English-only localization.
 - If phased delivery boundaries ("Faz1/Faz2/Faz3") from prior project history still apply,
   annotate which rows belong to which phase — this baseline currently treats everything above
   as one undifferentiated "current" scope.
+- **Turkish translations (CR 2026-10-28):** `web/src/shared/i18n/locales/tr.json` was drafted by
+  Claude Code and needs a native Turkish speaker's review before release.
 
 ## Revision history
 
@@ -125,3 +127,4 @@ English-only localization.
 | 2026-10-08 | Scope Change (approved by all stakeholders, CR 2026-10-06 rule configuration & limits by trigger) **Phase 5 implemented**: expiry override applied (E1–E3) — `ledger_entries.expires_at` (migration `LedgerExpiresAtCr1006`, no backfill) written on earn / transfer_in postings from the rule's `expiryOverrideDays` (dated from release for delayed postings) or the wallet's `expiration_days`; expiry job and expiring-soon warning (job and Customer 360) use each lot's effective date, soonest-expiring first, never-expiring last; override also works in wallets without expiry; API rejects `expiryOverrideDays` ≤ 0; portal shows the wallet default as the placeholder. See `docs/scope-changes/2026-10-05-rule-config-limits-by-trigger.md` §7.10–§7.11. | Claude Code, at the request of Moiz Ali Afzal |
 | 2026-10-08 | Bug fix (CR 2026-10-06 R15, no scope change): a redelivered event (replayed from the dead-letter queue, or redelivered after a crash) no longer re-runs winner selection when its rules already posted — budgets and Redis limit counters are no longer recorded twice, and a rule that paid or reached its cap in the first delivery can no longer let the next exclusive rule pay a second award for the same event (seen on signup / KYC and capped rules); a redelivered partial Reversal no longer fails on the outbox dedupe. See `docs/scope-changes/2026-10-05-rule-config-limits-by-trigger.md` §7.12. | Claude Code, at the request of Moiz Ali Afzal |
 | 2026-10-08 | UI only (no scope change): Event Simulator pre-fills the event data JSON per selected event type (`web/src/entities/event/model/event-samples.ts`), keeps an edited payload, offers "Reset to sample" and warns while a `REPLACE_WITH_…` placeholder is left. | Claude Code, at the request of Moiz Ali Afzal |
+| 2026-10-28 | Scope Change (approved by PO + Architect, CR 2026-10-28 Turkish in the admin portal): Turkish locale (`tr.json`, same keys as `en.json`), a language switch in the user menu and on the login page saved per browser, dates and numbers formatted in the chosen language (display only; inputs and the wire format unchanged), the network-error message translated. Portal only — no backend, DB or API change. Server-sent error messages stay English. Translations pending native-speaker review. See `docs/scope-changes/2026-10-28-portal-turkish.md`. | Claude Code, at the request of haider.abdullah@dengage.com |

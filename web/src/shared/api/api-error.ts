@@ -1,3 +1,5 @@
+import { translate } from '@/shared/i18n';
+
 /**
  * Every backend failure classified into one kind, from a fetch `Response`'s status, body and
  * headers, so every screen reacts to a backend error the same way.
@@ -79,10 +81,7 @@ export function apiErrorFrom(status: number, body: unknown, retryAfterHeader?: s
   const code = problem?.code ?? null;
   const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) || null : null;
   const title =
-    problem?.title ??
-    (status === 0
-      ? 'Cannot reach the server. Check your connection and try again.'
-      : `Request failed (${status})`);
+    problem?.title ?? (status === 0 ? translate('common.networkError') : `Request failed (${status})`);
 
   return new ApiError({
     kind: kindForStatus(status, code),

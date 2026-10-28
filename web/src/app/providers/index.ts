@@ -4,7 +4,7 @@ import { VueQueryPlugin } from '@tanstack/vue-query';
 import { configureApi, createAppQueryClient } from '@/shared/api';
 import { appConfig } from '@/shared/config/app-config';
 import { i18n } from '@/shared/i18n';
-import { useSessionStore, useTenantContextStore } from '@/shared/model';
+import { useLocaleStore, useSessionStore, useTenantContextStore } from '@/shared/model';
 import { notify } from '@/shared/ui';
 import { router } from '../router';
 
@@ -20,6 +20,9 @@ export function installProviders(app: App): void {
   app.use(i18n);
   app.use(router);
   app.use(VueQueryPlugin, { queryClient });
+
+  // The saved (or browser) language, before anything renders.
+  useLocaleStore(pinia).apply();
 
   const session = useSessionStore(pinia);
   const tenant = useTenantContextStore(pinia);
