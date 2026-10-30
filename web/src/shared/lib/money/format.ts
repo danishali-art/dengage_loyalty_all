@@ -1,3 +1,4 @@
+import { intlLocale } from '@/shared/i18n';
 import type { DecimalString } from './decimal-string';
 
 export interface MoneyDisplayConfig {
@@ -21,7 +22,7 @@ export function formatMoney(
   const decimals = config.decimalPlaces ?? (config.currency ? 2 : 0);
   const n = Number(value);
   const body = Number.isFinite(n)
-    ? new Intl.NumberFormat(undefined, {
+    ? new Intl.NumberFormat(intlLocale(), {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
       }).format(n)

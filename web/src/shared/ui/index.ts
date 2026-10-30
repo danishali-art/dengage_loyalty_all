@@ -32,7 +32,7 @@ export type { Crumb } from './layout/types';
 export { default as AppDialog } from './overlay/AppDialog.vue';
 export { default as AppPopupMenu } from './overlay/AppPopupMenu.vue';
 export { default as AppDrawer } from './overlay/AppDrawer.vue';
-export type { PopupMenuItem } from './overlay/types';
+export type { PopupMenuChoice, PopupMenuItem } from './overlay/types';
 export { default as AppToastHost } from './feedback/AppToastHost.vue';
 export { default as AppConfirmHost } from './feedback/AppConfirmHost.vue';
 export { default as AppProgressBar } from './feedback/AppProgressBar.vue';

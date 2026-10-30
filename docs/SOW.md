@@ -171,8 +171,9 @@ breakdown was removed by CR 2026-10-05.)
   any tenant-scoped screen renders for a platform admin with none selected).
 - Contextual sidebar sub-navigation that adapts to "inside a program" vs. "inside a platform
   tenant."
-- Localization scaffolding: every user-facing string is a translation key; English is the only
-  locale so far (see §3).
+- Localization: every user-facing string is a translation key, in English and Turkish
+  (CR 2026-10-28). The portal is English until an admin picks another language in the user menu;
+  the choice is saved per browser, and dates and numbers are formatted in it. Messages sent by the API stay English.
 
 ## 3. Explicitly out of scope / known limitations (as-built)
 
@@ -236,8 +237,9 @@ decision: accept as out-of-scope, or raise as a Scope Change Request.
 - **Reports and Settings** appear as feature-flagged placeholders in the portal's sidebar but
   have no implementation behind them.
 - **Global search** is not implemented.
-- **English only**: every screen's strings are translation keys, but only the English locale
-  exists; Turkish needs a second locale file.
+- ~~**English only**: every screen's strings are translation keys, but only the English locale
+  exists; Turkish needs a second locale file.~~ — closed by CR 2026-10-28 (Turkish added). Still
+  English: error titles and field messages sent by the API.
 - ~~**Card Buckets and Streak Campaigns** are not surfaced as summary cards on the Program
   Overview page~~ — added by CR 2026-10-05.
 

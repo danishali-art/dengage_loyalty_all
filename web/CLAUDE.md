@@ -61,7 +61,12 @@ e2e/         Playwright: *.spec.ts run against mock-api.ts (no backend); *.e2e.s
 
 ## Behaviour notes
 
-- Sign-in is always `POST /auth/login`. English only for now.
+- Sign-in is always `POST /auth/login`.
+- English and Turkish (CR 2026-10-28). The language is picked only in the user menu's
+  **Language** submenu and saved per browser (`useLocaleStore`, `loyalty.portal.locale`). It's
+  English until changed (the browser's language is never used), and the login page shows the
+  saved language without offering a picker. `<html lang>` follows it. Dates and numbers are formatted in it through
+  `intlLocale()` (display only). Messages sent by the API stay English.
 - Form limits follow the backend validators: account type name ≤ 100; a reward name including its
   slug prefix ≤ 100; admin email ≤ 255 (`PlatformValidators`); a rule's rate / amount and a card
   bucket's reward amount > 0, and a rule's priority a whole number (`RulesValidators` /

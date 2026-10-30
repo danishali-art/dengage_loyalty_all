@@ -38,12 +38,16 @@
     "active": "Active",
     "inactive": "Inactive",
     "genericError": "Something went wrong. Please try again.",
+    "networkError": "Cannot reach the server. Check your connection and try again.",
     "status": {
       "active": "Active",
       "disabled": "Disabled",
       "deleted": "Deleted",
       "pending_approval": "Pending approval"
     }
+  },
+  "locale": {
+    "label": "Language"
   },
   "auth": {
     "signOut": "Sign out",

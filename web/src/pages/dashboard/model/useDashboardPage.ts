@@ -1,5 +1,6 @@
 import { computed, reactive } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { intlLocale } from '@/shared/i18n';
 import { useProgramsQuery } from '@/entities/program';
 import { useDashboardSummaryQuery, type DashboardFilter, type DashboardSummary } from '@/entities/dashboard';
 
@@ -13,7 +14,7 @@ export interface StatTile {
 /** Display only: a decimal string with up to 2 decimals. */
 function formatBalance(value: string): string {
   const n = Number(value);
-  return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : value;
+  return Number.isFinite(n) ? n.toLocaleString(intlLocale(), { maximumFractionDigits: 2 }) : value;
 }
 
 export function dashboardTiles(s: DashboardSummary): StatTile[] {
