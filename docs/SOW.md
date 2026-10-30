@@ -172,8 +172,8 @@ breakdown was removed by CR 2026-10-05.)
 - Contextual sidebar sub-navigation that adapts to "inside a program" vs. "inside a platform
   tenant."
 - Localization: every user-facing string is a translation key, in English and Turkish
-  (CR 2026-10-28). Admins pick the language in the user menu or on the login page; the choice is
-  saved per browser, and dates and numbers are formatted in it. Messages sent by the API stay English.
+  (CR 2026-10-28). The portal is English until an admin picks another language in the user menu;
+  the choice is saved per browser, and dates and numbers are formatted in it. Messages sent by the API stay English.
 
 ## 3. Explicitly out of scope / known limitations (as-built)
 

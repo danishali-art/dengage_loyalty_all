@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
@@ -17,18 +17,13 @@ export function useLoginForm() {
   const route = useRoute();
   const formError = ref<string | null>(null);
 
-  // Computed so the messages follow a language switch on the login page itself (CR 2026-10-28).
-  const schema = computed(() =>
-    toTypedSchema(
-      z.object({
-        email: z.string().trim().email(translate('auth.login.errors.email')),
-        password: z.string().min(1, translate('auth.login.errors.password')),
-      }),
-    ),
-  );
+  const schema = z.object({
+    email: z.string().trim().email(translate('auth.login.errors.email')),
+    password: z.string().min(1, translate('auth.login.errors.password')),
+  });
 
   const { defineField, errors, handleSubmit } = useForm({
-    validationSchema: schema,
+    validationSchema: toTypedSchema(schema),
     initialValues: { email: '', password: '' },
   });
   const [email] = defineField('email');

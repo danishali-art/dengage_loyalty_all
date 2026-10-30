@@ -17,24 +17,22 @@ describe('useLocaleStore', () => {
     document.documentElement.lang = '';
   });
 
-  it('starts in English when nothing is stored and the browser language is not Turkish', () => {
-    vi.spyOn(navigator, 'language', 'get').mockReturnValue('de-DE');
+  it('starts in English when nothing is stored', () => {
     expect(useLocaleStore().locale).toBe('en');
   });
 
-  it('starts in Turkish for a Turkish browser', () => {
+  // English until the admin changes it — the browser's language is never used as a guess.
+  it('starts in English even for a Turkish browser', () => {
     vi.spyOn(navigator, 'language', 'get').mockReturnValue('tr-TR');
+    expect(useLocaleStore().locale).toBe('en');
+  });
+
+  it('starts in the stored language', () => {
+    localStorage.setItem('loyalty.portal.locale', 'tr');
     expect(useLocaleStore().locale).toBe('tr');
   });
 
-  it('prefers the stored choice over the browser language', () => {
-    vi.spyOn(navigator, 'language', 'get').mockReturnValue('tr-TR');
-    localStorage.setItem('loyalty.portal.locale', 'en');
-    expect(useLocaleStore().locale).toBe('en');
-  });
-
   it('ignores a stored value the portal has no locale for', () => {
-    vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-US');
     localStorage.setItem('loyalty.portal.locale', 'xx');
     expect(useLocaleStore().locale).toBe('en');
   });

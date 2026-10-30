@@ -3,7 +3,7 @@ import { LOCALE_NAMES, SUPPORTED_LOCALES, type AppLocale } from '@/shared/i18n';
 import { useLocaleStore } from '@/shared/model';
 import type { SelectOption } from '@/shared/ui';
 
-/** Pick the portal's language. Used by the login page and the topbar's user menu. */
+/** Pick the portal's language. Used by the topbar's user menu (Language submenu). */
 export function useLocaleSwitch() {
   const store = useLocaleStore();
 

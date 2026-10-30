@@ -5,12 +5,10 @@ import { readStored, writeStored } from './storage';
 
 const LOCALE_KEY = 'loyalty.portal.locale';
 
-/** No choice stored yet: the browser's language if the portal has it, otherwise English. */
+/** English until the admin picks another language in the user menu — never the browser's guess. */
 function initialLocale(): AppLocale {
   const stored = readStored(LOCALE_KEY);
-  if (isAppLocale(stored)) return stored;
-  const browser = typeof navigator === 'undefined' ? '' : navigator.language.slice(0, 2).toLowerCase();
-  return isAppLocale(browser) ? browser : DEFAULT_LOCALE;
+  return isAppLocale(stored) ? stored : DEFAULT_LOCALE;
 }
 
 /**

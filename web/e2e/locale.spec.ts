@@ -3,25 +3,27 @@ import AxeBuilder from '@axe-core/playwright';
 import { loginAs } from './fixtures';
 import { mockApi } from './mock-api';
 
-/** The language switch (CR 2026-10-28), against the mocked `/api`. */
+/**
+ * The language switch (CR 2026-10-28), against the mocked `/api`. The portal is English until the
+ * admin picks another language in the user menu; the login screen has no picker.
+ */
 test.describe('language switch', () => {
   test.beforeEach(async ({ page }) => {
     await mockApi(page);
   });
 
-  test('the login page switches to Turkish and remembers it after a reload', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByRole('combobox', { name: 'Language' }).click();
-    await page.getByRole('option', { name: 'Türkçe', exact: true }).click();
+  test.describe('in a Turkish browser', () => {
+    test.use({ locale: 'tr-TR' });
 
-    await expect(page.getByRole('heading', { name: "Sadakat'e giriş yapın" })).toBeVisible();
-    await expect(page.locator('html')).toHaveAttribute('lang', 'tr');
-
-    await page.reload();
-    await expect(page.getByRole('button', { name: 'Giriş yap' })).toBeVisible();
+    test('the login page is English and offers no language picker', async ({ page }) => {
+      await page.goto('/login');
+      await expect(page.getByRole('heading', { name: 'Sign in to Loyalty' })).toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+      await expect(page.getByRole('combobox', { name: 'Language' })).toHaveCount(0);
+    });
   });
 
-  test("the user menu's Language submenu switches the shell to Turkish", async ({ page }) => {
+  test("the user menu's Language submenu switches to Turkish, and the choice is kept", async ({ page }) => {
     await loginAs(page, 'ops@novapay.test', 'any-password');
     // The avatar button's accessible name is the user id from the mocked token.
     await page.locator('.topbar__avatar').click();
@@ -45,5 +47,13 @@ test.describe('language switch', () => {
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
     const serious = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
     expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Ana menü' })).toBeVisible();
+
+    // Signing out keeps the saved language: the login page is Turkish too.
+    await page.locator('.topbar__avatar').click();
+    await page.getByRole('menuitem', { name: 'Çıkış yap' }).click();
+    await expect(page.getByRole('heading', { name: "Sadakat'e giriş yapın" })).toBeVisible();
   });
 });

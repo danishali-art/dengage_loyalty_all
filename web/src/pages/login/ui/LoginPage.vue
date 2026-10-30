@@ -3,11 +3,9 @@ import { onMounted } from 'vue';
 import { useSessionStore } from '@/shared/model';
 import { AppCard } from '@/shared/ui';
 import { LoginForm, useLoginForm } from '@/features/auth-login';
-import { LocaleSwitch, useLocaleSwitch } from '@/features/locale-switch';
 
 const session = useSessionStore();
 const { email, password, errors, formError, pending, submit, goHome } = useLoginForm();
-const { locale, options: localeOptions } = useLocaleSwitch();
 
 // Already signed in (e.g. a bookmark to /login): skip the form.
 onMounted(() => {
@@ -31,9 +29,6 @@ onMounted(() => {
         @submit="submit"
       />
     </AppCard>
-    <div class="login-page__locale">
-      <LocaleSwitch v-model="locale" :options="localeOptions" />
-    </div>
   </main>
 </template>
 
@@ -63,11 +58,6 @@ onMounted(() => {
   color: white;
   font-size: 1.125rem;
   font-weight: 700;
-}
-.login-page__locale {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
 }
 .login-page__title {
   margin: 0;

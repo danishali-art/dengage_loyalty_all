@@ -61,14 +61,14 @@ Portal only. The backend, DB and API don't change.
 2. **Language state.** `web/src/shared/model/locale.store.ts`, a Pinia store shaped like
    `tenant-context.store.ts`.
    - It saves the choice in the browser (localStorage key `loyalty.portal.locale`).
-   - On first visit it uses the browser's language when that's Turkish, otherwise English.
+   - The portal is English until the admin picks another language; the browser's language is not
+     used (changed 2026-10-29, see §9).
    - Choosing a language switches vue-i18n's locale and sets `<html lang>`.
    - The stored choice is applied once at startup.
 3. **Language switch.** A new feature slice, `features/locale-switch` (copying the shape of
-   `features/tenant-switch`), offering "English" and "Türkçe". It appears:
-   - in the topbar user menu, as a **Language** submenu between the role line and Sign out
-     (English / Türkçe, the current one checked);
-   - on the login page.
+   `features/tenant-switch`), offering "English" and "Türkçe". It appears only in the topbar user
+   menu, as a **Language** submenu between the role line and Sign out (English / Türkçe, the
+   current one checked). The login page has no picker; it shows the saved language.
 4. **Formatting follows the chosen language.** The three `Intl` call sites above use the portal's
    language instead of the browser's. This changes display only: parsing and the wire format don't
    change, and timestamps stay UTC ISO on the wire.
@@ -127,7 +127,7 @@ Portal only. The backend, DB and API don't change.
 - From `web/`: `npm run api:check`, `npm run type-check`, `npm run lint`, `npm test`,
   `npm run build`, `npx prettier --write` on changed files, `npm run e2e`.
 - Manual check:
-  1. Switch the language on the login page and in the user menu.
+  1. Switch the language in the user menu's Language submenu.
   2. In Turkish, walk through programs, rule edit, Customer 360 (tabs and the event drawer),
      dialogs and toasts.
   3. Check that dates and amounts are formatted the Turkish way and that long labels fit.
@@ -142,13 +142,17 @@ Portal only. The backend, DB and API don't change.
 
 ## 9. Implementation (2026-10-28)
 
-As proposed in §3, with two additions:
+As proposed in §3, with these follow-ups at the developer's request (UI only, inside the approved
+scope):
 
-- The login form's schema is now a `computed`, so its validation messages follow a language switch
-  made on the login page itself (other forms are rebuilt when they open, see §6).
-- At the developer's request (2026-10-28), the user menu's language choice was moved from a bare
-  item ("Türkçe" under the role) into its own **Language** submenu that lists both languages and
-  marks the current one. This is UI only, inside the approved scope.
+- **2026-10-28:** the user menu's language choice was moved from a bare item ("Türkçe" under the
+  role) into its own **Language** submenu that lists both languages and marks the current one.
+- **2026-10-29:** the language picker on the login page was removed, and so was the first-visit
+  browser-language guess. The portal is English until the admin changes it in the user menu.
+  After that the saved choice applies everywhere, including the login page after a sign-out.
+  `LocaleSwitch.vue` was deleted, and the login form's schema was reverted to its original,
+  non-computed form: it was a `computed` only so it could follow a switch made on the login page.
+  `LoginPage.vue` and `useLoginForm.ts` are therefore unchanged from before the CR.
 
 ### Files
 
@@ -158,19 +162,19 @@ As proposed in §3, with two additions:
 | `web/src/shared/i18n/locales/en.json` | Changed — new keys `locale.label` and `common.networkError` |
 | `web/src/shared/i18n/index.ts` | Changed — registers `tr` (typed as the English schema), `SUPPORTED_LOCALES`, `LOCALE_NAMES`, `isAppLocale`, `intlLocale()` |
 | `web/src/shared/i18n/locales.spec.ts` | Created — same keys, same placeholders, no empty messages |
-| `web/src/shared/model/locale.store.ts` | Created — the active language: stored choice → browser language → English; sets vue-i18n and `<html lang>`; saved as `loyalty.portal.locale` |
-| `web/src/shared/model/locale.store.spec.ts` | Created — fallback order, saving, `<html lang>`, Turkish messages and number format |
+| `web/src/shared/model/locale.store.ts` | Created — the active language: the stored choice, else English (never the browser's); sets vue-i18n and `<html lang>`; saved as `loyalty.portal.locale` |
+| `web/src/shared/model/locale.store.spec.ts` | Created — English by default (even in a Turkish browser), stored choice, saving, `<html lang>`, Turkish messages and number format |
 | `web/src/shared/model/index.ts` | Changed — exports `useLocaleStore` |
 | `web/src/app/providers/index.ts` | Changed — applies the saved language at startup |
-| `web/src/features/locale-switch/index.ts`, `model/useLocaleSwitch.ts`, `ui/LocaleSwitch.vue` | Created — the language switch (options, current language, select) |
+| `web/src/features/locale-switch/index.ts`, `model/useLocaleSwitch.ts` | Created — the language switch (options, current language, select), used by the user menu |
+| `web/src/features/locale-switch/ui/LocaleSwitch.vue` | Created 2026-10-28 for the login page, deleted 2026-10-29 with the login picker |
 | `web/src/widgets/app-topbar/model/useTopbar.ts` | Changed — a Language submenu in the user menu, between the role and Sign out |
 | `web/src/shared/ui/overlay/types.ts`, `AppPopupMenu.vue`, `web/src/shared/ui/index.ts` | Changed — `PopupMenuItem.choices`: a submenu of radio options, built from the existing dropdown-menu primitives (sub, radio group, radio item) |
 | `web/src/shared/ui/overlay/AppPopupMenu.spec.ts` | Created — submenu opens, current option checked, a pick is reported |
-| `web/src/pages/login/ui/LoginPage.vue` | Changed — language picker under the sign-in card |
-| `web/src/features/auth-login/model/useLoginForm.ts` | Changed — computed schema so its messages follow a language switch |
+| `web/src/pages/login/ui/LoginPage.vue`, `web/src/features/auth-login/model/useLoginForm.ts` | Changed 2026-10-28 (login picker, computed schema), restored to their pre-CR state 2026-10-29 — net unchanged |
 | `web/src/shared/lib/date/format.ts`, `web/src/shared/lib/money/format.ts`, `web/src/pages/dashboard/model/useDashboardPage.ts` | Changed — format in the portal's language (`intlLocale()`) instead of the browser's |
 | `web/src/shared/api/api-error.ts` | Changed — the network-error message is a translation key |
-| `web/e2e/locale.spec.ts` | Created — switch on the login page and survive a reload; switch from the user menu; axe check in Turkish |
+| `web/e2e/locale.spec.ts` | Created — a Turkish browser still gets an English login page with no picker; the user menu switches to Turkish, the choice survives a reload and a sign-out; axe check in Turkish |
 | `docs/scope-changes/2026-10-28-portal-turkish.md` | Created — this document |
 | `docs/SCOPE_BASELINE.md` | Changed — foundation row, limitations sentence, open item (translation review), revision history |
 | `docs/SOW.md` | Changed — §2.8 localization line; §3 "English only" struck through |
@@ -180,10 +184,15 @@ As proposed in §3, with two additions:
 ### Verification
 
 From `web/`:
-- **Passed** (re-run after the Language submenu change): `npm run type-check`, `npm run lint`,
-  `npm test` (44 files, 239 tests, including the 3 new specs), `npx vite build`, `npm run e2e`
-  with `PW_CHANNEL=msedge` (10 mocked tests passed, including the 2 new ones; the 4 real-backend
-  specs are skipped by default).
+- **Passed** (re-run 2026-10-29 after removing the login picker): `npm run type-check`,
+  `npm run lint`, `npm test` (44 files, 239 tests, including the 3 new specs), `npx vite build`,
+  and `npm run e2e` with `PW_CHANNEL=msedge`. That's 10 mocked tests, including the 2 language tests;
+  the 4 real-backend specs are skipped by default.
+  - In the full parallel run, one unrelated test timed out:
+    `platform.spec.ts` "platform_admin creates a tenant…". Its "Create admin" button kept
+    re-rendering while the test clicked it.
+  - Rerun alone, that spec passed (2 of 2). It also passed in both earlier full runs, so it's a
+    flaky test under load, not caused by this change.
 - **`npm run build` fails at its `api:check` prebuild**, which was already failing on this Windows
   checkout and isn't caused by this change. `openapi.json` and `schema.d.ts` are CRLF here
   (`core.autocrlf=true`) but generated as LF. With line endings ignored, both match the backend

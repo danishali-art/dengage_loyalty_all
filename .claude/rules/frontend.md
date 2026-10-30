@@ -129,7 +129,7 @@ Layers, top to bottom: `app → pages → widgets → features → entities → 
   dotted and grouped by screen (`programs.list.col.name`); `@ | { } $` are escaped.
 - The active language lives in `useLocaleStore` (`shared/model`). Format dates and numbers with
   `intlLocale()` from `@/shared/i18n`, never the browser's locale (`undefined`). A form schema whose
-  messages must follow a language switch while it's open is a `computed` (see `useLoginForm`).
+  messages must follow a language switch while it's open is a `computed`.
 - JS upper-casing of translated text uses `toLocaleUpperCase(intlLocale())` (Turkish i → İ).
 - `vue/no-bare-strings-in-template` is on. Every user-facing string is a key. Outside components
   use `translate(key, params)`.
