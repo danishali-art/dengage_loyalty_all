@@ -70,14 +70,22 @@ Layers, top to bottom: `app → pages → widgets → features → entities → 
   `openapi/openapi.json` by **reading the C# source** (`*Dtos.cs`, `*Controller.cs`, `*AppService.cs`,
   the engine models they use). `npm run api:types` writes `src/shared/api/generated/schema.d.ts`.
   Both files are generated. **Never edit them by hand.**
-- `npm run api:check` (also before every build) fails when either is out of date. After any
-  backend DTO or route change, run `api:spec` then `api:types` and commit both with the change.
+- The committed `openapi.json` is the spec the portal is pinned to: the portal builds from it with
+  no backend source, as the split's `dengage.loyalty.frontend` does. `npm run api:sync [-- <path-or-url>]`
+  pins another spec (default: `../dengage.loyalty.api/openapi/openapi.json`, next to this
+  repository), regenerates the types and records the source in `openapi/SPEC_SOURCE`; commit all three.
+- `npm run api:check` (also before every build) fails when `schema.d.ts` doesn't match the pinned
+  spec. While the backend is in this repository, `npm run api:check:backend` also fails when the
+  spec is behind the C# source. After any backend DTO or route change, run `api:spec` then
+  `api:types` and commit both with the change.
+- Both generated files are LF whatever the checkout (`web/.gitattributes`), because `api:check`
+  compares them byte for byte.
 - Mapping rules (`tools/openapi/build-spec.ts`): `decimal` → decimal string, `Guid` → uuid,
   `DateTime` → date-time, nullable → optional (the API omits nulls: `WhenWritingNull`),
   `[JsonPropertyName]` wins over camelCase, enums → integers (no `JsonStringEnumConverter`).
 - What C# can't express (allowed values of `string` statuses, excluded modules) goes in
   `openapi/overrides.ts`, **each entry naming its C# source**. An override that no longer matches
-  a member fails the build. The generator fails loudly rather than guessing. Fix it or add an override.
+  a member fails `api:spec` and `api:check:backend`. The generator fails loudly rather than guessing. Fix it or add an override.
 - App code uses `ApiSchema<'ProgramResponse'>` (re-exported as entity types). It never hand-writes DTO shapes.
 
 ## Forms (VeeValidate + Zod)
