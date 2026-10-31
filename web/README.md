@@ -50,14 +50,19 @@ npm run api:spec && npm run api:types
 ```
 
 Commit `openapi/openapi.json` and `src/shared/api/generated/schema.d.ts` with the change. The build
-(and `npm run api:check`) fails until they match the C# source.
+(and `npm run api:check`) only checks the types against the committed spec;
+`npm run api:check:backend` fails until the spec matches the C# source.
+
+To pin a spec from elsewhere (as the split's `dengage.loyalty.frontend` does), run
+`npm run api:sync [-- <path-or-url>]` (default: `../dengage.loyalty.api/openapi/openapi.json`) and
+commit `openapi/`, `openapi/SPEC_SOURCE` and the generated types.
 
 ## Deployment (image `dengage.loyalty.frontend`)
 
 Packaged like the dEngage panel (`adminpanel`): [`../dengage.loyalty.frontend/`](../dengage.loyalty.frontend/)
 holds the Dockerfile, the nginx template and the start-up scripts, and `build.json` registers the
-image for the shared Bitbucket pipeline. Build context is the repo root, because the build's
-`api:check` reads the backend source in `src/`:
+image for the shared Bitbucket pipeline. Build context is the repo root; the build needs no
+backend source:
 
 ```bash
 docker build -t dengage.loyalty.frontend -f dengage.loyalty.frontend/Dockerfile .
