@@ -84,7 +84,8 @@ Call out any breaking change explicitly.
 | API returns 400 with a `snake_case_code` | A domain `InvalidOperationException` went through `DomainErrorTranslator`. A new code may need its prefix mapped. |
 | Portal shows no data but the API works | The API or Consumer isn't running, or the dev proxy target changed (`web/vite.config.ts`, `/api` → `:5173`). The only API mock is `web/e2e/mock-api.ts`, used by the mocked e2e suites. |
 | Integration tests fail on startup | Docker isn't running, so the Testcontainers for Postgres, Redis and RabbitMQ can't start. |
-| Portal build or `npm run api:check` fails: "out of date with the backend C# source" | A backend DTO or route changed. Run `npm run api:spec && npm run api:types` in `web/` and commit both generated files (Cross-stack step 4). |
+| `npm run api:check:backend` fails: "out of date with the backend C# source" | A backend DTO or route changed. Run `npm run api:spec && npm run api:types` in `web/` and commit both generated files (Cross-stack step 4). |
+| Portal build or `npm run api:check` fails: "schema.d.ts is out of date" | The spec changed without `npm run api:types`, or `schema.d.ts` was edited by hand. Run `npm run api:types`. |
 | `npm run api:spec` throws "Unknown type", "cannot find the request type", or "Overrides match no C# member" | The generator met a C# shape it can't map, or an override's member was renamed. Fix the mapping in `web/tools/openapi/` or the entry in `openapi/overrides.ts` (with its C# source). Never hand-edit `openapi.json`. |
 | A Vue e2e click on a page-header button times out with "…subtree intercepts pointer events" | A toast (top right, below the topbar) is covering it. Wait the toast out first (`toast()` in `e2e/platform.spec.ts`). |
 | A portal e2e axe check fails on `color-contrast` | A text colour is below 4.5:1 on its background. Fix the token in `web/src/app/styles/global.css`; don't drop the check. |

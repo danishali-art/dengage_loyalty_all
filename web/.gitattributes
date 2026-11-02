@@ -1,0 +1,4 @@
+# Generated files are compared byte for byte by `npm run api:check` (and the generators write LF),
+# so a CRLF checkout (core.autocrlf=true on Windows) must not convert them.
+openapi/openapi.json text eol=lf
+src/shared/api/generated/schema.d.ts text eol=lf

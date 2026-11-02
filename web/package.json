@@ -16,7 +16,9 @@
     "e2e": "playwright test",
     "api:spec": "tsx tools/openapi/generate-spec.ts",
     "api:types": "tsx tools/openapi/generate-types.ts",
-    "api:check": "tsx tools/openapi/check-spec.ts"
+    "api:check": "tsx tools/openapi/check-spec.ts",
+    "api:check:backend": "tsx tools/openapi/check-spec.ts --backend",
+    "api:sync": "tsx tools/openapi/sync-spec.ts"
   },
   "dependencies": {
     "@lucide/vue": "1.55.0",

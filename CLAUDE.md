@@ -89,4 +89,5 @@ the service at startup instead of falling back to localhost.
 - `web/CLAUDE.md` — admin portal (Vue 3): architecture and commands. Rules in
   `.claude/rules/frontend.md`.
 - `web/openapi/openapi.json` — machine-readable API contract **generated from the C# source**
-  (`npm run api:spec` in `web/`); the portal's TypeScript types come from it.
+  (`npm run api:spec` in `web/`); the portal's TypeScript types come from it, and it builds from
+  this committed copy without the C# source (`npm run api:sync` pins a spec from elsewhere).

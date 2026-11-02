@@ -10,9 +10,11 @@ npm run build        # api:check, then vue-tsc + vite build
 npm run type-check   # vue-tsc
 npm run lint         # ESLint, including the architecture rules
 npm test             # Vitest (unit, component, generator)
-npm run api:spec     # regenerate openapi/openapi.json from the backend C# source
+npm run api:spec     # regenerate openapi/openapi.json from the backend C# source in ../src
 npm run api:types    # regenerate src/shared/api/generated/schema.d.ts from the spec
-npm run api:check    # fail if either generated file is out of date
+npm run api:check    # fail if schema.d.ts doesn't match the pinned spec (no backend needed)
+npm run api:check:backend   # also fail if openapi.json is behind the C# source in ../src
+npm run api:sync     # pin another spec (default ../dengage.loyalty.api/openapi/openapi.json) + regenerate types
 npm run e2e          # Playwright (reuses the dev server on :4201); PW_CHANNEL=msedge for an installed browser
 E2E_BACKEND=1 npm run e2e   # also the *.e2e.spec.ts real-backend flows (Api on :5173; customers needs the Consumer)
 ```
@@ -40,8 +42,9 @@ src/
              model/ (types, schemas, mappers), ui/
   shared/    api/ (typed client, ApiError, query client, generated types), ui/ (App* wrappers; primitives/ = shadcn-vue),
              lib/ (money, date, forms, loading, dsl = condition + streak DSL mirroring the C# engine), model/ (session + tenant stores), config/, i18n/
-tools/       openapi/ (C# → OpenAPI generator, drift check)
-openapi/     openapi.json (generated, committed), overrides.ts (hand-kept, each entry sourced)
+tools/       openapi/ (C# → OpenAPI generator, drift checks, api:sync)
+openapi/     openapi.json (generated or pinned, committed), SPEC_SOURCE (written by api:sync),
+             overrides.ts (hand-kept, each entry sourced)
 tests/       setup.ts (jsdom polyfills), utils/mount-with-providers.ts (component-test helper)
 e2e/         Playwright: *.spec.ts run against mock-api.ts (no backend); *.e2e.spec.ts against the
              real backend (skipped unless E2E_BACKEND=1); fixtures.ts (loginAs, pick, provisionTenant)

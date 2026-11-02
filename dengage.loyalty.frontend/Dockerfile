@@ -8,9 +8,9 @@ FROM node:24.14.1-bookworm AS build
 
 WORKDIR /repo
 
-# `npm run build` first runs the OpenAPI drift check (api:check), which regenerates the spec from
-# the backend C# source in src/, so the build fails when the portal is behind the API.
-COPY src ./src
+# No backend source needed: `npm run build` first runs api:check, which checks the generated types
+# against the committed openapi/openapi.json. The spec itself is refreshed from the C# source with
+# `npm run api:spec` and checked with `npm run api:check:backend` (web/CLAUDE.md).
 COPY web/package.json web/package-lock.json ./web/
 WORKDIR /repo/web
 RUN npm ci
