@@ -1,6 +1,6 @@
 # Platform alignment — Phase 1 implementation record
 
-**Status:** implemented on branch `platform-alignment/phase-1` (not committed or merged yet). For Architect review.
+**Status:** approved and implemented. Committed `c67c497`, merged to `main` with Phase 2 (PR #8). Consolidated scope record: `docs/scope-changes/2026-10-20-platform-alignment.md`.
 **Date:** 2026-10-20
 **Basis:** *Loyalty Platform Alignment Assessment* (decisions D1–D18, approved for implementation phase by phase). Phase 1 = "Deployable & safe (standalone)".
 **Type:** infrastructure and hosting. No new capability, endpoint, entity or migration, so no `docs/SCOPE_BASELINE.md` change.
