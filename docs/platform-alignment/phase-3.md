@@ -1,6 +1,6 @@
 # Platform alignment — Phase 3 implementation record
 
-**Status:** in progress on branch `platform-alignment/phase-2` (continued there, on top of Phase 2 `12e4d38`).
+**Status:** approved and implemented. Committed on branch `platform-alignment/phase-2` (continued there, on top of Phase 2 `12e4d38`), merged to `main` (PR #9). Consolidated scope record: `docs/scope-changes/2026-10-20-platform-alignment.md`.
 **Basis:** *Loyalty Platform Alignment Assessment*, Phase 3 = "Convergence": split `Public.Api` from `Api`, Nancy → controllers, messaging → common broker / outbox library, publish `Api.Client` (D7, D8, D9 complete). Approved for implementation phase by phase.
 **Order:** controllers first (everything else builds on them), then the `Public.Api` split, the `Api.Client` package, and messaging last.
 
@@ -11,7 +11,7 @@
 | D7 Nancy → ASP.NET Core controllers | ✅ Done and tested (§1). Committed `3b2b420` |
 | D9 `Public.Api` split | ✅ Done and tested (§2). Committed `da3100c` |
 | `dEngage.Loyalty.Api.Client` package | ✅ Done and tested (§3). Committed `85e00c6` |
-| D8 messaging | ✅ Settings step done and tested (§4). Library move **not done by decision** (§4.1) |
+| D8 messaging | ✅ Settings step done and tested (§4). Committed `2668992`. Library move **not done by decision** (§4.1) |
 
 ## 1. D7 — Nancy → ASP.NET Core controllers (done)
 

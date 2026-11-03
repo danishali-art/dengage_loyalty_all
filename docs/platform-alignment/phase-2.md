@@ -1,6 +1,6 @@
 # Platform alignment — Phase 2 implementation record
 
-**Status:** in progress on branch `platform-alignment/phase-2` (on top of Phase 1, `c67c497`). Not committed yet.
+**Status:** approved and implemented. Committed on branch `platform-alignment/phase-2` (on top of Phase 1, `c67c497`), merged to `main` (PR #8). Consolidated scope record: `docs/scope-changes/2026-10-20-platform-alignment.md`.
 **Basis:** *Loyalty Platform Alignment Assessment*, Phase 2 = "Product-ready (standalone)": D4 `loyalty_config`, D12 tenant fairness, D18, publish `Contract`. Approved for implementation phase by phase.
 **Order agreed:** D12 first, as a small change; the other Phase 2 items follow.
 **Scope change 2026-10-20:** D15 webhooks were **dropped**. Clients are notified only the dEngage way (the Phase 4 connector forwards loyalty events into dEngage journeys and campaigns). A loyalty-only client therefore gets no push of loyalty events and reads current state through the Public API. `ISecretProtector` (D3), first needed for webhook signing secrets, moves to D4 (secret `loyalty_config` rows) and Phase 4 (dEngage integration credentials).
@@ -10,8 +10,8 @@
 | Item | Status |
 |---|---|
 | D12 tenant fairness (isolated tenant lanes) | ✅ Done and tested (§1). Committed `84427e7` |
-| D4 settings tables (`loyalty_config` global, `loyalty_tenant_config` per tenant) + `ISecretProtector` | ✅ Done and tested (§2). First table committed `798356f`; the rest not committed yet |
-| Publish `dEngage.Loyalty.Contract` (event envelope, event types and catalog, outbound event types, outcome reasons, messaging topology) | ✅ Done and tested (§3) |
+| D4 settings tables (`loyalty_config` global, `loyalty_tenant_config` per tenant) + `ISecretProtector` | ✅ Done and tested (§2). Committed `798356f`, `5bbfe12` |
+| Publish `dEngage.Loyalty.Contract` (event envelope, event types and catalog, outbound event types, outcome reasons, messaging topology) | ✅ Done and tested (§3). Committed `2d0fe75` |
 | D15 webhooks | ❌ Dropped (2026-10-20) |
 | D18 loyalty emits events, doesn't send email/SMS | ✅ Nothing to build. With D15 dropped, notifications go through dEngage only |
 | NLog + metrics | ✅ Done in Phase 1 |
